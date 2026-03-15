@@ -3,22 +3,9 @@
 
 mod commands;
 
-use tauri::Manager;
-
 fn main() {
     tauri::Builder::default()
-        .setup(|app| {
-            let window = app.get_window("main").unwrap();
-            
-            // Ventana sin decoraciones nativas — usamos nuestra titlebar custom
-            #[cfg(target_os = "windows")]
-            {
-                use tauri::TitleBarStyle;
-                window.set_title_bar_style(TitleBarStyle::Overlay).ok();
-            }
-            
-            Ok(())
-        })
+        .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             commands::get_system_info,
             commands::get_docker_status,

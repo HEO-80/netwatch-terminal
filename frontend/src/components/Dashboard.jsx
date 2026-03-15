@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/tauri";
+// import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 
 // ── Separador de sección ──────────────────────────────────────────────────────
 const Separator = ({ char = "─", color = "var(--cy-border2)" }) => (
