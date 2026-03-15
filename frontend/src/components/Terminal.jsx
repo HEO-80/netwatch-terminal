@@ -1,18 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import { Terminal as XTerm } from "@xterm/xterm";
+import { useEffect, useRef, useCallback } from "react";
+import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-// import { invoke } from "@tauri-apps/api/tauri";
-import { customCommands } from "../commands/custom";
-import { invoke } from "@tauri-apps/api/core";
-// xterm.js theme — Cyberpunk 2077 palette
 
 const XTERM_THEME = {
-  background:    "#0b0a00",
-  foreground:    "#FCEE0A",
-  cursor:        "#FCEE0A",
-  cursorAccent:  "#0b0a00",
-  selectionBackground: "rgba(252, 238, 10, 0.2)",
+  background:          "#050500",
+  foreground:          "#FCEE0A",
+  cursor:              "#FCEE0A",
+  cursorAccent:        "#050500",
+  selectionBackground: "rgba(57, 255, 20, 0.2)",
   black:         "#000000",
   red:           "#ff5555",
   green:         "#39FF14",
@@ -21,235 +17,158 @@ const XTERM_THEME = {
   magenta:       "#D9027D",
   cyan:          "#00F0FF",
   white:         "#E8E8E8",
-  brightBlack:   "#666666",
+  brightBlack:   "#555555",
   brightRed:     "#ff7777",
   brightGreen:   "#57FF33",
-  brightYellow:  "#FFf44c",
+  brightYellow:  "#FFF44C",
   brightBlue:    "#33F3FF",
   brightMagenta: "#FF40A0",
   brightCyan:    "#33F3FF",
   brightWhite:   "#ffffff",
 };
 
-const PROMPT = "\x1b[38;2;184;172;8mnetwatch\x1b[0m\x1b[38;2;217;2;125m@HEO-80\x1b[0m\x1b[38;2;102;102;102m:\x1b[0m\x1b[38;2;252;238;10m~\x1b[0m\x1b[38;2;102;102;102m$\x1b[0m ";
+const WS_URL = "ws://127.0.0.1:7777";
 
-export default function TerminalPane({ active }) {
+export default function TerminalPane({ active, onBack }) {
   const containerRef = useRef(null);
-  const xtermRef     = useRef(null);
+  const termRef      = useRef(null);
   const fitRef       = useRef(null);
-  const inputRef     = useRef("");
-  const historyRef   = useRef([]);
-  const histIdxRef   = useRef(-1);
-  const cwdRef       = useRef("~");
-  const [cwd, setCwd] = useState("~");
+  const wsRef        = useRef(null);
+  const reconnTimer  = useRef(null);
+  const retries      = useRef(0);
 
   useEffect(() => {
-    if (!containerRef.current || xtermRef.current) return;
+    if (!containerRef.current || termRef.current) return;
 
-    // Init xterm
-    const term = new XTerm({
-      theme: XTERM_THEME,
-      fontFamily:  "'JetBrains Mono', 'Cascadia Code', monospace",
-      fontSize:    13,
-      lineHeight:  1.0,
-      cursorBlink: true,
-      cursorStyle: "block",
+    const term = new Terminal({
+      theme:            XTERM_THEME,
+      fontFamily:       "'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Code', monospace",
+      fontSize:         13,
+      lineHeight:       1.25,
+      cursorBlink:      true,
+      cursorStyle:      "block",
       allowTransparency: true,
-      scrollback: 5000,
+      scrollback:       10000,
+      windowsMode:      true,
     });
 
     const fitAddon   = new FitAddon();
     const linksAddon = new WebLinksAddon();
-
     term.loadAddon(fitAddon);
     term.loadAddon(linksAddon);
     term.open(containerRef.current);
     fitAddon.fit();
 
-    xtermRef.current = term;
-    fitRef.current   = fitAddon;
+    termRef.current = term;
+    fitRef.current  = fitAddon;
 
-    // Print prompt
-    term.write(PROMPT);
+    // Input → WS
+    term.onData((data) => send({ type: "input", data }));
+    term.onResize(({ cols, rows }) => send({ type: "resize", cols, rows }));
 
-    // Handle input
-    term.onData((data) => {
-      const code = data.charCodeAt(0);
-
-      if (data === "\r") {
-        // Enter
-        const cmd = inputRef.current.trim();
-        term.write("\r\n");
-
-        if (cmd) {
-          historyRef.current.unshift(cmd);
-          histIdxRef.current = -1;
-          handleCommand(cmd, term);
-        } else {
-          term.write(PROMPT);
-        }
-        inputRef.current = "";
-
-      } else if (data === "\x7F") {
-        // Backspace
-        if (inputRef.current.length > 0) {
-          inputRef.current = inputRef.current.slice(0, -1);
-          term.write("\b \b");
-        }
-
-      } else if (data === "\x1B[A") {
-        // Arrow up — history
-        const next = Math.min(histIdxRef.current + 1, historyRef.current.length - 1);
-        if (next >= 0) {
-          clearInput(term);
-          histIdxRef.current = next;
-          inputRef.current = historyRef.current[next];
-          term.write(inputRef.current);
-        }
-
-      } else if (data === "\x1B[B") {
-        // Arrow down — history
-        const next = Math.max(histIdxRef.current - 1, -1);
-        clearInput(term);
-        histIdxRef.current = next;
-        inputRef.current = next === -1 ? "" : historyRef.current[next];
-        term.write(inputRef.current);
-
-      } else if (data === "\x09") {
-        // Tab — autocomplete
-        const partial = inputRef.current;
-        const cmds = Object.keys(customCommands).concat(["help", "clear", "pwd", "ls", "cd", "exit"]);
-        const match = cmds.find((c) => c.startsWith(partial) && c !== partial);
-        if (match) {
-          clearInput(term);
-          inputRef.current = match;
-          term.write(match);
-        }
-
-      } else if (code >= 32) {
-        // Printable char
-        inputRef.current += data;
-        term.write(data);
-      }
-    });
-
-    // Resize observer
+    // ResizeObserver
     const ro = new ResizeObserver(() => fitAddon.fit());
     ro.observe(containerRef.current);
 
+    // Conectar WS
+    connect(term, fitAddon);
+
     return () => {
       ro.disconnect();
+      clearTimeout(reconnTimer.current);
+      if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close(); }
       term.dispose();
-      xtermRef.current = null;
+      termRef.current = null;
     };
   }, []);
 
-  // Focus when tab becomes active
   useEffect(() => {
-    if (active) xtermRef.current?.focus();
+    if (active && termRef.current) {
+      setTimeout(() => {
+        fitRef.current?.fit();
+        termRef.current?.focus();
+      }, 50);
+    }
   }, [active]);
 
-  async function handleCommand(raw, term) {
-    const parts = raw.trim().split(/\s+/);
-    const cmd   = parts[0].toLowerCase();
-    const args  = parts.slice(1);
+  const send = useCallback((msg) => {
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }, []);
 
-    // ── Built-in commands ────────────────────────────────────────────────────
-    if (cmd === "clear" || cmd === "cls") {
-      term.clear();
-      term.write(PROMPT);
-      return;
+  const connect = useCallback((term, fitAddon) => {
+    if (retries.current === 0) {
+      term.writeln("\x1b[38;2;0;240;255m[NETWATCH]\x1b[0m Conectando a PowerShell...");
     }
 
-    if (cmd === "exit") {
-      term.write("\x1b[38;2;252;238;10mCerrando NETWATCH...\x1b[0m\r\n");
-      setTimeout(() => invoke("close_window"), 800);
-      return;
-    }
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
-    if (cmd === "pwd") {
-      term.write(`\x1b[38;2;0;240;255m${cwdRef.current}\x1b[0m\r\n`);
-      term.write(PROMPT);
-      return;
-    }
-
-    // ── Custom commands ──────────────────────────────────────────────────────
-    if (customCommands[cmd]) {
-      await customCommands[cmd]({ args, term, write: (s) => term.write(s), writeln: (s) => term.write(s + "\r\n"), invoke });
-      term.write("\r\n" + PROMPT);
-      return;
-    }
-
-    // ── Help ─────────────────────────────────────────────────────────────────
-    if (cmd === "help" || cmd === "help-ps") {
-      printHelp(term);
-      term.write(PROMPT);
-      return;
-    }
-
-    // ── Fallback: ejecutar en PowerShell real ────────────────────────────────
-    term.write(`\x1b[38;2;102;102;102mEjecutando: ${raw}\x1b[0m\r\n`);
-    try {
-      const result = await invoke("run_powershell", { command: raw });
-      if (result.stdout) {
-        const lines = result.stdout.replace(/\r\n/g, "\n").split("\n");
-        for (const line of lines) {
-          if (line) term.write(line + "\r\n");
-        }
-      }
-      if (result.stderr && !result.success) {
-        term.write(`\x1b[38;2;255;85;85m${result.stderr}\x1b[0m\r\n`);
-      }
-    } catch (e) {
-      term.write(`\x1b[38;2;255;85;85mError: ${e}\x1b[0m\r\n`);
-    }
-    term.write(PROMPT);
-  }
-
-  function clearInput(term) {
-    const len = inputRef.current.length;
-    term.write("\b \b".repeat(len));
-  }
-
-  function printHelp(term) {
-    const cy = (hex, text) => {
-      const r = parseInt(hex.slice(1,3),16);
-      const g = parseInt(hex.slice(3,5),16);
-      const b = parseInt(hex.slice(5,7),16);
-      return `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
+    ws.onopen = () => {
+      retries.current = 0;
+      term.writeln("\x1b[32m✓ Conectado\x1b[0m");
+      const { cols, rows } = term;
+      send({ type: "resize", cols, rows });
     };
-    const Y = (t) => cy("#FCEE0A", t);
-    const G = (t) => cy("#39FF14", t);
-    const D = (t) => cy("#666666", t);
 
-    term.write(Y("Comandos disponibles:") + "\r\n");
-    term.write("\r\n");
-    const cmds = [
-      ["help",      "mostrar comandos"],
-      ["whoami",    "perfil del operativo"],
-      ["projects",  "listar repositorios"],
-      ["skills",    "módulos instalados"],
-      ["contact",   "canales de comunicación"],
-      ["status",    "estado del sistema"],
-      ["bee",       "conectar a Beelink via SSH"],
-      ["clear",     "limpiar pantalla"],
-      ["exit",      "cerrar NETWATCH"],
-    ];
-    for (const [c, desc] of cmds) {
-      term.write(`  ${Y(c.padEnd(14))}${D("→")} ${G(desc)}\r\n`);
-    }
-    term.write("\r\n");
-  }
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "output") term.write(msg.data);
+        if (msg.type === "exit") term.writeln(`\r\n\x1b[33m[Shell cerrada: ${msg.code}]\x1b[0m`);
+      } catch {}
+    };
+
+    ws.onclose = (e) => {
+      if (e.code === 1000) return;
+      retries.current++;
+      if (retries.current <= 5) {
+        term.writeln(`\r\n\x1b[33m[Reconectando ${retries.current}/5...]\x1b[0m`);
+        reconnTimer.current = setTimeout(() => connect(term, fitAddon), 2000);
+      } else {
+        term.writeln("\r\n\x1b[31m✗ No se pudo conectar al PTY server.\x1b[0m");
+      }
+    };
+  }, [send]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        flex: 1,
-        padding: "8px 4px 4px",
-        overflow: "hidden",
-        background: "var(--cy-bg)",
-      }}
-    />
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#050500", overflow: "hidden" }}>
+      {/* Barra info */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "3px 12px", background: "#000",
+        borderBottom: "1px solid #111", flexShrink: 0,
+        fontFamily: "var(--font-mono)", fontSize: "10px", color: "#444",
+        userSelect: "none",
+      }}>
+        <span style={{ color: "#39FF14" }}>●</span>
+        <span>powershell · netwatch@HEO-80</span>
+        <div style={{ flex: 1 }}/>
+        <span style={{ color: "#222" }}>ws://127.0.0.1:7777</span>
+      </div>
+
+      {/* xterm container */}
+      <div
+        ref={containerRef}
+        style={{ flex: 1, padding: "6px 4px 4px 8px", overflow: "hidden" }}
+        onClick={() => termRef.current?.focus()}
+      />
+
+      {/* Hints */}
+      <div style={{
+        padding: "2px 12px", background: "#000",
+        borderTop: "1px solid #111", flexShrink: 0,
+        fontFamily: "var(--font-mono)", fontSize: "10px",
+        color: "#333", display: "flex", gap: "14px", userSelect: "none",
+      }}>
+        <span><span style={{ color: "#FCEE0A" }}>Tab</span> completar</span>
+        <span><span style={{ color: "#FCEE0A" }}>→</span> sugerencia</span>
+        <span><span style={{ color: "#FCEE0A" }}>Ctrl+T</span> fzf</span>
+        <span><span style={{ color: "#FCEE0A" }}>Ctrl+R</span> historial</span>
+        <span><span style={{ color: "#FCEE0A" }}>z dir</span> saltar</span>
+        <div style={{ flex: 1 }}/>
+        <span><span style={{ color: "#555" }}>Alt+T</span> dashboard</span>
+      </div>
+    </div>
   );
 }

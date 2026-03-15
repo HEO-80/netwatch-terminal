@@ -1,0 +1,17 @@
+{
+  "name": "netwatch-pty-server",
+  "version": "1.0.0",
+  "description": "PTY bridge server for NETWATCH Terminal",
+  "main": "pty-server.js",
+  "scripts": {
+    "start": "node pty-server.js",
+    "build": "pkg pty-server.js --targets node18-win-x64 --output netwatch-pty-server.exe"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}

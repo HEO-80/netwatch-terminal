@@ -1,78 +1,80 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import TitleBar from "./components/TitleBar";
 import Dashboard from "./components/Dashboard";
 import TerminalPane from "./components/Terminal";
 import StatusBar from "./components/StatusBar";
 import "./styles/themes.css";
 
-const TABS = ["dashboard", "terminal"];
-
 export default function App() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [screen, setScreen] = useState("dashboard");
+
+  // ── Teclado global ────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      // ESC — volver al dashboard desde terminal
+      if (e.key === "Escape" && screen === "terminal") {
+        e.preventDefault();
+        setScreen("dashboard");
+        return;
+      }
+      // Alt+T — toggle entre dashboard y terminal
+      if (e.altKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        setScreen(s => s === "dashboard" ? "terminal" : "dashboard");
+        return;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [screen]);
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      width: "100vw",
-      height: "100vh",
-      background: "var(--cy-bg)",
-      border: "1px solid var(--cy-border2)",
-      borderRadius: "8px",
-      overflow: "hidden",
-      boxShadow: "0 0 60px var(--cy-glow-yellow), 0 32px 80px rgba(0,0,0,0.9)",
-    }}>
-      {/* Scanlines */}
-      <div className="cy-scanlines" />
-
-      {/* Title bar */}
-      <TitleBar title="NETWATCH OS v2.077" subtitle="HEO-80" />
-
-      {/* Tab bar */}
-      <div style={{
+    <div
+      data-tauri-drag-region
+      style={{
         display: "flex",
-        gap: "0",
-        background: "var(--cy-bg2)",
-        borderBottom: "1px solid var(--cy-border2)",
-        padding: "0 16px",
-        flexShrink: 0,
-      }}>
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              background: "transparent",
-              border: "none",
-              borderBottom: activeTab === tab ? "2px solid var(--cy-yellow)" : "2px solid transparent",
-              color: activeTab === tab ? "var(--cy-yellow)" : "var(--cy-dim)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              padding: "8px 16px",
-              cursor: "pointer",
-              transition: "color 0.15s, border-color 0.15s",
-            }}
-          >
-            {tab === "dashboard" ? "▣ Dashboard" : "▸ Terminal"}
-          </button>
-        ))}
+        flexDirection: "column",
+        width: "100vw",
+        height: "100vh",
+        background: "#050500",
+        border: "1px solid #00F0FF",
+        overflow: "hidden",
+        boxShadow: "0 0 0 1px rgba(0,240,255,0.15), 0 0 40px rgba(0,240,255,0.05)",
+        position: "relative",
+      }}
+    >
+      {/* Scanlines */}
+      <div style={{
+        position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999,
+        background: "repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px)",
+      }}/>
+
+      {/* Corner marks magenta */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 100 }}>
+        <div style={{ position: "absolute", top: 6, left: 6, width: 16, height: 16, borderTop: "2px solid #D9027D", borderLeft: "2px solid #D9027D" }}/>
+        <div style={{ position: "absolute", top: 6, right: 6, width: 16, height: 16, borderTop: "2px solid #D9027D", borderRight: "2px solid #D9027D" }}/>
+        <div style={{ position: "absolute", bottom: 6, left: 6, width: 16, height: 16, borderBottom: "2px solid #D9027D", borderLeft: "2px solid #D9027D" }}/>
+        <div style={{ position: "absolute", bottom: 6, right: 6, width: 16, height: 16, borderBottom: "2px solid #D9027D", borderRight: "2px solid #D9027D" }}/>
       </div>
+
+      {/* Title bar — drag region principal */}
+      <TitleBar
+        title="NETWATCH OS V2.077"
+        subtitle="HEO-80"
+        screen={screen}
+        onToggle={() => setScreen(s => s === "dashboard" ? "terminal" : "dashboard")}
+      />
 
       {/* Content */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        {activeTab === "dashboard" ? (
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            <Dashboard />
-          </div>
-        ) : (
-          <TerminalPane active={activeTab === "terminal"} />
-        )}
+        {screen === "dashboard"
+          ? <Dashboard onLaunchTerminal={() => setScreen("terminal")} />
+          : <TerminalPane active={true} onBack={() => setScreen("dashboard")} />
+        }
       </div>
 
       {/* Status bar */}
-      <StatusBar user="Usuario" cwd="~" />
+      <StatusBar user="Usuario" screen={screen} />
     </div>
   );
 }
