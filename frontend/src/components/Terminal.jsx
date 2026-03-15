@@ -51,7 +51,7 @@ export default function TerminalPane({ active }) {
       theme: XTERM_THEME,
       fontFamily:  "'JetBrains Mono', 'Cascadia Code', monospace",
       fontSize:    13,
-      lineHeight:  1.6,
+      lineHeight:  1.0,
       cursorBlink: true,
       cursorStyle: "block",
       allowTransparency: true,
