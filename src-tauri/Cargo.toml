@@ -1,0 +1,23 @@
+[package]
+name = "netwatch-terminal"
+version = "2.0.77"
+description = "NETWATCH Terminal — Cyberpunk 2077 desktop terminal app"
+authors = ["Héctor Oviedo Blasco <heo80@github>"]
+license = "MIT"
+repository = "https://github.com/HEO-80/netwatch-terminal"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["shell-open"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+
+[features]
+# This feature is used for production builds or when a dev server is not specified
+custom-protocol = ["tauri/custom-protocol"]

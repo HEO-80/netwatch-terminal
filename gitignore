@@ -1,0 +1,33 @@
+# Rust / Tauri
+target/
+Cargo.lock
+src-tauri/target/
+
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Build outputs
+src-tauri/target/release/bundle/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# Env
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
