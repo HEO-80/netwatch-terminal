@@ -1,59 +1,24 @@
-/* ══════════════════════════════════════════════════════════════════════════════
-   NETWATCH Terminal — Cyberpunk 2077 Palette
-   Migrated from themes/Cyberpunk2077.ps1 ($global:CY)
-   ══════════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   NETWATCH Terminal — Cyberpunk 2077 Palette v2
+   Angular, no border-radius, yellow + green fosforito
+   ══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Core palette ── */
-  --cy-yellow:       #FCEE0A;   /* CY_YELLOW  — títulos, prompt activo */
-  --cy-green:        #39FF14;   /* CY_GREEN   — éxito, neon accent */
-  --cy-magenta:      #D9027D;   /* CY_MAGENTA — acciones, comandos */
-  --cy-cyan:         #00F0FF;   /* CY_CYAN    — info, separadores */
-  --cy-white:        #E8E8E8;   /* CY_WHITE   — texto base */
-  --cy-dim:          #666666;   /* CY_DIM     — texto secundario */
-
-  /* ── Backgrounds ── */
-  --cy-bg:           #0b0a00;   /* Fondo principal */
-  --cy-bg2:          #0f0d00;   /* Titlebar, panels */
-  --cy-bg3:          #141200;   /* Hover states */
-
-  /* ── Borders ── */
-  --cy-border:       #3a3300;
-  --cy-border2:      #5a4e00;
-  --cy-border-glow:  rgba(252, 238, 10, 0.3);
-
-  /* ── Glows ── */
-  --cy-glow-yellow:  rgba(252, 238, 10, 0.15);
-  --cy-glow-green:   rgba(57, 255, 20, 0.15);
-  --cy-glow-magenta: rgba(217, 2, 125, 0.15);
-  --cy-glow-cyan:    rgba(0, 240, 255, 0.15);
-
-  /* ── Terminal specific ── */
-  --cy-prompt:       #b8ac08;   /* prompt symbol dim */
-  --cy-cmd:          #ffffff;   /* texto del comando escrito */
-  --cy-cursor:       #FCEE0A;
-  --cy-cursor-glow:  rgba(252, 238, 10, 0.7);
-
-  /* ── Status colors ── */
-  --cy-success:      #39FF14;
-  --cy-error:        #ff5555;
-  --cy-warn:         #ffcb6b;
-  --cy-info:         #00F0FF;
-
-  /* ── Sections (System Info columns) ── */
-  --cy-label:        #00F0FF;   /* etiquetas — Started, Shell, CPU... */
-  --cy-value:        #39FF14;   /* valores */
-  --cy-separator:    #D9027D;   /* | separadores */
-  --cy-shortcut-key: #FCEE0A;   /* (n), (o), (g)... */
-  --cy-shortcut-cmd: #39FF14;   /* comandos en shortcuts */
-
-  /* ── Typography ── */
+  --cy-yellow:      #FCEE0A;
+  --cy-green:       #39FF14;
+  --cy-magenta:     #D9027D;
+  --cy-cyan:        #00F0FF;
+  --cy-white:       #E8E8E8;
+  --cy-dim:         #555555;
+  --cy-bg:          #050500;
+  --cy-bg2:         #000000;
+  --cy-border:      #00F0FF;
+  --cy-border2:     #1a3a1a;
+  --cy-glow-green:  rgba(57, 255, 20, 0.12);
+  --cy-glow-cyan:   rgba(0, 240, 255, 0.12);
   --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-  --font-size-base: 13px;
-  --line-height: 22px;
 }
 
-/* ── Reset global ── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -68,19 +33,19 @@ html, body, #root {
   font-family: var(--font-mono);
 }
 
-/* ── Scrollbar global ── */
-::-webkit-scrollbar       { width: 4px; }
-::-webkit-scrollbar-track { background: var(--cy-bg); }
-::-webkit-scrollbar-thumb { background: var(--cy-border2); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: var(--cy-yellow); }
+/* Scrollbar */
+::-webkit-scrollbar       { width: 3px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #00F0FF; }
+::-webkit-scrollbar-thumb:hover { background: #FCEE0A; }
 
-/* ── Selección de texto ── */
+/* Selección */
 ::selection {
-  background: rgba(252, 238, 10, 0.2);
-  color: var(--cy-yellow);
+  background: rgba(57, 255, 20, 0.25);
+  color: #39FF14;
 }
 
-/* ── Scanlines effect ── */
+/* Scanlines */
 .cy-scanlines {
   position: fixed;
   inset: 0;
@@ -95,23 +60,29 @@ html, body, #root {
   );
 }
 
-/* ── Animations ── */
+/* Animations */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px var(--cy-border-glow); }
-  50%       { box-shadow: 0 0 20px var(--cy-border-glow), 0 0 40px rgba(252, 238, 10, 0.1); }
+@keyframes scanDown {
+  from { top: -10%; }
+  to   { top: 110%; }
 }
 
-@keyframes typing-cursor {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+/* Glitch scan line efecto en arranque */
+.cy-boot-scan {
+  position: fixed;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #00F0FF, transparent);
+  animation: scanDown 1.2s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 9998;
 }
