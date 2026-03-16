@@ -1,4 +1,4 @@
-export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", screen, onToggle }) {
+export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab, activeTabLabel }) {
 
   const handleClose = async () => {
     try {
@@ -14,90 +14,86 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
     } catch {}
   };
 
+  const handleMaximize = async () => {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const win = getCurrentWindow();
+      const isMax = await win.isMaximized();
+      isMax ? await win.unmaximize() : await win.maximize();
+    } catch {}
+  };
+
   return (
     <div
       data-tauri-drag-region
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        padding: "8px 16px",
+        display: "flex", alignItems: "center", gap: "12px",
+        padding: "0 16px",
         background: "#000000",
         borderBottom: "1px solid #00F0FF",
-        flexShrink: 0,
+        flexShrink: 0, height: "40px",
         userSelect: "none",
-        height: "42px",
-        cursor: "default",
       }}
     >
-      {/* macOS dots — NO drag region */}
-      <div style={{ display: "flex", gap: "6px" }} data-tauri-drag-region="false">
+      {/* Dots — NO drag */}
+      <div style={{ display: "flex", gap: "6px" }}>
         {[
-          { color: "#ff5555", action: handleClose },
-          { color: "#ffcb6b", action: handleMinimize },
-          { color: "#4ec994", action: null },
+          { color: "#ff5555", action: handleClose,    title: "Cerrar" },
+          { color: "#ffcb6b", action: handleMinimize, title: "Minimizar" },
+          { color: "#4ec994", action: handleMaximize, title: "Maximizar" },
         ].map((dot, i) => (
           <span
             key={i}
-            onClick={(e) => { e.stopPropagation(); dot.action?.(); }}
+            onClick={(e) => { e.stopPropagation(); dot.action(); }}
+            title={dot.title}
             style={{
-              width: 12, height: 12,
-              borderRadius: "50%",
-              background: dot.color,
-              cursor: dot.action ? "pointer" : "default",
-              display: "inline-block",
-              flexShrink: 0,
+              width: 12, height: 12, borderRadius: "50%",
+              background: dot.color, cursor: "pointer",
+              display: "inline-block", flexShrink: 0,
+              transition: "filter 0.15s",
             }}
+            onMouseOver={e => e.target.style.filter = "brightness(1.4)"}
+            onMouseOut={e => e.target.style.filter = "brightness(1)"}
           />
         ))}
       </div>
 
-      <div style={{ width: 1, height: 20, background: "#00F0FF", opacity: 0.3 }}/>
-      <span style={{ color: "#00F0FF", fontSize: "11px", opacity: 0.7 }}>▣</span>
+      <div style={{ width: 1, height: 18, background: "#1a1a1a" }}/>
 
-      {/* Title — drag region */}
+      {/* Icono */}
+      <span style={{ color: "#00F0FF", fontSize: "11px", opacity: 0.6 }}>▣</span>
+
+      {/* Título — drag region */}
       <span
         data-tauri-drag-region
         style={{
-          flex: 1,
-          textAlign: "center",
-          fontSize: "11px",
-          color: "#FCEE0A",
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          fontFamily: "var(--font-mono)",
-          fontWeight: 700,
+          flex: 1, textAlign: "center",
+          fontSize: "11px", color: "#FCEE0A",
+          letterSpacing: "0.18em", textTransform: "uppercase",
+          fontFamily: "var(--font-mono)", fontWeight: 700,
           cursor: "grab",
         }}
       >
         {title}
-        <span style={{ color: "#666", margin: "0 8px" }}>·</span>
+        <span style={{ color: "#333", margin: "0 8px" }}>·</span>
         <span style={{ color: "#39FF14" }}>{subtitle}</span>
+        {activeTabLabel && (
+          <span style={{ color: "#444", marginLeft: 12, fontSize: "10px", fontWeight: 400 }}>
+            — {activeTabLabel}
+          </span>
+        )}
       </span>
 
-      {/* Toggle button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        style={{
-          background: "transparent",
-          border: "1px solid #00F0FF",
-          color: "#00F0FF",
-          fontFamily: "var(--font-mono)",
-          fontSize: "10px",
-          letterSpacing: "0.1em",
-          padding: "3px 10px",
-          cursor: "pointer",
-          textTransform: "uppercase",
-        }}
-        onMouseOver={e => { e.target.style.background = "#00F0FF"; e.target.style.color = "#000"; }}
-        onMouseOut={e => { e.target.style.background = "transparent"; e.target.style.color = "#00F0FF"; }}
-      >
-        {screen === "dashboard" ? "▸ terminal" : "▣ dashboard"}
-      </button>
-
-      <span style={{ fontSize: "10px", color: "#333", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
-        Alt+T · ESC
-      </span>
+      {/* Hints teclado */}
+      <div style={{
+        display: "flex", gap: "10px", alignItems: "center",
+        fontFamily: "var(--font-mono)", fontSize: "9px", color: "#333",
+      }}>
+        <span><span style={{ color: "#FCEE0A" }}>Alt+T</span> nueva PS</span>
+        <span><span style={{ color: "#FCEE0A" }}>Alt+D</span> dashboard</span>
+        <span><span style={{ color: "#FCEE0A" }}>Alt+W</span> cerrar tab</span>
+        <span><span style={{ color: "#FCEE0A" }}>Alt+1-9</span> saltar</span>
+      </div>
     </div>
   );
 }

@@ -1,51 +1,59 @@
-/* ══════════════════════════════════════════════════════════════
-   NETWATCH Terminal — Cyberpunk 2077 Palette v2
-   Angular, no border-radius, yellow + green fosforito
-   ══════════════════════════════════════════════════════════════ */
+/* NETWATCH Terminal — themes.css v3 fix */
 
 :root {
-  --cy-yellow:      #FCEE0A;
-  --cy-green:       #39FF14;
-  --cy-magenta:     #D9027D;
-  --cy-cyan:        #00F0FF;
-  --cy-white:       #E8E8E8;
-  --cy-dim:         #555555;
-  --cy-bg:          #050500;
-  --cy-bg2:         #000000;
-  --cy-border:      #00F0FF;
-  --cy-border2:     #1a3a1a;
-  --cy-glow-green:  rgba(57, 255, 20, 0.12);
-  --cy-glow-cyan:   rgba(0, 240, 255, 0.12);
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --cy-yellow:  #FCEE0A;
+  --cy-green:   #39FF14;
+  --cy-magenta: #D9027D;
+  --cy-cyan:    #00F0FF;
+  --cy-bg:      #050500;
+  --cy-bg2:     #000000;
+  --cy-border:  #00F0FF;
+  --cy-dim:     #555555;
+  --font-mono:  'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
 }
 
+/* ── Reset global — SIN border-radius en ningún sitio ── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  border-radius: 0 !important;
 }
 
 html, body, #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: transparent;
+  background: #050500;
   font-family: var(--font-mono);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar       { width: 3px; }
-::-webkit-scrollbar-track { background: #000; }
-::-webkit-scrollbar-thumb { background: #00F0FF; }
-::-webkit-scrollbar-thumb:hover { background: #FCEE0A; }
+/* ── Scrollbar CYAN ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #00F0FF;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FCEE0A;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00F0FF #000;
+}
 
-/* Selección */
+/* ── Selección ── */
 ::selection {
-  background: rgba(57, 255, 20, 0.25);
+  background: rgba(57, 255, 20, 0.2);
   color: #39FF14;
 }
 
-/* Scanlines */
+/* ── Scanlines ── */
 .cy-scanlines {
   position: fixed;
   inset: 0;
@@ -60,29 +68,34 @@ html, body, #root {
   );
 }
 
-/* Animations */
+/* ── Animaciones ── */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes fadeInLine {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes scanDown {
-  from { top: -10%; }
-  to   { top: 110%; }
+@keyframes nwScanDown {
+  from { top: 0; opacity: 0.8; }
+  to   { top: 100%; opacity: 0; }
 }
 
-/* Glitch scan line efecto en arranque */
-.cy-boot-scan {
+/* Línea de scan al arrancar */
+.nw-boot-scan {
   position: fixed;
   left: 0; right: 0;
-  height: 2px;
+  height: 1px;
   background: linear-gradient(to right, transparent, #00F0FF, transparent);
-  animation: scanDown 1.2s ease-in-out forwards;
+  animation: nwScanDown 1.4s ease-in-out forwards;
   pointer-events: none;
   z-index: 9998;
+}
+
+/* Botones — sin border-radius siempre */
+button {
+  border-radius: 0 !important;
 }

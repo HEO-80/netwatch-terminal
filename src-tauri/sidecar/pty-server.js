@@ -1,41 +1,52 @@
-// pty-server.js
-// Servidor WebSocket que conecta xterm.js con PowerShell real via node-pty
-// Tauri lo lanza como sidecar al arrancar la app
+// pty-server.js v2
+// Multi-sesión: cada WebSocket connection lanza su propia shell
+// Shell seleccionable por query param: ws://127.0.0.1:7777?shell=pwsh.exe
 
 const { WebSocketServer } = require("ws");
-const pty = require("node-pty");
-const os  = require("os");
-const path = require("path");
+const { URL }             = require("url");
+const pty                 = require("node-pty");
+const os                  = require("os");
 
 const PORT = 7777;
 const wss  = new WebSocketServer({ port: PORT, host: "127.0.0.1" });
 
-console.log(`[NETWATCH PTY] Servidor escuchando en ws://127.0.0.1:${PORT}`);
+console.log(`[NETWATCH PTY] v2 — Servidor en ws://127.0.0.1:${PORT}`);
 
-wss.on("connection", (ws) => {
-  console.log("[NETWATCH PTY] Cliente conectado");
+const SHELLS = {
+  "pwsh.exe": { exe: "pwsh.exe",  args: [],         env: { TemaActivo: "Cyberpunk2077" } },
+  "wsl.exe":  { exe: "wsl.exe",   args: [],         env: {} },
+  "cmd.exe":  { exe: "cmd.exe",   args: [],         env: {} },
+};
 
-  // ── Arrancar PowerShell con el profile Cyberpunk2077 ──────────────────
-  const shell = "pwsh.exe";
+wss.on("connection", (ws, req) => {
+  // Parsear shell del query param
+  const params   = new URL(req.url, "http://localhost").searchParams;
+  const shellKey = params.get("shell") || "pwsh.exe";
+  const tabId    = params.get("id")    || "?";
+  const config   = SHELLS[shellKey] || SHELLS["pwsh.exe"];
 
-  // Pasar TemaActivo para que profile.ps1 cargue Cyberpunk2077
-  const env = {
-    ...process.env,
-    TemaActivo: "Cyberpunk2077",
-    TERM: "xterm-256color",
-  };
+  console.log(`[NETWATCH PTY] Tab ${tabId} conectado — shell: ${shellKey}`);
 
-  const ptyProcess = pty.spawn(shell, [], {
-    name: "xterm-256color",
-    cols: 120,
-    rows: 30,
-    cwd: os.homedir(),
-    env,
-    // Windows: usar ConPTY para compatibilidad total con Oh My Posh
-    useConpty: false,
-  });
+  const env = { ...process.env, TERM: "xterm-256color", ...config.env };
 
-  // ── PTY → WebSocket (output de PowerShell al frontend) ───────────────
+  let ptyProcess;
+  try {
+    ptyProcess = pty.spawn(config.exe, config.args, {
+      name:      "xterm-256color",
+      cols:      120,
+      rows:      30,
+      cwd:       os.homedir(),
+      env,
+      useConpty: false,
+    });
+  } catch (err) {
+    console.error(`[NETWATCH PTY] Error arrancando ${shellKey}:`, err.message);
+    ws.send(JSON.stringify({ type: "output", data: `\r\n\x1b[31mError arrancando ${shellKey}: ${err.message}\x1b[0m\r\n` }));
+    ws.close();
+    return;
+  }
+
+  // PTY → WS
   ptyProcess.onData((data) => {
     if (ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify({ type: "output", data }));
@@ -43,49 +54,36 @@ wss.on("connection", (ws) => {
   });
 
   ptyProcess.onExit(({ exitCode }) => {
-    console.log(`[NETWATCH PTY] Shell cerrada con código ${exitCode}`);
+    console.log(`[NETWATCH PTY] Tab ${tabId} shell cerrada (${exitCode})`);
     if (ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify({ type: "exit", code: exitCode }));
-      ws.close();
+      ws.close(1000);
     }
   });
 
-  // ── WebSocket → PTY (input del frontend a PowerShell) ─────────────────
+  // WS → PTY
   ws.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw.toString());
-
       switch (msg.type) {
-        // Teclas / caracteres del usuario
-        case "input":
-          ptyProcess.write(msg.data);
-          break;
-
-        // Redimensionar terminal (cuando el usuario cambia tamaño ventana)
+        case "input":  ptyProcess.write(msg.data); break;
         case "resize":
-          ptyProcess.resize(
-            Math.max(1, msg.cols),
-            Math.max(1, msg.rows)
-          );
+          ptyProcess.resize(Math.max(1, msg.cols), Math.max(1, msg.rows));
           break;
-
-        // Ping keepalive
-        case "ping":
-          ws.send(JSON.stringify({ type: "pong" }));
-          break;
+        case "ping": ws.send(JSON.stringify({ type: "pong" })); break;
       }
     } catch (e) {
-      console.error("[NETWATCH PTY] Error parseando mensaje:", e.message);
+      console.error("[NETWATCH PTY] Error:", e.message);
     }
   });
 
   ws.on("close", () => {
-    console.log("[NETWATCH PTY] Cliente desconectado — matando shell");
+    console.log(`[NETWATCH PTY] Tab ${tabId} desconectado — matando shell`);
     try { ptyProcess.kill(); } catch {}
   });
 
   ws.on("error", (err) => {
-    console.error("[NETWATCH PTY] WebSocket error:", err.message);
+    console.error(`[NETWATCH PTY] WS error tab ${tabId}:`, err.message);
   });
 });
 
@@ -94,11 +92,5 @@ wss.on("error", (err) => {
   process.exit(1);
 });
 
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("[NETWATCH PTY] SIGTERM recibido — cerrando");
-  wss.close(() => process.exit(0));
-});
-process.on("SIGINT", () => {
-  wss.close(() => process.exit(0));
-});
+process.on("SIGTERM", () => { wss.close(() => process.exit(0)); });
+process.on("SIGINT",  () => { wss.close(() => process.exit(0)); });

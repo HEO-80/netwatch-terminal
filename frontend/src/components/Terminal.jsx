@@ -9,36 +9,38 @@ const XTERM_THEME = {
   cursor:              "#FCEE0A",
   cursorAccent:        "#050500",
   selectionBackground: "rgba(57, 255, 20, 0.2)",
-  black:         "#000000",
-  red:           "#ff5555",
-  green:         "#39FF14",
-  yellow:        "#FCEE0A",
-  blue:          "#00F0FF",
-  magenta:       "#D9027D",
-  cyan:          "#00F0FF",
-  white:         "#E8E8E8",
-  brightBlack:   "#555555",
-  brightRed:     "#ff7777",
-  brightGreen:   "#57FF33",
-  brightYellow:  "#FFF44C",
-  brightBlue:    "#33F3FF",
-  brightMagenta: "#FF40A0",
-  brightCyan:    "#33F3FF",
-  brightWhite:   "#ffffff",
+  black:   "#000000", red:     "#ff5555", green:   "#39FF14",
+  yellow:  "#FCEE0A", blue:    "#00F0FF", magenta: "#D9027D",
+  cyan:    "#00F0FF", white:   "#E8E8E8",
+  brightBlack: "#555", brightRed: "#ff7777", brightGreen: "#57FF33",
+  brightYellow: "#FFF44C", brightBlue: "#33F3FF",
+  brightMagenta: "#FF40A0", brightCyan: "#33F3FF", brightWhite: "#ffffff",
 };
 
-const WS_URL = "ws://127.0.0.1:7777";
+// Cada tab tiene su propia conexión WS al PTY server
+// El servidor distingue las sesiones por el parámetro ?shell=
+const WS_BASE = "ws://127.0.0.1:7777";
 
-export default function TerminalPane({ active, onBack }) {
+const SHELL_LABELS = {
+  "pwsh.exe": { name: "PowerShell", color: "#00F0FF" },
+  "wsl.exe":  { name: "WSL/bash",   color: "#39FF14" },
+  "cmd.exe":  { name: "CMD",        color: "#FCEE0A" },
+};
+
+export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
   const containerRef = useRef(null);
   const termRef      = useRef(null);
   const fitRef       = useRef(null);
   const wsRef        = useRef(null);
   const reconnTimer  = useRef(null);
   const retries      = useRef(0);
+  const initialized  = useRef(false);
+
+  const shellInfo = SHELL_LABELS[shell] || SHELL_LABELS["pwsh.exe"];
 
   useEffect(() => {
-    if (!containerRef.current || termRef.current) return;
+    if (!containerRef.current || initialized.current) return;
+    initialized.current = true;
 
     const term = new Terminal({
       theme:            XTERM_THEME,
@@ -49,7 +51,7 @@ export default function TerminalPane({ active, onBack }) {
       cursorStyle:      "block",
       allowTransparency: true,
       scrollback:       10000,
-      windowsMode:      true,
+      windowsMode:      shell !== "wsl.exe",
     });
 
     const fitAddon   = new FitAddon();
@@ -62,15 +64,12 @@ export default function TerminalPane({ active, onBack }) {
     termRef.current = term;
     fitRef.current  = fitAddon;
 
-    // Input → WS
     term.onData((data) => send({ type: "input", data }));
     term.onResize(({ cols, rows }) => send({ type: "resize", cols, rows }));
 
-    // ResizeObserver
     const ro = new ResizeObserver(() => fitAddon.fit());
     ro.observe(containerRef.current);
 
-    // Conectar WS
     connect(term, fitAddon);
 
     return () => {
@@ -79,11 +78,13 @@ export default function TerminalPane({ active, onBack }) {
       if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close(); }
       term.dispose();
       termRef.current = null;
+      initialized.current = false;
     };
   }, []);
 
+  // Focus + fit cuando se activa
   useEffect(() => {
-    if (active && termRef.current) {
+    if (active) {
       setTimeout(() => {
         fitRef.current?.fit();
         termRef.current?.focus();
@@ -97,25 +98,27 @@ export default function TerminalPane({ active, onBack }) {
   }, []);
 
   const connect = useCallback((term, fitAddon) => {
+    const wsUrl = `${WS_BASE}?shell=${encodeURIComponent(shell)}&id=${tabId}`;
+
     if (retries.current === 0) {
-      term.writeln("\x1b[38;2;0;240;255m[NETWATCH]\x1b[0m Conectando a PowerShell...");
+      const c = shellInfo.color;
+      term.writeln(`\x1b[38;2;0;240;255m[NETWATCH]\x1b[0m Conectando a \x1b[${c}m${shellInfo.name}\x1b[0m...`);
     }
 
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
       retries.current = 0;
-      term.writeln("\x1b[32m✓ Conectado\x1b[0m");
-      const { cols, rows } = term;
-      send({ type: "resize", cols, rows });
+      term.writeln(`\x1b[32m✓ Conectado — ${shellInfo.name}\x1b[0m`);
+      send({ type: "resize", cols: termRef.current.cols, rows: termRef.current.rows });
     };
 
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === "output") term.write(msg.data);
-        if (msg.type === "exit") term.writeln(`\r\n\x1b[33m[Shell cerrada: ${msg.code}]\x1b[0m`);
+        if (msg.type === "exit")   term.writeln(`\r\n\x1b[33m[Shell cerrada: código ${msg.code}]\x1b[0m`);
       } catch {}
     };
 
@@ -126,28 +129,30 @@ export default function TerminalPane({ active, onBack }) {
         term.writeln(`\r\n\x1b[33m[Reconectando ${retries.current}/5...]\x1b[0m`);
         reconnTimer.current = setTimeout(() => connect(term, fitAddon), 2000);
       } else {
-        term.writeln("\r\n\x1b[31m✗ No se pudo conectar al PTY server.\x1b[0m");
+        term.writeln("\r\n\x1b[31m✗ Sin conexión al PTY server.\x1b[0m");
       }
     };
-  }, [send]);
+  }, [shell, tabId, shellInfo]);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#050500", overflow: "hidden" }}>
-      {/* Barra info */}
+      {/* Info bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: "10px",
         padding: "3px 12px", background: "#000",
         borderBottom: "1px solid #111", flexShrink: 0,
-        fontFamily: "var(--font-mono)", fontSize: "10px", color: "#444",
-        userSelect: "none",
+        fontFamily: "var(--font-mono)", fontSize: "10px",
+        color: "#444", userSelect: "none",
       }}>
-        <span style={{ color: "#39FF14" }}>●</span>
-        <span>powershell · netwatch@HEO-80</span>
+        <span style={{ color: shellInfo.color, fontSize: "8px" }}>●</span>
+        <span style={{ color: shellInfo.color }}>{shellInfo.name}</span>
+        <span>·</span>
+        <span>netwatch@HEO-80</span>
         <div style={{ flex: 1 }}/>
         <span style={{ color: "#222" }}>ws://127.0.0.1:7777</span>
       </div>
 
-      {/* xterm container */}
+      {/* xterm */}
       <div
         ref={containerRef}
         style={{ flex: 1, padding: "6px 4px 4px 8px", overflow: "hidden" }}
@@ -163,11 +168,12 @@ export default function TerminalPane({ active, onBack }) {
       }}>
         <span><span style={{ color: "#FCEE0A" }}>Tab</span> completar</span>
         <span><span style={{ color: "#FCEE0A" }}>→</span> sugerencia</span>
-        <span><span style={{ color: "#FCEE0A" }}>Ctrl+T</span> fzf</span>
-        <span><span style={{ color: "#FCEE0A" }}>Ctrl+R</span> historial</span>
-        <span><span style={{ color: "#FCEE0A" }}>z dir</span> saltar</span>
+        <span><span style={{ color: "#FCEE0A" }}>Ctrl+T</span> fzf archivos</span>
+        <span><span style={{ color: "#FCEE0A" }}>Ctrl+R</span> fzf historial</span>
+        <span><span style={{ color: "#FCEE0A" }}>z dir</span> saltar carpeta</span>
         <div style={{ flex: 1 }}/>
-        <span><span style={{ color: "#555" }}>Alt+T</span> dashboard</span>
+        <span><span style={{ color: "#555" }}>Alt+T</span> nueva PS</span>
+        <span><span style={{ color: "#555" }}>Alt+D</span> dashboard</span>
       </div>
     </div>
   );
