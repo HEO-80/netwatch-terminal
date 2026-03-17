@@ -1,101 +1,87 @@
-/* NETWATCH Terminal — themes.css v3 fix */
+/* ══════════════════════════════════════════════════════════════════════════════
+   NETWATCH Terminal — Color System v4
+
+   PALETA ORIGINAL:
+   #FCEE0A  Yellow  → identidad NETWATCH, títulos, highlights máximos
+   #39FF14  Green   → éxito, bash/linux, confirmaciones
+   #00F0FF  Cyan    → rutas, info, CMD shell marker
+   #D9027D  Magenta → git, acciones, PS shell marker
+   #ff5555  Red     → solo errores
+   #E8E8E8  White   → texto base normal
+   #546E7A  Gray    → sugerencias, texto dim
+   #080700  BG      → fondo original
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --cy-yellow:  #FCEE0A;
-  --cy-green:   #39FF14;
-  --cy-magenta: #D9027D;
-  --cy-cyan:    #00F0FF;
-  --cy-bg:      #050500;
-  --cy-bg2:     #000000;
-  --cy-border:  #00F0FF;
-  --cy-dim:     #555555;
-  --font-mono:  'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+  --nw-yellow:   #FCEE0A;
+  --nw-green:    #39FF14;
+  --nw-cyan:     #00F0FF;
+  --nw-magenta:  #D9027D;
+  --nw-red:      #ff5555;
+  --nw-white:    #E8E8E8;
+  --nw-gray:     #546E7A;
+  --nw-dim:      #2a3a3a;
+  --nw-bg:       #080700;
+  --nw-bg2:      #0b0a00;
+  --nw-border:   #00F0FF;
+  --nw-border2:  #1a1a00;
+  --font-mono: 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
 }
 
-/* ── Reset global — SIN border-radius en ningún sitio ── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  border-radius: 0 !important;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0 !important; }
 
 html, body, #root {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #050500;
-  font-family: var(--font-mono);
+  width: 100%; height: 100%; overflow: hidden;
+  background: var(--nw-bg); font-family: var(--font-mono); color: var(--nw-white);
 }
 
-/* ── Scrollbar CYAN ── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: #000;
-}
-::-webkit-scrollbar-thumb {
-  background: #00F0FF;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #FCEE0A;
-}
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #00F0FF #000;
-}
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--nw-bg); }
+::-webkit-scrollbar-thumb { background: var(--nw-cyan); }
+::-webkit-scrollbar-thumb:hover { background: var(--nw-yellow); }
+* { scrollbar-width: thin; scrollbar-color: var(--nw-cyan) var(--nw-bg); }
 
-/* ── Selección ── */
-::selection {
-  background: rgba(57, 255, 20, 0.2);
-  color: #39FF14;
-}
+::selection { background: rgba(57,255,20,0.2); color: var(--nw-green); }
 
-/* ── Scanlines ── */
 .cy-scanlines {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 3px,
-    rgba(0, 0, 0, 0.04) 3px,
-    rgba(0, 0, 0, 0.04) 4px
-  );
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
 }
 
-/* ── Animaciones ── */
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes fadeInLine { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+
+@keyframes nw-glitch-1 {
+  0%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)}
+  50%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)}
+  100%{clip-path:inset(40% 0 40% 0);transform:translate(0,0)}
+}
+@keyframes nw-glitch-2 {
+  0%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)}
+  50%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)}
+  100%{clip-path:inset(40% 0 40% 0);transform:translate(0,0)}
 }
 
-@keyframes fadeInLine {
-  from { opacity: 0; transform: translateX(-6px); }
-  to   { opacity: 1; transform: translateX(0); }
+.nw-glitch { position: relative; display: inline-block; }
+.nw-glitch::before, .nw-glitch::after {
+  content: attr(data-text); position: absolute; top:0; left:0; width:100%; height:100%; opacity:0;
 }
+.nw-glitch:hover::before { color:var(--nw-cyan); opacity:0.6; animation: nw-glitch-1 0.25s steps(2) both; }
+.nw-glitch:hover::after  { color:var(--nw-magenta); opacity:0.6; animation: nw-glitch-2 0.25s steps(2) both; }
 
-@keyframes nwScanDown {
-  from { top: 0; opacity: 0.8; }
-  to   { top: 100%; opacity: 0; }
+.nw-btn-fill { position:relative; overflow:hidden; transition:color 0.2s; }
+.nw-btn-fill::before {
+  content:""; position:absolute; inset:0; background:var(--nw-yellow);
+  transform:translateX(-101%); transition:transform 0.25s cubic-bezier(0.4,0,0.2,1); z-index:0;
 }
+.nw-btn-fill:hover::before { transform:translateX(0); }
+.nw-btn-fill:hover { color:#080700 !important; }
+.nw-btn-fill > * { position:relative; z-index:1; }
 
-/* Línea de scan al arrancar */
+@keyframes nw-scan-down { from{top:0;opacity:0.5} to{top:100%;opacity:0} }
 .nw-boot-scan {
-  position: fixed;
-  left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, #00F0FF, transparent);
-  animation: nwScanDown 1.4s ease-in-out forwards;
-  pointer-events: none;
-  z-index: 9998;
-}
-
-/* Botones — sin border-radius siempre */
-button {
-  border-radius: 0 !important;
+  position:fixed; left:0; right:0; height:1px;
+  background:linear-gradient(to right,transparent,var(--nw-cyan),transparent);
+  animation: nw-scan-down 1.4s ease-in-out forwards;
+  pointer-events:none; z-index:9998;
 }
