@@ -28,12 +28,12 @@
       "csp": null
     }
   },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-
-    ]
-    
-  }
+"bundle": {
+  "active": true,
+  "targets": "all",
+  "icon": [],
+  "resources": [
+    "sidecar/netwatch-pty-server.exe"
+  ]
+}
 }
