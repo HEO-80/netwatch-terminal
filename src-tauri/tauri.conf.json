@@ -1,58 +1,14 @@
 {
+  "productName": "NETWATCH Terminal",
+  "version": "2.0.77",
+  "identifier": "io.heo80.netwatch",
   "build": {
     "beforeDevCommand": "cd frontend && npm run dev",
     "beforeBuildCommand": "cd frontend && npm run build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../frontend/dist"
   },
-  "package": {
-    "productName": "NETWATCH Terminal",
-    "version": "2.0.77"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "execute": true,
-        "sidecar": false,
-        "open": true
-      },
-      "window": {
-        "all": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "io.heo80.netwatch",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      },
-      "nsis": {
-        "displayLanguageSelector": false,
-        "installerIcon": "icons/icon.ico",
-        "headerImage": "icons/installer-header.bmp",
-        "sidebarImage": "icons/installer-sidebar.bmp",
-        "license": null,
-        "installMode": "currentUser"
-      }
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
-    },
+  "app": {
     "windows": [
       {
         "label": "main",
@@ -65,9 +21,19 @@
         "fullscreen": false,
         "decorations": false,
         "transparent": true,
-        "center": true,
-        "focus": true
+        "center": true
       }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+
     ]
+    
   }
 }

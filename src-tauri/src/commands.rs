@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use tauri::Window;
+use tauri::{AppHandle, Manager};
 
 // ── System Info ───────────────────────────────────────────────────────────────
 
@@ -181,22 +181,23 @@ pub fn ssh_beelink(host: String, port: u16) -> bool {
 // ── Window controls ───────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn minimize_window(window: Window) {
-    window.minimize().ok();
+pub fn minimize_window(app: AppHandle) {
+    app.get_webview_window("main").unwrap().minimize().ok();
 }
 
 #[tauri::command]
-pub fn maximize_window(window: Window) {
-    window.maximize().ok();
+pub fn maximize_window(app: AppHandle) {
+    app.get_webview_window("main").unwrap().maximize().ok();
 }
 
 #[tauri::command]
-pub fn close_window(window: Window) {
-    window.close().ok();
+pub fn close_window(app: AppHandle) {
+    app.get_webview_window("main").unwrap().close().ok();
 }
 
 #[tauri::command]
-pub fn toggle_fullscreen(window: Window) {
-    let is_fullscreen = window.is_fullscreen().unwrap_or(false);
-    window.set_fullscreen(!is_fullscreen).ok();
+pub fn toggle_fullscreen(app: AppHandle) {
+    let win = app.get_webview_window("main").unwrap();
+    let is_fullscreen = win.is_fullscreen().unwrap_or(false);
+    win.set_fullscreen(!is_fullscreen).ok();
 }

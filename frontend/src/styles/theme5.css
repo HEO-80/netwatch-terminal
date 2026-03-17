@@ -1,0 +1,101 @@
+/* NETWATCH Terminal — themes.css v3 fix */
+
+:root {
+  --cy-yellow:  #FCEE0A;
+  --cy-green:   #39FF14;
+  --cy-magenta: #D9027D;
+  --cy-cyan:    #00F0FF;
+  --cy-bg:      #050500;
+  --cy-bg2:     #000000;
+  --cy-border:  #00F0FF;
+  --cy-dim:     #555555;
+  --font-mono:  'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* ── Reset global — SIN border-radius en ningún sitio ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 0 !important;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050500;
+  font-family: var(--font-mono);
+}
+
+/* ── Scrollbar CYAN ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #00F0FF;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FCEE0A;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00F0FF #000;
+}
+
+/* ── Selección ── */
+::selection {
+  background: rgba(57, 255, 20, 0.2);
+  color: #39FF14;
+}
+
+/* ── Scanlines ── */
+.cy-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+}
+
+/* ── Animaciones ── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fadeInLine {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes nwScanDown {
+  from { top: 0; opacity: 0.8; }
+  to   { top: 100%; opacity: 0; }
+}
+
+/* Línea de scan al arrancar */
+.nw-boot-scan {
+  position: fixed;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #00F0FF, transparent);
+  animation: nwScanDown 1.4s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Botones — sin border-radius siempre */
+button {
+  border-radius: 0 !important;
+}

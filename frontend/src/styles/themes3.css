@@ -1,0 +1,88 @@
+/* ══════════════════════════════════════════════════════════════
+   NETWATCH Terminal — Cyberpunk 2077 Palette v2
+   Angular, no border-radius, yellow + green fosforito
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  --cy-yellow:      #FCEE0A;
+  --cy-green:       #39FF14;
+  --cy-magenta:     #D9027D;
+  --cy-cyan:        #00F0FF;
+  --cy-white:       #E8E8E8;
+  --cy-dim:         #555555;
+  --cy-bg:          #050500;
+  --cy-bg2:         #000000;
+  --cy-border:      #00F0FF;
+  --cy-border2:     #1a3a1a;
+  --cy-glow-green:  rgba(57, 255, 20, 0.12);
+  --cy-glow-cyan:   rgba(0, 240, 255, 0.12);
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--font-mono);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 3px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #00F0FF; }
+::-webkit-scrollbar-thumb:hover { background: #FCEE0A; }
+
+/* Selección */
+::selection {
+  background: rgba(57, 255, 20, 0.25);
+  color: #39FF14;
+}
+
+/* Scanlines */
+.cy-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+}
+
+/* Animations */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scanDown {
+  from { top: -10%; }
+  to   { top: 110%; }
+}
+
+/* Glitch scan line efecto en arranque */
+.cy-boot-scan {
+  position: fixed;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #00F0FF, transparent);
+  animation: scanDown 1.2s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 9998;
+}
