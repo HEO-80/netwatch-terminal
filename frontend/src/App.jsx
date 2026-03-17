@@ -4,6 +4,7 @@ import Dashboard from "./components/Dashboard";
 import TerminalPane from "./components/Terminal";
 import SidePanel from "./components/SidePanel";
 import InfraPanel from "./components/InfraPanel";
+import AIPanel from "./components/AIPanel";
 import "./styles/themes.css";
 
 let tabIdCounter = 1;
@@ -65,7 +66,7 @@ function BootScreen({ onDone }) {
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
       justifyContent: "center", padding: "0 60px",
-      background: "#050500", position: "relative",
+      background: "#080700", position: "relative",
       opacity: finished ? 0 : 1, transition: "opacity 0.35s ease",
     }}>
       <div>
@@ -78,7 +79,8 @@ function BootScreen({ onDone }) {
           <span style={{ display: "inline-block", width: 9, height: 14, background: "#FCEE0A", verticalAlign: "middle", marginLeft: 4, animation: "blink 1s step-end infinite" }}/>
         )}
       </div>
-      <button onClick={skip} style={{ position: "absolute", bottom: 40, right: 40, background: "transparent", border: "1px solid #333", color: "#555", fontFamily: "var(--font-mono)", fontSize: "10px", padding: "4px 14px", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+      <button onClick={skip}
+        style={{ position: "absolute", bottom: 40, right: 40, background: "transparent", border: "1px solid #333", color: "#555", fontFamily: "var(--font-mono)", fontSize: "10px", padding: "4px 14px", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
         onMouseOver={e => { e.target.style.borderColor = "#FCEE0A"; e.target.style.color = "#FCEE0A"; }}
         onMouseOut={e => { e.target.style.borderColor = "#333"; e.target.style.color = "#555"; }}
       >SKIP ▸</button>
@@ -87,11 +89,12 @@ function BootScreen({ onDone }) {
 }
 
 export default function App() {
-  const [booting,     setBooting]     = useState(true);
-  const [tabs,        setTabs]        = useState(() => [createTab("dashboard"), createTab("powershell")]);
-  const [activeTab,   setActiveTab]   = useState(1);
-  const [panelOpen,   setPanelOpen]   = useState(false);  // Alt+P — crypto/MEV (derecha)
-  const [infraOpen,   setInfraOpen]   = useState(false);  // Alt+I — infra (izquierda)
+  const [booting,   setBooting]   = useState(true);
+  const [tabs,      setTabs]      = useState(() => [createTab("dashboard"), createTab("powershell")]);
+  const [activeTab, setActiveTab] = useState(1);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [infraOpen, setInfraOpen] = useState(false);
+  const [aiOpen,    setAiOpen]    = useState(false);
 
   const activeTabObj = tabs.find(t => t.id === activeTab) || tabs[0];
 
@@ -105,19 +108,14 @@ export default function App() {
     const handler = (e) => {
       if (!e.altKey) return;
       const key = e.key.toLowerCase();
-      if (key === "p") { e.preventDefault(); setPanelOpen(o => !o); }
-      else if (key === "i") { e.preventDefault(); setInfraOpen(o => !o); }
-      else if (key === "t") { e.preventDefault(); addTab("powershell"); }
-      else if (key === "w") { e.preventDefault(); closeTab(activeTab); }
-      else if (key === "d") {
-        e.preventDefault();
-        const dash = tabs.find(t => t.type === "dashboard");
-        if (dash) setActiveTab(dash.id);
-      } else if (e.key >= "1" && e.key <= "9") {
-        e.preventDefault();
-        const idx = parseInt(e.key) - 1;
-        if (tabs[idx]) setActiveTab(tabs[idx].id);
-      }
+      e.preventDefault();
+      if      (key === "a") setAiOpen(o => !o);
+      else if (key === "p") setPanelOpen(o => !o);
+      else if (key === "i") setInfraOpen(o => !o);
+      else if (key === "t") addTab("powershell");
+      else if (key === "w") closeTab(activeTab);
+      else if (key === "d") { const dash = tabs.find(t => t.type === "dashboard"); if (dash) setActiveTab(dash.id); }
+      else if (e.key >= "1" && e.key <= "9") { const idx = parseInt(e.key) - 1; if (tabs[idx]) setActiveTab(tabs[idx].id); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -144,12 +142,12 @@ export default function App() {
     <div style={{
       display: "flex", flexDirection: "column",
       width: "100vw", height: "100vh",
-      background: "#050500", border: "1px solid #00F0FF",
+      background: "#080700", border: "1px solid #00F0FF",
       overflow: "hidden", position: "relative",
     }}>
       <div className="cy-scanlines"/>
 
-      {/* Corner marks */}
+      {/* Corner marks magenta */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 100 }}>
         {[
           { top: 6,    left: 6,   borderTop: "2px solid #D9027D",    borderLeft:  "2px solid #D9027D" },
@@ -167,40 +165,50 @@ export default function App() {
         activeTabLabel={booting ? "BOOTING..." : activeTabObj?.label}
         panelOpen={panelOpen}
         infraOpen={infraOpen}
+        aiOpen={aiOpen}
         onTogglePanel={() => setPanelOpen(o => !o)}
         onToggleInfra={() => setInfraOpen(o => !o)}
+        onToggleAi={() => setAiOpen(o => !o)}
       />
 
-      {/* Fila: InfraPanel | Contenido | SidePanel */}
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
+      {/* ══ ZONA PRINCIPAL — columna vertical ══ */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
-        {/* Panel INFRA — izquierda, borde magenta */}
-        <InfraPanel open={infraOpen} />
+        {/* AI Panel — arriba, se despliega hacia abajo */}
+        <AIPanel open={aiOpen} height={300} />
 
-        {/* Contenido principal */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
-          {booting ? (
-            <BootScreen onDone={handleBootDone} />
-          ) : (
-            tabs.map(tab => (
-              <div key={tab.id} style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column",
-                visibility:    tab.id === activeTab ? "visible" : "hidden",
-                pointerEvents: tab.id === activeTab ? "auto" : "none",
-                zIndex:        tab.id === activeTab ? 1 : 0,
-              }}>
-                {tab.type === "dashboard"
-                  ? <Dashboard onLaunchTerminal={() => addTab("powershell")} />
-                  : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} />
-                }
-              </div>
-            ))
-          )}
+        {/* Fila horizontal: INFRA | contenido | CRYPTO */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
+
+          {/* Panel INFRA izquierda */}
+          <InfraPanel open={infraOpen} />
+
+          {/* Contenido central */}
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+            {booting ? (
+              <BootScreen onDone={handleBootDone} />
+            ) : (
+              tabs.map(tab => (
+                <div key={tab.id} style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column",
+                  visibility:    tab.id === activeTab ? "visible" : "hidden",
+                  pointerEvents: tab.id === activeTab ? "auto" : "none",
+                  zIndex:        tab.id === activeTab ? 1 : 0,
+                }}>
+                  {tab.type === "dashboard"
+                    ? <Dashboard onLaunchTerminal={() => addTab("powershell")} />
+                    : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} />
+                  }
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Panel CRYPTO derecha */}
+          <SidePanel open={panelOpen} />
+
         </div>
-
-        {/* Panel CRYPTO/MEV — derecha, borde cyan */}
-        <SidePanel open={panelOpen} />
       </div>
 
       {/* TabBar */}
@@ -208,33 +216,32 @@ export default function App() {
         <TabBar
           tabs={tabs} activeTab={activeTab}
           onSelect={setActiveTab} onClose={closeTab} onAdd={addTab}
-          panelOpen={panelOpen} infraOpen={infraOpen}
+          panelOpen={panelOpen} infraOpen={infraOpen} aiOpen={aiOpen}
           onTogglePanel={() => setPanelOpen(o => !o)}
           onToggleInfra={() => setInfraOpen(o => !o)}
+          onToggleAi={() => setAiOpen(o => !o)}
         />
       )}
     </div>
   );
 }
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpen, onTogglePanel, onToggleInfra }) {
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpen, aiOpen, onTogglePanel, onToggleInfra, onToggleAi }) {
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
 
   return (
     <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: "1px solid #00F0FF", flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
 
-      {/* Infra toggle — izquierda */}
-      <button onClick={onToggleInfra} title="Alt+I — Panel Infra"
-        style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #1a1a1a", color: infraOpen ? "#000" : "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", letterSpacing: "0.05em", flexShrink: 0 }}
+      {/* INFRA toggle izquierda */}
+      <button onClick={onToggleInfra} title="Alt+I"
+        style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #1a1a1a", color: infraOpen ? "#000" : "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
         onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
         onMouseOut={e => { if (!infraOpen) e.target.style.color = "#444"; }}
       >◈ INFRA</button>
 
-      {/* Badge powerline */}
-      <div style={{ background: "#FCEE0A", color: "#000", padding: "0 10px", display: "flex", alignItems: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>
-        NETWATCH
-      </div>
+      {/* Badge NETWATCH powerline */}
+      <div style={{ background: "#FCEE0A", color: "#000", padding: "0 10px", display: "flex", alignItems: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>NETWATCH</div>
       <div style={{ width: 0, height: 0, borderTop: "28px solid transparent", borderLeft: "10px solid #FCEE0A", flexShrink: 0 }}/>
 
       {/* Tabs */}
@@ -242,11 +249,20 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpe
         {tabs.map(tab => {
           const active = tab.id === activeTab;
           return (
-            <div key={tab.id} onClick={() => onSelect(tab.id)} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "0 12px", background: active ? "#0d0d00" : "transparent", borderRight: "1px solid #111", borderTop: active ? "1px solid #FCEE0A" : "1px solid transparent", color: active ? "#FCEE0A" : "#444", fontSize: "10px", cursor: "pointer", whiteSpace: "nowrap", letterSpacing: "0.05em", userSelect: "none" }}>
+            <div key={tab.id} onClick={() => onSelect(tab.id)} style={{
+              display: "flex", alignItems: "center", gap: "5px", padding: "0 12px",
+              background:  active ? "#0d0d00" : "transparent",
+              borderRight: "1px solid #111",
+              borderTop:   active ? "1px solid #FCEE0A" : "1px solid transparent",
+              color:       active ? "#FCEE0A" : "#444",
+              fontSize: "10px", cursor: "pointer", whiteSpace: "nowrap",
+              letterSpacing: "0.05em", userSelect: "none",
+            }}>
               <span style={{ fontSize: "9px", opacity: 0.8 }}>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.closeable && (
-                <span onClick={e => { e.stopPropagation(); onClose(tab.id); }} style={{ marginLeft: 3, color: "#333", fontSize: "12px", cursor: "pointer" }}
+                <span onClick={e => { e.stopPropagation(); onClose(tab.id); }}
+                  style={{ marginLeft: 3, color: "#333", fontSize: "12px", cursor: "pointer" }}
                   onMouseOver={e => e.target.style.color = "#ff5555"}
                   onMouseOut={e => e.target.style.color = "#333"}
                 >×</span>
@@ -258,6 +274,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpe
 
       {/* Controles derecha */}
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
+        {/* Nueva terminal */}
         {[
           { type: "powershell", label: "+ PS",  color: "#00F0FF" },
           { type: "wsl",        label: "+ WSL", color: "#39FF14" },
@@ -270,17 +287,23 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpe
           >{btn.label}</button>
         ))}
 
-        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 4px" }}/>
+        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
 
-        {/* Panel crypto toggle */}
-        <button onClick={onTogglePanel} title="Alt+P — Panel Crypto/MEV"
+        {/* AI toggle */}
+        <button onClick={onToggleAi} title="Alt+A — Panel AI"
+          style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#1a1a1a"}`, color: aiOpen ? "#000" : "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+          onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
+          onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
+        >◈ AI</button>
+
+        {/* CRYPTO toggle */}
+        <button onClick={onTogglePanel} title="Alt+P — Panel Crypto"
           style={{ background: panelOpen ? "#00F0FF" : "transparent", border: `1px solid ${panelOpen ? "#00F0FF" : "#1a1a1a"}`, color: panelOpen ? "#000" : "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
           onMouseOver={e => { if (!panelOpen) { e.target.style.borderColor = "#00F0FF"; e.target.style.color = "#00F0FF"; } }}
           onMouseOut={e => { if (!panelOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
         >◈ CRYPTO</button>
 
-        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 4px" }}/>
-
+        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
         <span style={{ fontSize: "10px", color: "#FCEE0A", letterSpacing: "0.08em" }}>⏱ {time}</span>
       </div>
     </div>
