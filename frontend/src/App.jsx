@@ -5,6 +5,7 @@ import TerminalPane from "./components/Terminal";
 import SidePanel from "./components/SidePanel";
 import InfraPanel from "./components/InfraPanel";
 import AIPanel from "./components/AIPanel";
+import MetricsPanel from "./components/MetricsPanel";
 import "./styles/themes.css";
 
 let tabIdCounter = 1;
@@ -89,12 +90,13 @@ function BootScreen({ onDone }) {
 }
 
 export default function App() {
-  const [booting,   setBooting]   = useState(true);
-  const [tabs,      setTabs]      = useState(() => [createTab("dashboard"), createTab("powershell")]);
-  const [activeTab, setActiveTab] = useState(1);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [infraOpen, setInfraOpen] = useState(false);
-  const [aiOpen,    setAiOpen]    = useState(false);
+  const [booting,      setBooting]      = useState(true);
+  const [tabs,         setTabs]         = useState(() => [createTab("dashboard"), createTab("powershell")]);
+  const [activeTab,    setActiveTab]    = useState(1);
+  const [panelOpen,    setPanelOpen]    = useState(false);
+  const [infraOpen,    setInfraOpen]    = useState(false);
+  const [aiOpen,       setAiOpen]       = useState(false);
+  const [metricsOpen,  setMetricsOpen]  = useState(false);
 
   const activeTabObj = tabs.find(t => t.id === activeTab) || tabs[0];
 
@@ -110,6 +112,7 @@ export default function App() {
       const key = e.key.toLowerCase();
       e.preventDefault();
       if      (key === "a") setAiOpen(o => !o);
+      else if (key === "m") setMetricsOpen(o => !o);
       else if (key === "p") setPanelOpen(o => !o);
       else if (key === "i") setInfraOpen(o => !o);
       else if (key === "t") addTab("powershell");
@@ -171,20 +174,18 @@ export default function App() {
         onToggleAi={() => setAiOpen(o => !o)}
       />
 
-      {/* ══ ZONA PRINCIPAL — columna vertical ══ */}
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      {/* ══ ZONA PRINCIPAL ══ */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
 
-        {/* AI Panel — arriba, se despliega hacia abajo */}
-        <AIPanel open={aiOpen} height={300} />
+        {/* Panel INFRA izquierda — altura completa */}
+        <InfraPanel open={infraOpen} />
 
-        {/* Fila horizontal: INFRA | contenido | CRYPTO */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
+        {/* Zona central — AI arriba + contenido */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <AIPanel open={aiOpen} height={300} />
 
-          {/* Panel INFRA izquierda */}
-          <InfraPanel open={infraOpen} />
-
-          {/* Contenido central */}
-          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+          {/* Contenido tabs */}
+          <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
             {booting ? (
               <BootScreen onDone={handleBootDone} />
             ) : (
@@ -204,29 +205,33 @@ export default function App() {
               ))
             )}
           </div>
-
-          {/* Panel CRYPTO derecha */}
-          <SidePanel open={panelOpen} />
-
         </div>
+
+        {/* Panel CRYPTO derecha — altura completa */}
+        <SidePanel open={panelOpen} />
+
       </div>
+
+      {/* Metrics Panel — encima de las pestañas */}
+      <MetricsPanel open={metricsOpen} height={130} />
 
       {/* TabBar */}
       {!booting && (
         <TabBar
           tabs={tabs} activeTab={activeTab}
           onSelect={setActiveTab} onClose={closeTab} onAdd={addTab}
-          panelOpen={panelOpen} infraOpen={infraOpen} aiOpen={aiOpen}
+          panelOpen={panelOpen} infraOpen={infraOpen} aiOpen={aiOpen} metricsOpen={metricsOpen}
           onTogglePanel={() => setPanelOpen(o => !o)}
           onToggleInfra={() => setInfraOpen(o => !o)}
           onToggleAi={() => setAiOpen(o => !o)}
+          onToggleMetrics={() => setMetricsOpen(o => !o)}
         />
       )}
     </div>
   );
 }
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpen, aiOpen, onTogglePanel, onToggleInfra, onToggleAi }) {
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpen, aiOpen, metricsOpen, onTogglePanel, onToggleInfra, onToggleAi, onToggleMetrics }) {
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
 
@@ -274,7 +279,6 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpe
 
       {/* Controles derecha */}
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
-        {/* Nueva terminal */}
         {[
           { type: "powershell", label: "+ PS",  color: "#00F0FF" },
           { type: "wsl",        label: "+ WSL", color: "#39FF14" },
@@ -295,6 +299,13 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpe
           onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
           onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
         >◈ AI</button>
+
+        {/* METRICS toggle */}
+        <button onClick={onToggleMetrics} title="Alt+M — Panel Metrics"
+          style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#1a1a1a"}`, color: metricsOpen ? "#000" : "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+          onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
+          onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
+        >◈ METRICS</button>
 
         {/* CRYPTO toggle */}
         <button onClick={onTogglePanel} title="Alt+P — Panel Crypto"
