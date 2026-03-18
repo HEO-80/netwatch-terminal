@@ -97,6 +97,16 @@ export default function App() {
   const [infraOpen,    setInfraOpen]    = useState(false);
   const [aiOpen,       setAiOpen]       = useState(false);
   const [metricsOpen,  setMetricsOpen]  = useState(false);
+  const [systemUser,   setSystemUser]   = useState("Usuario");
+
+  // Leer usuario del sistema al arrancar
+  useEffect(() => {
+    import("@tauri-apps/api/core").then(({ invoke }) => {
+      invoke("get_system_info").then(info => {
+        if (info?.user) setSystemUser(info.user);
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
 
   const activeTabObj = tabs.find(t => t.id === activeTab) || tabs[0];
 
@@ -199,7 +209,7 @@ export default function App() {
                 }}>
                   {tab.type === "dashboard"
                     ? <Dashboard onLaunchTerminal={() => addTab("powershell")} />
-                    : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} />
+                    : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} onClose={closeTab} systemUser={systemUser} />
                   }
                 </div>
               ))

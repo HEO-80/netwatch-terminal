@@ -172,7 +172,7 @@ export default function MetricsPanel({ open, height = 130 }) {
       minHeight:     open ? `${height}px` : "0px",
       overflow:      "hidden",
       background:    "#090909",
-      borderTop:     open ? `1px solid ${G}33` : "none",
+      borderTop:     open ? "1px solid #00F0FF" : "none",
       flexShrink:    0,
       transition:    "height 0.2s ease, min-height 0.2s ease",
       display:       "flex",

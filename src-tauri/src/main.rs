@@ -47,8 +47,8 @@ fn main() {
                     .unwrap_or_default()
                     .parent()
                     .unwrap_or(&std::path::Path::new("."))
+                    .join("sidecar")
                     .join("netwatch-pty-server.exe");
-
                 let child = Command::new(&exe_path).spawn();
 
                 match child {

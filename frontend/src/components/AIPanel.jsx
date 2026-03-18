@@ -486,7 +486,7 @@ export default function AIPanel({ open, height = 340 }) {
       minHeight:     open ? `${height}px` : "0px",
       overflow:      "hidden",
       background:    BG2,
-      borderBottom:  open ? `1px solid ${accentColor}` : "none",
+      borderBottom:  open ? "1px solid #00F0FF" : "none",
       flexShrink:    0,
       transition:    "height 0.2s ease, min-height 0.2s ease",
       display:       "flex",

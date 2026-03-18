@@ -252,7 +252,7 @@ export default function InfraPanel({ open }) {
       minWidth:   open ? "220px" : "0px",
       overflow:   "hidden",
       background: "#020200",
-      borderRight: open ? "1px solid #D9027D" : "none",
+      borderRight: open ? "1px solid #00F0FF" : "none",
       flexShrink: 0,
       transition: "width 0.2s ease, min-width 0.2s ease",
       display:    "flex",

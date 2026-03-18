@@ -24,7 +24,7 @@ pub fn get_system_info() -> SystemInfo {
 
     SystemInfo {
         started: now,
-        shell: "7.5 Core".to_string(), // PowerShell version
+        shell: "7.5 Core".to_string(),
         cpu,
         ram,
         user,
@@ -36,7 +36,6 @@ fn get_os_name() -> String {
     let output = Command::new("powershell")
         .args(["-NoProfile", "-Command", "(Get-CimInstance Win32_OperatingSystem).Caption"])
         .output();
-    
     match output {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         Err(_) => "Microsoft Windows 11".to_string(),
@@ -45,10 +44,9 @@ fn get_os_name() -> String {
 
 fn get_ram() -> String {
     let output = Command::new("powershell")
-        .args(["-NoProfile", "-Command", 
+        .args(["-NoProfile", "-Command",
             "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2).ToString() + ' GB'"])
         .output();
-    
     match output {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         Err(_) => "N/A".to_string(),
@@ -59,7 +57,6 @@ fn get_cpu() -> String {
     let output = Command::new("powershell")
         .args(["-NoProfile", "-Command", "(Get-CimInstance Win32_Processor).Name"])
         .output();
-    
     match output {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         Err(_) => "N/A".to_string(),
@@ -70,7 +67,6 @@ fn get_current_time() -> String {
     let output = Command::new("powershell")
         .args(["-NoProfile", "-Command", "Get-Date -Format 'yyyy-MM-dd HH:mm'"])
         .output();
-    
     match output {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         Err(_) => "N/A".to_string(),
@@ -98,7 +94,6 @@ pub fn get_docker_status() -> DockerStatus {
     let output = Command::new("docker")
         .args(["ps", "--format", "{{.ID}}|{{.Names}}|{{.Status}}|{{.Ports}}"])
         .output();
-    
     match output {
         Ok(o) if o.status.success() => {
             let stdout = String::from_utf8_lossy(&o.stdout);
@@ -115,7 +110,6 @@ pub fn get_docker_status() -> DockerStatus {
                     }
                 })
                 .collect();
-            
             DockerStatus { available: true, containers }
         }
         _ => DockerStatus { available: false, containers: vec![] },
@@ -136,7 +130,6 @@ pub fn run_powershell(command: String) -> PsResult {
     let output = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", &command])
         .output();
-    
     match output {
         Ok(o) => PsResult {
             stdout:  String::from_utf8_lossy(&o.stdout).to_string(),
@@ -182,22 +175,30 @@ pub fn ssh_beelink(host: String, port: u16) -> bool {
 
 #[tauri::command]
 pub fn minimize_window(app: AppHandle) {
-    app.get_webview_window("main").unwrap().minimize().ok();
+    if let Some(win) = app.get_webview_window("main") {
+        win.minimize().ok();
+    }
 }
 
 #[tauri::command]
 pub fn maximize_window(app: AppHandle) {
-    app.get_webview_window("main").unwrap().maximize().ok();
+    if let Some(win) = app.get_webview_window("main") {
+        let is_max = win.is_maximized().unwrap_or(false);
+        if is_max { win.unmaximize().ok(); } else { win.maximize().ok(); }
+    }
 }
 
 #[tauri::command]
 pub fn close_window(app: AppHandle) {
-    app.get_webview_window("main").unwrap().close().ok();
+    // Usar app.exit() en vez de window.close() para asegurar
+    // que el proceso PTY server también se mata correctamente
+    app.exit(0);
 }
 
 #[tauri::command]
 pub fn toggle_fullscreen(app: AppHandle) {
-    let win = app.get_webview_window("main").unwrap();
-    let is_fullscreen = win.is_fullscreen().unwrap_or(false);
-    win.set_fullscreen(!is_fullscreen).ok();
+    if let Some(win) = app.get_webview_window("main") {
+        let is_fs = win.is_fullscreen().unwrap_or(false);
+        win.set_fullscreen(!is_fs).ok();
+    }
 }

@@ -1,27 +1,10 @@
+import { invoke } from "@tauri-apps/api/core";
+
 export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab, activeTabLabel }) {
 
-  const handleClose = async () => {
-    try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().close();
-    } catch { window.close(); }
-  };
-
-  const handleMinimize = async () => {
-    try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().minimize();
-    } catch {}
-  };
-
-  const handleMaximize = async () => {
-    try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      const win = getCurrentWindow();
-      const isMax = await win.isMaximized();
-      isMax ? await win.unmaximize() : await win.maximize();
-    } catch {}
-  };
+  const handleClose    = (e) => { e.stopPropagation(); invoke("close_window").catch(() => {}); };
+  const handleMinimize = (e) => { e.stopPropagation(); invoke("minimize_window").catch(() => {}); };
+  const handleMaximize = (e) => { e.stopPropagation(); invoke("maximize_window").catch(() => {}); };
 
   return (
     <div
@@ -33,10 +16,14 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
         borderBottom: "1px solid #00F0FF",
         flexShrink: 0, height: "40px",
         userSelect: "none",
+        WebkitAppRegion: "drag",
       }}
     >
-      {/* Dots — NO drag */}
-      <div style={{ display: "flex", gap: "6px" }}>
+      {/* Dots — zona NO drag explícita */}
+      <div
+        style={{ display: "flex", gap: "6px", WebkitAppRegion: "no-drag" }}
+        onClick={e => e.stopPropagation()}
+      >
         {[
           { color: "#ff5555", action: handleClose,    title: "Cerrar" },
           { color: "#ffcb6b", action: handleMinimize, title: "Minimizar" },
@@ -44,26 +31,27 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
         ].map((dot, i) => (
           <span
             key={i}
-            onClick={(e) => { e.stopPropagation(); dot.action(); }}
+            onClick={dot.action}
             title={dot.title}
             style={{
               width: 12, height: 12, borderRadius: "50%",
               background: dot.color, cursor: "pointer",
               display: "inline-block", flexShrink: 0,
               transition: "filter 0.15s",
+              WebkitAppRegion: "no-drag",
             }}
-            onMouseOver={e => e.target.style.filter = "brightness(1.4)"}
-            onMouseOut={e => e.target.style.filter = "brightness(1)"}
+            onMouseOver={e => e.currentTarget.style.filter = "brightness(1.4)"}
+            onMouseOut={e => e.currentTarget.style.filter = "brightness(1)"}
           />
         ))}
       </div>
 
-      <div style={{ width: 1, height: 18, background: "#1a1a1a" }}/>
+      <div style={{ width: 1, height: 18, background: "#1a1a1a", WebkitAppRegion: "no-drag" }}/>
 
       {/* Icono */}
       <span style={{ color: "#00F0FF", fontSize: "11px", opacity: 0.6 }}>▣</span>
 
-      {/* Título — drag region */}
+      {/* Título — zona drag */}
       <span
         data-tauri-drag-region
         style={{
@@ -72,6 +60,7 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
           letterSpacing: "0.18em", textTransform: "uppercase",
           fontFamily: "var(--font-mono)", fontWeight: 700,
           cursor: "grab",
+          WebkitAppRegion: "drag",
         }}
       >
         {title}
@@ -84,10 +73,11 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
         )}
       </span>
 
-      {/* Hints teclado */}
+      {/* Hints teclado — no drag */}
       <div style={{
         display: "flex", gap: "10px", alignItems: "center",
         fontFamily: "var(--font-mono)", fontSize: "9px", color: "#333",
+        WebkitAppRegion: "no-drag",
       }}>
         <span><span style={{ color: "#FCEE0A" }}>Alt+T</span> nueva PS</span>
         <span><span style={{ color: "#FCEE0A" }}>Alt+D</span> dashboard</span>

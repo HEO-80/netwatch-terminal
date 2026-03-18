@@ -43,7 +43,7 @@ const SHELL_CONFIG = {
 
 const WS_BASE = "ws://127.0.0.1:7777";
 
-export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
+export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClose, systemUser = "Usuario" }) {
   const containerRef = useRef(null);
   const termRef      = useRef(null);
   const fitRef       = useRef(null);
@@ -168,7 +168,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
         <span style={{ color: sc.color, fontSize:"8px" }}>●</span>
         <span style={{ color: sc.color }}>{sc.name}</span>
         <span style={{ color:"#2a3a3a" }}>·</span>
-        <span style={{ color:"#546E7A" }}>netwatch@HEO-80</span>
+        <span style={{ color:"#546E7A" }}>netwatch@{systemUser}</span>
         <div style={{ flex:1 }}/>
         <span style={{ color:"#1a1a00" }}>ws://127.0.0.1:7777</span>
       </div>
@@ -199,3 +199,4 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
     </div>
   );
 }
+
