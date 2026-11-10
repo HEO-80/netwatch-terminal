@@ -45,6 +45,13 @@ AI-powered · Real-time metrics · Multi-shell · Crypto dashboard · MEV bot mo
 <br/>
 <br/>
 
+<img src="img/netwatch-full-dashboard.png" alt="NETWATCH Full Dashboard — All panels active" width="90%" />
+
+*Full workspace: INFRA + AI + CRYPTO + METRICS panels with Dashboard and multi-tab shells*
+
+<br/>
+<br/>
+
 <img src="img/netwatch-eye-patrol.jpg" alt="NETWATCH Secure Log: Eye Patrol — Concept Art" width="90%" />
 
 *NETWATCH Secure Log: Eye Patrol — Concept Art*
