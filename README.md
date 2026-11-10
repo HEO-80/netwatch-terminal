@@ -2,6 +2,11 @@
 
 <br/>
 
+<img src="img/netwatch-header.gif" alt="NETWATCH OS — Animated Header" width="80%" />
+
+<br/>
+<br/>
+
 <img src="img/Netwatch-terminal1.png" alt="NETWATCH Terminal" width="100%" />
 
 <br/>
