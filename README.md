@@ -227,6 +227,65 @@ localStorage.setItem('nw-claude-key', 'YOUR_ANTHROPIC_API_KEY')
 
 <div align="center">
 
+## 🔧 Custom Commands (`nw`)
+
+</div>
+
+NETWATCH intercepts its own commands before they reach the shell. Type `nw help` for the full list.
+
+| Command | What it does |
+|---------|-------------|
+| `nw help` | List all available commands |
+| `nw status` | System overview, active ports, repos with changes |
+| `nw eth` | BTC/ETH prices + ETH gas fees |
+| `nw repos` | Git repos: branch, dirty/clean, commits ahead |
+| `nw ssh` | Saved SSH servers + quick connect |
+| `nw snip` | Snippets: save, list, and run frequent commands |
+| `nw deploy` | Deploy wizard — auto-detects Tauri/Next/Hardhat/Docker |
+| `nw ai <question>` | Chat with Claude AI from the terminal |
+
+Profile commands: `whoami`, `projects`, `skills`, `contact`, `status`, `bee`, `notion`, `obsidian`, `gmail`, `vsc`
+
+---
+
+<div align="center">
+
+## 🏗️ INFRA Panel
+
+</div>
+
+Left sidebar (`Alt+I`) — infrastructure at a glance.
+
+| Section | Data |
+|---------|------|
+| **SSH Servers** | Saved hosts with live ping status (green/red dots) |
+| **Active Ports** | Scan of known ports: 3000, 5173, 7777, 27017, etc. |
+| **Kubernetes** | Pod status via `kubectl` |
+| **Terraform** | Workspace list from local `.tfstate` |
+| **GitHub** | Latest commits and repos via GitHub API |
+
+---
+
+<div align="center">
+
+## 💰 CRYPTO Panel
+
+</div>
+
+Right sidebar (`Alt+P`) — crypto and bot monitoring.
+
+| Section | Data |
+|---------|------|
+| **Prices** | BTC/ETH real-time via CoinGecko API |
+| **Gas** | ETH gas fees in Gwei — slow/standard/fast *(coming soon)* |
+| **Docker** | Running containers with status dots |
+| **MEV Bots** | ETH-Main, BSC-Flash, ARB-Snipe — status and last tx |
+| **Uptime** | System uptime counter |
+
+---
+
+<div align="center">
+
 ## ✅ Status
 
 | Feature | Status |
@@ -245,6 +304,72 @@ localStorage.setItem('nw-claude-key', 'YOUR_ANTHROPIC_API_KEY')
 | SSH connect from INFRA panel | ⏳ |
 
 </div>
+
+---
+
+<div align="center">
+
+## 🗺️ Roadmap v3
+
+</div>
+
+What's coming next:
+
+**Phase 1 — Optimization**
+- Lazy panels (zero fetch/CPU when hidden)
+- Secure API key store via `tauri-plugin-store`
+- Native Rust metrics worker (replace PowerShell polling)
+- WebSocket reconnection with exponential backoff
+- Evaluate native PTY in Rust (`portable-pty`) to drop Node.js sidecar
+
+**Phase 2 — `nw` DSL in Rust**
+- Custom language parser (pest/nom) built into Tauri backend
+- Pipes and filters: `nw proc | filter cpu > 50 | top 10`
+- Persistent environment variables: `$NW_PROJECTS`, `$NW_SERVERS`
+- `.nw` script files with variables, conditionals, loops and functions
+- Transparent bridge: unrecognized commands pass to active shell
+
+**Phase 3 — Killer Features**
+- Command Palette (`Ctrl+Shift+P`) — fuzzy search across everything
+- Smart output — JSON auto-rendered as collapsible tables/trees
+- Clipboard manager with history and search
+- Auto project context detection (Node, Rust, Docker, Hardhat...)
+- Session recording and replay
+- Snippet templates with variables
+
+**Phase 4 — Integrated Dojo**
+- Training mode: quizzes, sandbox missions, shell rosetta stone
+- Notebook tab: executable code cells + markdown (like Jupyter for sysadmin)
+- Persistent progress tracking with cyberpunk-styled dashboard
+
+**Phase 5 — Ecosystem**
+- Plugin system: install/remove custom commands and panels
+- Exportable profiles (`.nw-profile`)
+- Sync config between machines
+- Theme engine with hot-reload (`cyberpunk-2077`, `matrix`, `blade-runner`...)
+- Linux and macOS builds
+
+---
+
+<div align="center">
+
+## 🔗 Related
+
+</div>
+
+| Project | Description |
+|---------|-------------|
+| [powershell-cyberpunk](https://github.com/HEO-80/powershell-cyberpunk) | The PowerShell profile that inspired NETWATCH — custom prompt, training dojo, file tools, PSRemoting, Oh My Posh theme |
+
+---
+
+<div align="center">
+
+## 📄 License
+
+</div>
+
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
