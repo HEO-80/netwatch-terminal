@@ -346,8 +346,11 @@ export default function AIPanel({ open, height = 340 }) {
   const activeCmd      = getActiveCommand(input);
   const totalToks      = totalTokens(messages);
 
-  // ── CHECK EN BACKGROUND al montar — no espera a que el panel esté abierto ──
+  // Solo detectar providers y warmup cuando el panel se abre por primera vez
+  const checkedRef = useRef(false);
   useEffect(() => {
+    if (!open || checkedRef.current) return;
+    checkedRef.current = true;
     setChecking(true);
     Promise.all(
       Object.values(PROVIDERS).map(async p => {
@@ -363,7 +366,6 @@ export default function AIPanel({ open, height = 340 }) {
         const models = map[firstAvail].models;
         setActiveModel(models[0] || PROVIDERS[firstAvail].defaultModel);
 
-        // Warm-up automático del modelo local (Ollama) — solo una vez
         if (PROVIDERS[firstAvail].local && !warmupRef.current) {
           warmupRef.current = true;
           setWarming(true);
@@ -373,7 +375,7 @@ export default function AIPanel({ open, height = 340 }) {
       }
       setChecking(false);
     });
-  }, []); // ← Array vacío: solo al montar, independiente de `open`
+  }, [open]);
 
   // Auto-scroll
   useEffect(() => {

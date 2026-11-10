@@ -50,6 +50,10 @@ async function cmdHelp(args, write) {
     [C.gray("nw snip ls"),           "listar snippets"],
     [C.gray("nw snip add <id> <cmd>"),"guardar snippet"],
     [C.gray("nw snip run <id>"),     "ejecutar snippet"],
+    [C.yellow("nw task"),             "listar tareas"],
+    [C.yellow("nw task add <texto>"),"añadir tarea"],
+    [C.yellow("nw task done <n>"),   "completar tarea N"],
+    [C.yellow("nw task start <n>"),  "poner en curso tarea N"],
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
   ];
 
@@ -314,10 +318,106 @@ Responde conciso y directo. Máximo 15 líneas. Sin markdown, texto plano.`,
   write(nl);
 }
 
+// ── nw task ──────────────────────────────────────────────────────────────────
+async function cmdTask(args, write) {
+  const STORAGE_KEY = "nw-tasks";
+  const load = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; } };
+  const save = (t) => localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "add" && args.length > 1) {
+    const text = args.slice(1).join(" ");
+    const tasks = load();
+    tasks.push({ id: Date.now(), text, status: "todo", created: new Date().toISOString() });
+    save(tasks);
+    write(nl + C.green(`✓ Tarea añadida: ${C.white(text)}`) + nl + nl);
+    return;
+  }
+
+  if (sub === "done" && args[1]) {
+    const tasks = load();
+    const num = parseInt(args[1]);
+    const pending = tasks.filter(t => t.status !== "done");
+    if (num >= 1 && num <= pending.length) {
+      pending[num - 1].status = "done";
+      save(tasks);
+      write(nl + C.green(`✓ Completada: ${C.white(pending[num - 1].text)}`) + nl + nl);
+    } else {
+      write(nl + C.red(`✗ Tarea #${num} no encontrada`) + nl + nl);
+    }
+    return;
+  }
+
+  if (sub === "start" && args[1]) {
+    const tasks = load();
+    const pending = tasks.filter(t => t.status === "todo");
+    const num = parseInt(args[1]);
+    if (num >= 1 && num <= pending.length) {
+      pending[num - 1].status = "doing";
+      save(tasks);
+      write(nl + C.cyan(`◎ En curso: ${C.white(pending[num - 1].text)}`) + nl + nl);
+    } else {
+      write(nl + C.red(`✗ Tarea #${num} no encontrada en pendientes`) + nl + nl);
+    }
+    return;
+  }
+
+  if (sub === "rm" && args[1]) {
+    const tasks = load();
+    const num = parseInt(args[1]);
+    if (num >= 1 && num <= tasks.length) {
+      const removed = tasks.splice(num - 1, 1)[0];
+      save(tasks);
+      write(nl + C.red(`✗ Eliminada: ${C.white(removed.text)}`) + nl + nl);
+    } else {
+      write(nl + C.red(`✗ Tarea #${num} no encontrada`) + nl + nl);
+    }
+    return;
+  }
+
+  if (sub === "clear") {
+    const tasks = load().filter(t => t.status !== "done");
+    save(tasks);
+    write(nl + C.green("✓ Tareas completadas limpiadas") + nl + nl);
+    return;
+  }
+
+  // Default: list
+  const tasks = load();
+  if (!tasks.length) {
+    write(nl + C.dim("  Sin tareas. nw task add <texto>") + nl + nl);
+    return;
+  }
+
+  write(nl + C.cyan("◈ TASKS") + nl + SEP + nl + nl);
+
+  const groups = [
+    { label: "PENDIENTE", status: "todo",  color: C.yellow, icon: "○" },
+    { label: "EN CURSO",  status: "doing", color: C.cyan,   icon: "◎" },
+    { label: "HECHO",     status: "done",  color: C.green,  icon: "●" },
+  ];
+
+  let globalIdx = 1;
+  groups.forEach(g => {
+    const items = tasks.filter(t => t.status === g.status);
+    if (!items.length) return;
+    write(`  ${g.color(g.label)}` + nl);
+    items.forEach(t => {
+      const prefix = t.status === "done" ? C.dim(String(globalIdx)) : C.yellow(String(globalIdx));
+      const text = t.status === "done" ? C.dim(t.text) : C.white(t.text);
+      write(`    ${prefix} ${g.icon} ${text}` + nl);
+      globalIdx++;
+    });
+    write(nl);
+  });
+
+  write(C.dim("  nw task add <texto> · nw task done <n> · nw task start <n> · nw task rm <n>") + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
-  ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi,
+  ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask,
 };
 
 export async function handleNwCommand(input, write, sendToShell) {

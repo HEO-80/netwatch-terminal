@@ -3,6 +3,8 @@ import TitleBar from "./components/TitleBar";
 import Dashboard from "./components/Dashboard";
 import TerminalPane from "./components/Terminal";
 import SidePanel from "./components/SidePanel";
+import TasksPanel from "./components/TasksPanel";
+import GitPanel from "./components/GitPanel";
 import InfraPanel from "./components/InfraPanel";
 import AIPanel from "./components/AIPanel";
 import MetricsPanel from "./components/MetricsPanel";
@@ -89,11 +91,18 @@ function BootScreen({ onDone }) {
   );
 }
 
+const RIGHT_PANELS = [null, "crypto", "tasks", "git"];
+
+function cycleRight(cur) {
+  const idx = RIGHT_PANELS.indexOf(cur);
+  return RIGHT_PANELS[(idx + 1) % RIGHT_PANELS.length];
+}
+
 export default function App() {
   const [booting,      setBooting]      = useState(true);
   const [tabs,         setTabs]         = useState(() => [createTab("dashboard"), createTab("powershell")]);
   const [activeTab,    setActiveTab]    = useState(1);
-  const [panelOpen,    setPanelOpen]    = useState(false);
+  const [rightPanel,   setRightPanel]   = useState(null);
   const [infraOpen,    setInfraOpen]    = useState(false);
   const [aiOpen,       setAiOpen]       = useState(false);
   const [metricsOpen,  setMetricsOpen]  = useState(false);
@@ -123,7 +132,7 @@ export default function App() {
       e.preventDefault();
       if      (key === "a") setAiOpen(o => !o);
       else if (key === "m") setMetricsOpen(o => !o);
-      else if (key === "p") setPanelOpen(o => !o);
+      else if (key === "p") setRightPanel(cycleRight);
       else if (key === "i") setInfraOpen(o => !o);
       else if (key === "t") addTab("powershell");
       else if (key === "w") closeTab(activeTab);
@@ -176,10 +185,10 @@ export default function App() {
         subtitle="HEO-80"
         onNewTab={addTab}
         activeTabLabel={booting ? "BOOTING..." : activeTabObj?.label}
-        panelOpen={panelOpen}
+        rightPanel={rightPanel}
         infraOpen={infraOpen}
         aiOpen={aiOpen}
-        onTogglePanel={() => setPanelOpen(o => !o)}
+        onCycleRight={() => setRightPanel(cycleRight)}
         onToggleInfra={() => setInfraOpen(o => !o)}
         onToggleAi={() => setAiOpen(o => !o)}
       />
@@ -217,8 +226,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* Panel CRYPTO derecha — altura completa */}
-        <SidePanel open={panelOpen} />
+        {/* Panel derecho — intercambiable con Alt+P */}
+        <SidePanel open={rightPanel === "crypto"} />
+        <TasksPanel open={rightPanel === "tasks"} />
+        <GitPanel open={rightPanel === "git"} />
 
       </div>
 
@@ -230,8 +241,8 @@ export default function App() {
         <TabBar
           tabs={tabs} activeTab={activeTab}
           onSelect={setActiveTab} onClose={closeTab} onAdd={addTab}
-          panelOpen={panelOpen} infraOpen={infraOpen} aiOpen={aiOpen} metricsOpen={metricsOpen}
-          onTogglePanel={() => setPanelOpen(o => !o)}
+          rightPanel={rightPanel} infraOpen={infraOpen} aiOpen={aiOpen} metricsOpen={metricsOpen}
+          onCycleRight={() => setRightPanel(cycleRight)}
           onToggleInfra={() => setInfraOpen(o => !o)}
           onToggleAi={() => setAiOpen(o => !o)}
           onToggleMetrics={() => setMetricsOpen(o => !o)}
@@ -241,7 +252,14 @@ export default function App() {
   );
 }
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpen, aiOpen, metricsOpen, onTogglePanel, onToggleInfra, onToggleAi, onToggleMetrics }) {
+const RIGHT_PANEL_META = {
+  crypto: { label: "CRYPTO", color: "#00F0FF" },
+  tasks:  { label: "TASKS",  color: "#FCEE0A" },
+  git:    { label: "GIT",    color: "#D9027D" },
+};
+
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics }) {
+  const rpMeta = rightPanel ? RIGHT_PANEL_META[rightPanel] : null;
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
 
@@ -317,12 +335,17 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, panelOpen, infraOpe
           onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
         >◈ METRICS</button>
 
-        {/* CRYPTO toggle */}
-        <button onClick={onTogglePanel} title="Alt+P — Panel Crypto"
-          style={{ background: panelOpen ? "#00F0FF" : "transparent", border: `1px solid ${panelOpen ? "#00F0FF" : "#1a1a1a"}`, color: panelOpen ? "#000" : "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
-          onMouseOver={e => { if (!panelOpen) { e.target.style.borderColor = "#00F0FF"; e.target.style.color = "#00F0FF"; } }}
-          onMouseOut={e => { if (!panelOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
-        >◈ CRYPTO</button>
+        {/* Right panel cycle — Alt+P */}
+        <button onClick={onCycleRight} title="Alt+P — Ciclar panel derecho"
+          style={{
+            background: rpMeta ? rpMeta.color : "transparent",
+            border: `1px solid ${rpMeta ? rpMeta.color : "#1a1a1a"}`,
+            color: rpMeta ? "#000" : "#333",
+            fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer",
+          }}
+          onMouseOver={e => { if (!rpMeta) { e.target.style.borderColor = "#00F0FF"; e.target.style.color = "#00F0FF"; } }}
+          onMouseOut={e => { if (!rpMeta) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
+        >◈ {rpMeta ? rpMeta.label : "PANEL"}</button>
 
         <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
         <span style={{ fontSize: "10px", color: "#FCEE0A", letterSpacing: "0.08em" }}>⏱ {time}</span>

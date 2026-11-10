@@ -161,12 +161,13 @@ export default function SidePanel({ open }) {
     setLoading(false);
   }, []);
 
-  // Carga inicial + refresco cada 30s
+  // Solo fetch/polling cuando el panel está abierto
   useEffect(() => {
+    if (!open) return;
     refresh();
     const t = setInterval(refresh, 30000);
     return () => clearInterval(t);
-  }, [refresh]);
+  }, [open, refresh]);
 
   const formatPrice = (n) => n ? `$${Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "---";
   const formatChange = (n) => {
