@@ -54,6 +54,10 @@ async function cmdHelp(args, write) {
     [C.yellow("nw task add <texto>"),"añadir tarea"],
     [C.yellow("nw task done <n>"),   "completar tarea N"],
     [C.yellow("nw task start <n>"),  "poner en curso tarea N"],
+    [C.green("nw note"),              "listar notas"],
+    [C.green("nw note add <texto>"),"guardar nota rapida"],
+    [C.green("nw note rm <n>"),     "eliminar nota N"],
+    [C.green("nw note clear"),      "borrar todas las notas"],
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
   ];
 
@@ -414,10 +418,65 @@ async function cmdTask(args, write) {
   write(C.dim("  nw task add <texto> · nw task done <n> · nw task start <n> · nw task rm <n>") + nl + nl);
 }
 
+// ── nw note ─────────────────────────────────────────────────────────────────
+async function cmdNote(args, write) {
+  const STORAGE_KEY = "nw-notes";
+  const load = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; } };
+  const save = (n) => localStorage.setItem(STORAGE_KEY, JSON.stringify(n));
+  const sub = args[0]?.toLowerCase();
+
+  if ((sub === "add" || !sub) && args.length > (sub === "add" ? 1 : 0)) {
+    const text = sub === "add" ? args.slice(1).join(" ") : args.join(" ");
+    const notes = load();
+    const now = new Date();
+    const time = now.toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    notes.unshift({ id: Date.now(), text, time, pinned: false });
+    save(notes);
+    write(nl + C.green(`✓ Nota guardada: ${C.white(text)}`) + nl + nl);
+    return;
+  }
+
+  if (sub === "rm" && args[1]) {
+    const notes = load();
+    const num = parseInt(args[1]);
+    if (num >= 1 && num <= notes.length) {
+      const removed = notes.splice(num - 1, 1)[0];
+      save(notes);
+      write(nl + C.red(`✗ Eliminada: ${C.white(removed.text)}`) + nl + nl);
+    } else {
+      write(nl + C.red(`✗ Nota #${num} no encontrada`) + nl + nl);
+    }
+    return;
+  }
+
+  if (sub === "clear") {
+    save([]);
+    write(nl + C.green("✓ Todas las notas eliminadas") + nl + nl);
+    return;
+  }
+
+  // Default: list
+  const notes = load();
+  if (!notes.length) {
+    write(nl + C.dim("  Sin notas. nw note <texto> o nw note add <texto>") + nl + nl);
+    return;
+  }
+
+  write(nl + C.cyan("◈ NOTES") + nl + SEP + nl + nl);
+  const pinned = notes.filter(n => n.pinned);
+  const unpinned = notes.filter(n => !n.pinned);
+  [...pinned, ...unpinned].forEach((n, i) => {
+    const pin = n.pinned ? C.yellow("★ ") : "  ";
+    write(`  ${C.yellow(String(i + 1).padStart(2))} ${pin}${C.white(n.text)}` + nl);
+    write(`      ${C.dim(n.time)}` + nl);
+  });
+  write(nl + C.dim("  nw note <texto> · nw note rm <n> · nw note clear") + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
-  ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask,
+  ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
 };
 
 export async function handleNwCommand(input, write, sendToShell) {

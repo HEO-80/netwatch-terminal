@@ -208,9 +208,11 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [ ] Monitorear Docker logs, system logs, archivos custom
 
 #### Panel NOTES (D)
-- [ ] Scratchpad rapido con texto plano / markdown basico
-- [ ] `nw note “texto”` para agregar desde terminal
-- [ ] Persistente entre sesiones
+- [x] Scratchpad rapido con texto plano / markdown basico
+- [x] `nw note “texto”` para agregar desde terminal
+- [x] Persistente entre sesiones (localStorage `nw-notes`)
+- [x] Pin/unpin notas (★/☆) — fijadas siempre arriba
+- [x] `nw note` / `nw note add` / `nw note rm` / `nw note clear` desde terminal
 - [ ] Exportar como `.md`
 
 ---
