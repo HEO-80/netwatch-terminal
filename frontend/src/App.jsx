@@ -6,6 +6,7 @@ import SidePanel from "./components/SidePanel";
 import TasksPanel from "./components/TasksPanel";
 import GitPanel from "./components/GitPanel";
 import NotesPanel from "./components/NotesPanel";
+import LogsPanel from "./components/LogsPanel";
 import InfraPanel from "./components/InfraPanel";
 import AIPanel from "./components/AIPanel";
 import MetricsPanel from "./components/MetricsPanel";
@@ -92,7 +93,7 @@ function BootScreen({ onDone }) {
   );
 }
 
-const RIGHT_PANELS = [null, "crypto", "tasks", "git", "notes"];
+const RIGHT_PANELS = [null, "crypto", "tasks", "git", "notes", "logs"];
 
 function cycleRight(cur) {
   const idx = RIGHT_PANELS.indexOf(cur);
@@ -232,6 +233,7 @@ export default function App() {
         <TasksPanel open={rightPanel === "tasks"} />
         <GitPanel open={rightPanel === "git"} />
         <NotesPanel open={rightPanel === "notes"} />
+        <LogsPanel open={rightPanel === "logs"} />
 
       </div>
 
@@ -259,6 +261,7 @@ const RIGHT_PANEL_META = {
   tasks:  { label: "TASKS",  color: "#FCEE0A" },
   git:    { label: "GIT",    color: "#D9027D" },
   notes:  { label: "NOTES", color: "#39FF14" },
+  logs:   { label: "LOGS",  color: "#ff5555" },
 };
 
 function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics }) {

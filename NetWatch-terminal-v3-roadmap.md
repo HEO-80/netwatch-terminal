@@ -202,10 +202,13 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [ ] Diff visual inline (futuro)
 
 #### Panel LOGS (C)
-- [ ] Stream en vivo tipo `tail -f` de archivos de log
-- [ ] Filtros por severity (error, warn, info)
-- [ ] Busqueda
-- [ ] Monitorear Docker logs, system logs, archivos custom
+- [x] Stream en vivo de Windows Event Logs (System + Application)
+- [x] Filtros por severity (error, warn, info, debug) con contadores
+- [x] Busqueda por texto en tiempo real
+- [x] Auto-scroll con deteccion de scroll manual
+- [x] Pause/resume, limpiar buffer, refresh manual
+- [ ] Monitorear Docker logs, archivos custom (futuro)
+- [ ] Tail -f de archivos arbitrarios (futuro)
 
 #### Panel NOTES (D)
 - [x] Scratchpad rapido con texto plano / markdown basico
