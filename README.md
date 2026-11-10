@@ -37,6 +37,13 @@ AI-powered · Real-time metrics · Multi-shell · Crypto dashboard · MEV bot mo
 
 <img src="img/Netwatch-terminal3.png" alt="NETWATCH INFRA + CRYPTO panels" width="90%" />
 
+<br/>
+<br/>
+
+<img src="img/netwatch-eye-patrol.jpg" alt="NETWATCH Secure Log: Eye Patrol — Concept Art" width="90%" />
+
+*NETWATCH Secure Log: Eye Patrol — Concept Art*
+
 </div>
 
 ---
