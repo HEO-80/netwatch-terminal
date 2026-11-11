@@ -313,10 +313,11 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 ### FASE 3 — Features killer
 
 #### Command Palette (Ctrl+Shift+P)
-- [ ] Overlay modal tipo VS Code con busqueda fuzzy
-- [ ] Indexar: comandos nw, historial, snippets, SSH servers, repos, Docker, K8s
-- [ ] Resultados agrupados por categoria con iconos
-- [ ] Enter ejecuta, Esc cierra
+- [x] Overlay modal tipo VS Code con busqueda fuzzy
+- [x] Indexar: comandos nw (DSL, tasks, notes, crypto, AI, snippets)
+- [x] Resultados agrupados por categoria con iconos/colores
+- [x] Enter ejecuta, Esc cierra, ↑↓ navegar
+- [x] Lazy-loaded (React.lazy), wired a Terminal via CustomEvent
 
 #### Output inteligente
 - [ ] Detectar stdout JSON valido y renderizar como tabla/arbol colapsable
