@@ -39,6 +39,8 @@ function StatusDot({ color, pulse }) {
 }
 
 function FileRow({ file }) {
+  const [diff, setDiff] = useState(null);
+  const [expanded, setExpanded] = useState(false);
   const statusMap = {
     "M":  { label: "mod", color: Y },
     "A":  { label: "add", color: G },
@@ -49,21 +51,56 @@ function FileRow({ file }) {
   };
   const st = statusMap[file.status] || { label: file.status, color: DIM };
 
+  const toggleDiff = async () => {
+    if (expanded) { setExpanded(false); return; }
+    if (diff !== null) { setExpanded(true); return; }
+    const cmd = file.staged
+      ? `git diff --cached -- "${file.path}"`
+      : file.status === "??" ? `Get-Content "${file.path}" -TotalCount 30 -ErrorAction SilentlyContinue`
+      : `git diff -- "${file.path}"`;
+    const res = await runGitCmd(cmd);
+    setDiff(res || "(sin cambios)");
+    setExpanded(true);
+  };
+
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: "5px",
-      padding: "2px 0", fontFamily: "var(--font-mono)", fontSize: "9px",
-    }}>
-      <span style={{
-        color: st.color, width: 28, textAlign: "center", flexShrink: 0,
-        fontSize: "8px", letterSpacing: "0.05em",
-      }}>{st.label}</span>
-      <span style={{
-        color: file.staged ? G : "#999",
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        flex: 1,
-      }}>{file.path}</span>
-      {file.staged && <span style={{ color: G, fontSize: "7px", flexShrink: 0 }}>staged</span>}
+    <div>
+      <div onClick={toggleDiff} style={{
+        display: "flex", alignItems: "center", gap: "5px",
+        padding: "2px 0", fontFamily: "var(--font-mono)", fontSize: "9px",
+        cursor: "pointer",
+      }}
+        onMouseOver={e => e.currentTarget.style.background = "#111"}
+        onMouseOut={e => e.currentTarget.style.background = "transparent"}
+      >
+        <span style={{
+          color: st.color, width: 28, textAlign: "center", flexShrink: 0,
+          fontSize: "8px", letterSpacing: "0.05em",
+        }}>{st.label}</span>
+        <span style={{
+          color: file.staged ? G : "#999",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          flex: 1,
+        }}>{file.path}</span>
+        {file.staged && <span style={{ color: G, fontSize: "7px", flexShrink: 0 }}>staged</span>}
+        <span style={{ color: DIM, fontSize: "8px", flexShrink: 0 }}>{expanded ? "▾" : "▸"}</span>
+      </div>
+      {expanded && diff !== null && (
+        <div style={{
+          maxHeight: "120px", overflowY: "auto", padding: "4px 6px",
+          background: "#0a0a00", border: "1px solid #1a1a00", marginBottom: "4px",
+          fontFamily: "var(--font-mono)", fontSize: "8px", lineHeight: "1.5",
+          whiteSpace: "pre-wrap", wordBreak: "break-all",
+        }}>
+          {diff.split("\n").slice(0, 40).map((line, i) => {
+            let color = "#555";
+            if (line.startsWith("+")) color = G;
+            else if (line.startsWith("-")) color = R;
+            else if (line.startsWith("@@")) color = C;
+            return <div key={i} style={{ color }}>{line}</div>;
+          })}
+        </div>
+      )}
     </div>
   );
 }

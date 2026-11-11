@@ -201,7 +201,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Archivos separados por staged / cambios con status (mod/add/del/new/ren)
 - [x] Dot animado si hay cambios, verde si clean
 - [x] Botones rápidos: commit (con input inline), push, pull, stash, stash pop
-- [ ] Diff visual inline (futuro)
+- [x] Diff visual inline — click en archivo muestra diff coloreado (+/- lines)
 
 #### Panel LOGS (C)
 - [x] Stream en vivo de Windows Event Logs (System + Application)
