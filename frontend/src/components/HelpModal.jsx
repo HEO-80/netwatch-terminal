@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, memo } from "react";
 
 const Y = "#FCEE0A";
 const G = "#39FF14";
@@ -87,23 +87,12 @@ const PANELS_INFO = [
 function HelpModal({ onClose }) {
   const [tab, setTab] = useState(0);
   const [fade, setFade] = useState(false);
-  const innerRef = useRef(null);
-  const [contentHeight, setContentHeight] = useState("auto");
 
   const switchTab = (i) => {
     if (i === tab) return;
     setFade(true);
-    setTimeout(() => { setTab(i); setFade(false); }, 120);
+    setTimeout(() => { setTab(i); setFade(false); }, 150);
   };
-
-  useEffect(() => {
-    const el = innerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setContentHeight(el.scrollHeight));
-    ro.observe(el);
-    setContentHeight(el.scrollHeight);
-    return () => ro.disconnect();
-  }, [tab]);
 
   return (
     <div onClick={onClose} style={{
@@ -152,16 +141,12 @@ function HelpModal({ onClose }) {
           ))}
         </div>
 
-        {/* Content — animated height */}
-        <div ref={contentRef} style={{
-          overflow: "hidden",
-          transition: "height 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-          height: contentHeight === "auto" ? "auto" : contentHeight,
-        }}>
-        <div ref={innerRef} style={{
-          overflowY: "auto", padding: "16px 20px", maxHeight: "calc(80vh - 120px)",
+        {/* Content */}
+        <div style={{
+          flex: 1, overflowY: "auto", padding: "16px 20px",
           opacity: fade ? 0 : 1,
-          transition: "opacity 0.12s ease",
+          transform: fade ? "translateY(6px)" : "translateY(0)",
+          transition: "opacity 0.15s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
         }}>
           {tab === 0 && SHORTCUTS.map(section => (
             <div key={section.title} style={{ marginBottom: "14px" }}>
@@ -239,7 +224,6 @@ function HelpModal({ onClose }) {
               </div>
             </div>
           )}
-        </div>
         </div>
 
         {/* Footer hint */}
