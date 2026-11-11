@@ -259,7 +259,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
       {/* xterm */}
       <div
         ref={containerRef}
-        style={{ flex:1, padding:"8px 4px 4px 10px", overflow:"hidden", background:"#080700" }}
+        style={{ flex:1, padding:"8px 4px 12px 10px", overflow:"hidden", background:"#080700" }}
         onClick={() => termRef.current?.focus()}
       />
 

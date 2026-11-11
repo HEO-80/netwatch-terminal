@@ -217,7 +217,7 @@ function SidePanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
       minWidth:   open ? (focused ? "350px" : "220px") : "0px",
       overflow:   "hidden",
       background: "#020200",
-      borderLeft: open ? "1px solid var(--nw-accent)" : "none",
+      borderLeft: open ? (focused ? "1px solid var(--nw-accent)" : "1px solid rgba(0,240,255,0.3)") : "none",
       flexShrink: 0,
       transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
