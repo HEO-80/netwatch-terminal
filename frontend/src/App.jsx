@@ -19,6 +19,8 @@ const CommandPalette = lazy(() => import("./components/CommandPalette"));
 const DojoPanel      = lazy(() => import("./components/DojoPanel"));
 const NotebookPanel  = lazy(() => import("./components/NotebookPanel"));
 const SetupWizard    = lazy(() => import("./components/SetupWizard"));
+const HelpModal      = lazy(() => import("./components/HelpModal"));
+const SettingsModal  = lazy(() => import("./components/SettingsModal"));
 
 let tabIdCounter = 1;
 function createTab(type = "powershell") {
@@ -136,6 +138,8 @@ function AppInner() {
   const [panelOverlay, setPanelOverlay] = useState(null);
   const [panelMini,    setPanelMini]    = useState({});
   const [showCheatSheet, setShowCheatSheet] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
   const [showSetup, setShowSetup] = useState(false);
   const { isEnabled, firstRunDone, setModule } = useModuleConfig();
@@ -214,6 +218,8 @@ function AppInner() {
         setPaletteOpen(o => !o);
       }
       if (e.key === "Escape") {
+        if (showHelpModal) { setShowHelpModal(false); return; }
+        if (showSettingsModal) { setShowSettingsModal(false); return; }
         if (showCheatSheet) { setShowCheatSheet(false); return; }
         if (panelOverlay) { setPanelOverlay(null); return; }
         if (focusPanel) { setFocusPanel(null); return; }
@@ -221,7 +227,7 @@ function AppInner() {
     };
     window.addEventListener("keydown", paletteHandler);
     return () => window.removeEventListener("keydown", paletteHandler);
-  }, [booting, panelOverlay, focusPanel, showCheatSheet]);
+  }, [booting, panelOverlay, focusPanel, showCheatSheet, showHelpModal, showSettingsModal]);
 
   useEffect(() => {
     if (booting) return;
@@ -232,7 +238,7 @@ function AppInner() {
 
       if (e.key === "F12" || (e.key === "?" && !isTerminalFocused)) {
         e.preventDefault();
-        setShowCheatSheet(s => !s);
+        setShowHelpModal(s => !s);
         return;
       }
 
@@ -395,12 +401,8 @@ function AppInner() {
         subtitle="HEO-80"
         onNewTab={addTab}
         activeTabLabel={booting ? "BOOTING..." : activeTabObj?.label}
-        rightPanel={rightPanel}
-        infraOpen={infraOpen}
-        aiOpen={aiOpen}
-        onCycleRight={() => setRightPanel(cycleRight)}
-        onToggleInfra={() => setInfraOpen(o => !o)}
-        onToggleAi={() => setAiOpen(o => !o)}
+        onOpenHelp={() => setShowHelpModal(true)}
+        onOpenSettings={() => setShowSettingsModal(true)}
       />
 
       {/* ══ ZONA PRINCIPAL ══ */}
@@ -519,82 +521,21 @@ function AppInner() {
         </Suspense>
       )}
 
-      {/* Cheat sheet (? / F12) */}
-      {showCheatSheet && (
-        <div onClick={() => setShowCheatSheet(false)} style={{
-          position: "absolute", inset: 0, zIndex: 200,
-          background: "rgba(0,0,0,0.85)",
-          backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: "#0a0a00", border: `1px solid ${accent}`,
-            padding: "24px 32px", maxWidth: "600px", width: "90%",
-            maxHeight: "80vh", overflowY: "auto",
-            fontFamily: "var(--font-mono)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <span style={{ fontSize: "14px", color: "#FCEE0A", letterSpacing: "0.1em" }}>ATAJOS DE TECLADO</span>
-              <span onClick={() => setShowCheatSheet(false)} style={{ color: "#888", cursor: "pointer", fontSize: "14px" }}>×</span>
-            </div>
+      {/* Help Modal (? / F12 / boton HELP) */}
+      {showHelpModal && (
+        <Suspense fallback={null}>
+          <HelpModal onClose={() => setShowHelpModal(false)} />
+        </Suspense>
+      )}
 
-            {[
-              { title: "PANELES", color: "#D9027D", keys: [
-                ["F1", "Focus panel izquierdo (INFRA)"],
-                ["F2", "Focus panel derecho"],
-                ["F3", "Focus panel superior (AI)"],
-                ["F4", "Focus panel inferior (METRICS)"],
-                ["F5", "Volver a la terminal"],
-                ["Tab", "Ciclar al siguiente panel"],
-                ["Shift+Tab", "Ciclar al panel anterior"],
-                ["Ctrl+F2", "Ciclar paneles derechos"],
-                ["Esc", "Cerrar overlay/focus"],
-              ]},
-              { title: "TERMINAL", color: "#39FF14", keys: [
-                ["Alt+T", "Nueva terminal"],
-                ["Alt+W", "Cerrar tab"],
-                ["Alt+D", "Dashboard"],
-                ["Alt+1-9", "Saltar a tab"],
-              ]},
-              { title: "PANELES TOGGLE", color: "var(--nw-accent)", keys: [
-                ["Alt+I", "Toggle INFRA"],
-                ["Alt+A", "Toggle AI"],
-                ["Alt+M", "Toggle METRICS"],
-                ["Alt+P", "Ciclar panel derecho"],
-              ]},
-              { title: "DENTRO DE PANEL", color: "#FCEE0A", keys: [
-                ["↑ / ↓", "Navegar entre elementos"],
-                ["Enter", "Ejecutar / expandir"],
-                ["Space", "Expandir / colapsar"],
-                ["c", "Copiar (IP, precio, path)"],
-                ["o", "Abrir (navegador)"],
-                ["e", "Editar"],
-                ["d", "Eliminar / desconectar"],
-                ["r", "Refrescar datos"],
-                ["m", "Minimizar panel"],
-                ["x", "Maximizar (overlay)"],
-                ["[ / ]", "Ciclar panel derecho"],
-                ["Esc", "Salir del panel"],
-              ]},
-              { title: "GENERAL", color: "#ff5555", keys: [
-                ["Ctrl+Shift+P", "Paleta de comandos"],
-                ["? / F12", "Este cheat sheet"],
-              ]},
-            ].map(section => (
-              <div key={section.title} style={{ marginBottom: "14px" }}>
-                <div style={{ color: section.color, fontSize: "10px", letterSpacing: "0.12em", marginBottom: "6px", borderBottom: `1px solid ${section.color}33`, paddingBottom: "3px" }}>
-                  {section.title}
-                </div>
-                {section.keys.map(([key, desc]) => (
-                  <div key={key} style={{ display: "flex", gap: "12px", padding: "2px 0", fontSize: "10px" }}>
-                    <span style={{ color: "#FCEE0A", minWidth: "120px" }}>{key}</span>
-                    <span style={{ color: "#888" }}>{desc}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Settings Modal (boton SETTINGS) */}
+      {showSettingsModal && (
+        <Suspense fallback={null}>
+          <SettingsModal
+            onClose={() => setShowSettingsModal(false)}
+            onOpenSetup={() => { setShowSettingsModal(false); setShowSetup(true); }}
+          />
+        </Suspense>
       )}
     </div>
   );

@@ -1,7 +1,10 @@
 import { memo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab, activeTabLabel }) {
+const G = "#39FF14";
+const C = "var(--nw-accent)";
+
+function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", activeTabLabel, onOpenHelp, onOpenSettings }) {
 
   const handleClose    = (e) => { e.stopPropagation(); invoke("close_window").catch(() => {}); };
   const handleMinimize = (e) => { e.stopPropagation(); invoke("minimize_window").catch(() => {}); };
@@ -20,7 +23,7 @@ function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab,
         WebkitAppRegion: "drag",
       }}
     >
-      {/* Dots — zona NO drag explícita */}
+      {/* Dots — zona NO drag */}
       <div
         style={{ display: "flex", gap: "6px", WebkitAppRegion: "no-drag" }}
         onClick={e => e.stopPropagation()}
@@ -74,16 +77,61 @@ function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab,
         )}
       </span>
 
-      {/* Hints teclado — no drag */}
+      {/* Botones HELP + SETTINGS */}
       <div style={{
-        display: "flex", gap: "10px", alignItems: "center",
-        fontFamily: "var(--font-mono)", fontSize: "9px", color: "#333",
+        display: "flex", gap: "6px", alignItems: "center",
         WebkitAppRegion: "no-drag",
       }}>
-        <span><span style={{ color: "#FCEE0A" }}>Alt+T</span> nueva PS</span>
-        <span><span style={{ color: "#FCEE0A" }}>Alt+D</span> dashboard</span>
-        <span><span style={{ color: "#FCEE0A" }}>Alt+W</span> cerrar tab</span>
-        <span><span style={{ color: "#FCEE0A" }}>Alt+1-9</span> saltar</span>
+        <button
+          onClick={onOpenHelp}
+          title="Ayuda, atajos y comandos"
+          style={{
+            background: "transparent",
+            border: `1px solid ${C}`,
+            color: C,
+            fontFamily: "var(--font-mono)", fontSize: "9px",
+            padding: "3px 10px", cursor: "pointer",
+            letterSpacing: "0.06em",
+            transition: "all 0.15s",
+            WebkitAppRegion: "no-drag",
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.background = `${C}`;
+            e.currentTarget.style.color = "#000";
+            e.currentTarget.style.boxShadow = `0 0 8px rgba(0, 240, 255, 0.4)`;
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = C;
+            e.currentTarget.style.boxShadow = "none";
+          }}
+        >? HELP</button>
+
+        <button
+          onClick={onOpenSettings}
+          title="Configuracion de modulos y opciones"
+          style={{
+            background: "transparent",
+            border: `1px solid ${G}`,
+            color: G,
+            fontFamily: "var(--font-mono)", fontSize: "9px",
+            padding: "3px 10px", cursor: "pointer",
+            letterSpacing: "0.06em",
+            fontWeight: 700,
+            transition: "all 0.15s",
+            WebkitAppRegion: "no-drag",
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.background = G;
+            e.currentTarget.style.color = "#000";
+            e.currentTarget.style.boxShadow = `0 0 10px rgba(57, 255, 20, 0.5)`;
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = G;
+            e.currentTarget.style.boxShadow = "none";
+          }}
+        >SETTINGS</button>
       </div>
     </div>
   );
