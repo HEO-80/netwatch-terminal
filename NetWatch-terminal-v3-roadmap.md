@@ -392,7 +392,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Aliases por nombre (matrix, blade-runner, ghost, cyberpunk, deus-ex)
 - [x] `nw theme create/delete` — crear/eliminar temas custom con colores personalizados
 - [x] Hot-switch sin reiniciar — CSS custom properties + `useTheme` hook
-- [ ] Archivos `.nw-theme` custom (JSON con paleta, fuente, opacidad, efectos) — futuro
+- [x] Archivos `.nw-theme` custom — save/load/edit con propiedades extendidas (bg, surface, text, font, opacity)
 
 #### Multi-plataforma
 - [x] Tauri v2 cross-platform ready (build config presente)
@@ -406,7 +406,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 
 ### Bloque 1 — Ahora (frontend, autocontenidos)
 - [x] **Task drag & drop** — mover tareas entre columnas arrastrando (HTML5 DnD en TasksPanel)
-- [ ] **Archivos .nw-theme custom** — crear temas propios en JSON (paleta, fuente, opacidad, efectos)
+- [x] **Archivos .nw-theme custom** — crear temas propios en JSON (paleta, fuente, opacidad, efectos)
 
 ### Bloque 2 — Siguiente (Dojo avanzado, perfil docente ASIR)
 - [ ] **Modo tatami** — sandbox con misiones guiadas y validacion de estado (¿archivo creado? ¿servicio corriendo?)

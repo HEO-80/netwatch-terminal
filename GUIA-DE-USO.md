@@ -68,6 +68,7 @@ Precios de BTC/ETH en tiempo real via CoinGecko. Solo hace fetch cuando esta vis
 
 ### Panel TASKS
 Kanban vertical con 3 columnas: Pendiente / En curso / Hecho.
+Las tareas se pueden **arrastrar entre columnas** con drag & drop (ademas de los botones ▸/◂).
 
 ```
 nw task                    → listar todas las tareas
@@ -146,15 +147,41 @@ nw theme blade-runner      → cambiar a Blade Runner (rojo)
 ### Temas custom
 
 ```
-nw theme create <nombre> <accent-hex> [corner-hex]
-nw theme delete <nombre>
+nw theme create <nombre> <accent-hex> [corner-hex] [prop=valor...]
+nw theme edit <nombre>     → ver todas las propiedades del tema
+nw theme save <nombre>     → exportar como .nw-theme (JSON al portapapeles)
+nw theme load              → importar .nw-theme desde portapapeles
+nw theme delete <nombre>   → eliminar tema custom
 ```
 
-Ejemplo:
+Ejemplo basico:
 ```
 nw theme create neon #FF00FF #00FF00
-nw theme neon              → aplicar tema custom
+nw theme neon              → aplicar tema
 ```
+
+Ejemplo con propiedades extendidas:
+```
+nw theme create synthwave #FF6EC7 #7B2FBE bg=#1a0030 surface=#2a0045 opacity=0.95
+nw theme edit synthwave    → ver propiedades
+nw theme save synthwave    → exportar JSON al portapapeles
+```
+
+Propiedades de un `.nw-theme`:
+
+| Propiedad | Descripcion                    | Ejemplo      |
+|-----------|--------------------------------|--------------|
+| accent    | Color principal de la interfaz | `#FF00FF`    |
+| glow      | Color del glow/sombra          | `#FF00FF33`  |
+| corner    | Color de las esquinas          | `#7B2FBE`    |
+| border    | Color de bordes                | `#FF00FF44`  |
+| bg        | Color de fondo principal       | `#1a0030`    |
+| surface   | Color de superficies/paneles   | `#2a0045`    |
+| text      | Color de texto base            | `#E8E8E8`    |
+| font      | Fuente monospace               | `"JetBrains Mono"` |
+| opacity   | Opacidad general (0-1)         | `0.95`       |
+
+Para compartir un tema: `nw theme save <nombre>`, enviar el JSON, el otro usuario lo pega en el portapapeles y ejecuta `nw theme load`.
 
 El cambio es instantaneo (hot-switch via CSS custom properties), sin recargar la app.
 

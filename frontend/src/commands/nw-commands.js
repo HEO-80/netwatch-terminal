@@ -622,10 +622,15 @@ function saveCustomThemes(t) { localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stri
 function applyCustomTheme(name, colors) {
   const root = document.documentElement;
   root.dataset.theme = name;
-  if (colors.accent) root.style.setProperty("--nw-accent", colors.accent);
-  if (colors.glow)   root.style.setProperty("--nw-accent-glow", colors.glow);
-  if (colors.corner) root.style.setProperty("--nw-corner", colors.corner);
-  if (colors.border) root.style.setProperty("--nw-border", colors.border);
+  if (colors.accent)  root.style.setProperty("--nw-accent", colors.accent);
+  if (colors.glow)    root.style.setProperty("--nw-accent-glow", colors.glow);
+  if (colors.corner)  root.style.setProperty("--nw-corner", colors.corner);
+  if (colors.border)  root.style.setProperty("--nw-border", colors.border);
+  if (colors.bg)      root.style.setProperty("--nw-bg", colors.bg);
+  if (colors.surface) root.style.setProperty("--nw-surface", colors.surface);
+  if (colors.text)    root.style.setProperty("--nw-text", colors.text);
+  if (colors.font)    root.style.setProperty("--font-mono", colors.font);
+  if (colors.opacity != null) root.style.setProperty("--nw-opacity", String(colors.opacity));
   localStorage.setItem("nw-theme", name);
 }
 
@@ -657,11 +662,23 @@ async function cmdTheme(args, write) {
     const name = args[1];
     const accent = args[2] || "#00F0FF";
     const corner = args[3] || "#D9027D";
-    customThemes[name] = { accent, glow: accent + "33", corner, border: accent + "44" };
+    const theme = { accent, glow: accent + "33", corner, border: accent + "44" };
+    const extra = args.slice(4);
+    extra.forEach(a => {
+      const [k, ...v] = a.split("=");
+      const val = v.join("=");
+      if (k && val && ["bg","surface","text","font","opacity"].includes(k)) {
+        theme[k] = k === "opacity" ? parseFloat(val) : val;
+      }
+    });
+    customThemes[name] = theme;
     saveCustomThemes(customThemes);
     write(nl + C.green(`✓ Tema "${name}" creado`) + nl);
     write(C.dim(`  Accent: ${accent} · Corner: ${corner}`) + nl);
-    write(C.dim(`  Uso: nw theme ${name}`) + nl + nl);
+    if (theme.bg) write(C.dim(`  Bg: ${theme.bg}`) + nl);
+    if (theme.font) write(C.dim(`  Font: ${theme.font}`) + nl);
+    write(C.dim(`  Uso: nw theme ${name}`) + nl);
+    write(C.dim(`  Editar: nw theme edit ${name}`) + nl + nl);
     return;
   }
 
@@ -669,6 +686,67 @@ async function cmdTheme(args, write) {
     delete customThemes[args[1]];
     saveCustomThemes(customThemes);
     write(nl + C.green(`✓ Tema "${args[1]}" eliminado`) + nl + nl);
+    return;
+  }
+
+  if (sub === "save" && args[1]) {
+    const name = args[1];
+    const theme = customThemes[name];
+    if (!theme) { write(nl + C.red(`  ✗ Tema "${name}" no existe. Créalo primero con nw theme create.`) + nl + nl); return; }
+    const nwTheme = { name, version: "1.0", ...theme, exported: new Date().toISOString() };
+    const json = JSON.stringify(nwTheme, null, 2);
+    try { await navigator.clipboard.writeText(json); } catch {}
+    write(nl + C.green(`✓ Tema "${name}" exportado como .nw-theme al portapapeles`) + nl);
+    write(C.dim(`  Guárdalo como ${name}.nw-theme`) + nl + nl);
+    return;
+  }
+
+  if (sub === "load") {
+    write(nl + C.cyan("◈ IMPORTAR .NW-THEME") + nl + SEP + nl + nl);
+    try {
+      const text = await navigator.clipboard.readText();
+      const theme = JSON.parse(text);
+      if (!theme.name || !theme.accent) {
+        write(C.red("  ✗ JSON inválido. Necesita al menos 'name' y 'accent'.") + nl + nl);
+        return;
+      }
+      customThemes[theme.name] = {
+        accent: theme.accent,
+        glow: theme.glow || theme.accent + "33",
+        corner: theme.corner || theme.accent,
+        border: theme.border || theme.accent + "44",
+        ...(theme.bg && { bg: theme.bg }),
+        ...(theme.surface && { surface: theme.surface }),
+        ...(theme.text && { text: theme.text }),
+        ...(theme.font && { font: theme.font }),
+        ...(theme.opacity != null && { opacity: theme.opacity }),
+      };
+      saveCustomThemes(customThemes);
+      write(C.green(`  ✓ Tema "${theme.name}" importado`) + nl);
+      write(C.dim(`  Usa: nw theme ${theme.name}`) + nl + nl);
+    } catch (e) {
+      write(C.red(`  ✗ Error: ${e.message}`) + nl);
+      write(C.dim("  Copia un JSON .nw-theme válido al portapapeles primero.") + nl + nl);
+    }
+    return;
+  }
+
+  if (sub === "edit" && args[1]) {
+    const name = args[1];
+    const theme = customThemes[name];
+    if (!theme) { write(nl + C.red(`  ✗ Tema "${name}" no encontrado`) + nl + nl); return; }
+    write(nl + C.cyan(`◈ TEMA: ${name}`) + nl + SEP + nl + nl);
+    write(`  ${C.yellow("accent")}   ${C.white(theme.accent || "—")}` + nl);
+    write(`  ${C.yellow("glow")}     ${C.white(theme.glow || "—")}` + nl);
+    write(`  ${C.yellow("corner")}   ${C.white(theme.corner || "—")}` + nl);
+    write(`  ${C.yellow("border")}   ${C.white(theme.border || "—")}` + nl);
+    if (theme.bg)      write(`  ${C.yellow("bg")}       ${C.white(theme.bg)}` + nl);
+    if (theme.surface) write(`  ${C.yellow("surface")}  ${C.white(theme.surface)}` + nl);
+    if (theme.text)    write(`  ${C.yellow("text")}     ${C.white(theme.text)}` + nl);
+    if (theme.font)    write(`  ${C.yellow("font")}     ${C.white(theme.font)}` + nl);
+    if (theme.opacity != null) write(`  ${C.yellow("opacity")}  ${C.white(String(theme.opacity))}` + nl);
+    write(nl + C.dim(`  nw theme save ${name}  → exportar como .nw-theme`) + nl);
+    write(C.dim(`  nw theme ${name}       → aplicar`) + nl + nl);
     return;
   }
 
@@ -689,8 +767,12 @@ async function cmdTheme(args, write) {
       write(`  ${C.white(name.toUpperCase().padEnd(10))} ${C.dim("nw theme " + name)} ${C.gray(customThemes[name].accent)}${active}` + nl);
     });
   }
-  write(nl + C.dim("  nw theme <nombre> para cambiar") + nl);
-  write(C.dim("  nw theme create <nombre> <accent-hex> [corner-hex]") + nl + nl);
+  write(nl + C.dim("  nw theme <nombre>        → cambiar tema") + nl);
+  write(C.dim("  nw theme create <n> <hex> → crear tema custom") + nl);
+  write(C.dim("  nw theme edit <nombre>   → ver propiedades del tema") + nl);
+  write(C.dim("  nw theme save <nombre>   → exportar como .nw-theme") + nl);
+  write(C.dim("  nw theme load            → importar .nw-theme desde portapapeles") + nl);
+  write(C.dim("  nw theme delete <nombre> → eliminar tema custom") + nl + nl);
 }
 
 // ── nw json ────────────────────────────────────────────────────────────────
