@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -25,7 +26,7 @@ const ACT_BTN = {
   padding: "1px 8px", cursor: "pointer",
 };
 
-function NoteItem({ note, expanded, onToggle, onDelete, onPin, onEdit }) {
+function NoteItem({ note, expanded, onToggle, onDelete, onPin, onEdit, kbActive, editRequest }) {
   const isPinned = note.pinned;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState(note.text);
@@ -35,6 +36,17 @@ function NoteItem({ note, expanded, onToggle, onDelete, onPin, onEdit }) {
   useEffect(() => { if (!expanded) setEditing(false); }, [expanded]);
 
   const startEdit = () => { setDraft(note.text); setEditing(true); };
+
+  // Edición solicitada por teclado (nw-panel-action: edit)
+  useEffect(() => {
+    if (editRequest && editRequest.id === note.id) { setDraft(note.text); setEditing(true); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editRequest]);
+
+  const wrapRef = useRef(null);
+  useEffect(() => {
+    if (kbActive) wrapRef.current?.scrollIntoView({ block: "nearest" });
+  }, [kbActive]);
   const saveEdit = () => {
     const t = draft.trim();
     if (t) onEdit(note.id, t);
@@ -47,11 +59,12 @@ function NoteItem({ note, expanded, onToggle, onDelete, onPin, onEdit }) {
   };
 
   return (
-    <div style={{
+    <div ref={wrapRef} style={{
       padding: "5px 7px", marginBottom: "4px",
       background: isPinned ? "#0d0c00" : "#0a0a00",
       border: `1px solid ${isPinned ? Y + "33" : "#111"}`,
       transition: "border-color 0.15s",
+      ...(kbActive ? KB_HIGHLIGHT : {}),
     }}
       onMouseOver={e => e.currentTarget.style.borderColor = isPinned ? Y + "66" : "#222"}
       onMouseOut={e => e.currentTarget.style.borderColor = isPinned ? Y + "33" : "#111"}
@@ -177,6 +190,45 @@ function NotesPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }
   const unpinned = notes.filter(n => !n.pinned);
   const sorted   = [...pinned, ...unpinned];
 
+  const [kbIndex, setKbIndex] = useKeyboardNav("notes", sorted.length, focused);
+  const [editRequest, setEditRequest] = useState(null);
+
+  // Mantener kbIndex dentro de rango si cambia la lista
+  useEffect(() => {
+    if (focused && sorted.length > 0 && kbIndex >= sorted.length) setKbIndex(sorted.length - 1);
+  }, [sorted.length, kbIndex, focused, setKbIndex]);
+
+  const sortedRef = useRef(sorted);
+  sortedRef.current = sorted;
+  const kbIndexRef = useRef(kbIndex);
+  kbIndexRef.current = kbIndex;
+
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "notes") return;
+      const note = sortedRef.current[kbIndexRef.current];
+      if (!note) return;
+      switch (e.detail.action) {
+        case "enter":
+        case "space":
+          toggleExpanded(note.id); break;
+        case "copy":
+          navigator.clipboard?.writeText(note.text); break;
+        case "edit":
+          setExpanded(note.id);
+          setEditRequest({ id: note.id, n: Date.now() }); break;
+        case "delete":
+          deleteNote(note.id); break;
+        case "open":
+          togglePin(note.id); break;
+        default: break;
+      }
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  }, [focused, toggleExpanded, deleteNote, togglePin]);
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -250,9 +302,11 @@ function NotesPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }
                 <span style={{ color: DIM }}>nw note "texto"</span> desde la terminal
               </div>
             ) : (
-              sorted.map(note => (
+              sorted.map((note, idx) => (
                 <NoteItem
                   key={note.id} note={note}
+                  kbActive={focused && idx === kbIndex}
+                  editRequest={editRequest}
                   expanded={expanded === note.id}
                   onToggle={toggleExpanded}
                   onDelete={deleteNote} onPin={togglePin} onEdit={editNote}

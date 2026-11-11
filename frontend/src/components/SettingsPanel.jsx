@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { secureGet, secureSet, secureDelete, isSecureBackend } from "../utils/secure-store";
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -29,6 +30,7 @@ function SettingsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimiz
   const [secure, setSecure]     = useState(false);
   const [hovered, setHovered]   = useState(false);
   const inputRef = useRef(null);
+  const [kbIndex] = useKeyboardNav("settings", KEY_DEFS.length, focused);
 
   useEffect(() => {
     if (!open) return;
@@ -80,6 +82,22 @@ function SettingsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimiz
     if (e.key === "Escape") cancelEdit();
   }, [saveKey, cancelEdit]);
 
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "settings") return;
+      const def = KEY_DEFS[kbIndex];
+      if (!def) return;
+      if (e.detail.action === "enter" || e.detail.action === "edit") startEdit(def.id);
+      if (e.detail.action === "delete" && values[def.id]) {
+        secureDelete(def.id);
+        setValues(prev => ({ ...prev, [def.id]: "" }));
+      }
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  }, [focused, kbIndex, startEdit, values]);
+
   if (!open) return null;
 
   return (
@@ -127,7 +145,7 @@ function SettingsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimiz
           )}
         </div>
 
-        {KEY_DEFS.map(def => {
+        {KEY_DEFS.map((def, i) => {
           const val = values[def.id] || "";
           const isEditing = editing === def.id;
 
@@ -137,6 +155,7 @@ function SettingsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimiz
               background: "#0b0a00",
               border: `1px solid ${isEditing ? def.color : "#1a1a00"}`,
               transition: "border-color 0.15s",
+              ...(kbIndex === i ? KB_HIGHLIGHT : {}),
             }}>
               {/* Label row */}
               <div style={{

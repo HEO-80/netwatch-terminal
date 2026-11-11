@@ -392,32 +392,32 @@ Tercero (largo plazo):
 - [x] Solo cicla entre paneles visibles/abiertos
 
 #### 4C. Navegacion dentro de panel con flechas
-- [ ] Flecha arriba/abajo -> navegar entre elementos/secciones del panel
-- [ ] Elemento seleccionado resaltado con fondo sutil (como hover raton)
-- [ ] Enter -> ejecutar accion del elemento (equivalente a click)
-- [ ] Space -> expandir/colapsar seccion del panel
+- [x] Flecha arriba/abajo -> navegar entre elementos/secciones del panel
+- [x] Elemento seleccionado resaltado con fondo sutil (como hover raton)
+- [x] Enter -> ejecutar accion del elemento (equivalente a click)
+- [x] Space -> expandir/colapsar seccion del panel
 - [x] Esc -> salir del panel, volver focus a terminal
 
 #### 4D. Atajos rapidos dentro de panel
-- [ ] `c` -> Copiar (IP, precio, path) al clipboard
-- [ ] `o` -> Open (abrir en navegador si aplica)
-- [ ] `e` -> Edit/Expand (expandir detalle, editar server)
-- [ ] `d` -> Delete/Disconnect (segun contexto)
+- [x] `c` -> Copiar (IP, precio, path) al clipboard
+- [x] `o` -> Open (abrir en navegador si aplica)
+- [x] `e` -> Edit/Expand (expandir detalle, editar server)
+- [x] `d` -> Delete/Disconnect (segun contexto)
 - [x] `r` -> Refresh (refrescar datos del panel)
 
 #### 4E. Ciclar paneles en misma posicion
 - [x] Ctrl+F2 -> cicla al siguiente panel de esa posicion (CRYPTO -> GIT -> TASKS -> NOTES)
-- [ ] Alternativa: `[` y `]` cuando panel tiene focus
+- [x] Alternativa: `[` y `]` cuando panel tiene focus
 
 #### 4F. Controles de ventana por teclado
-- [ ] Con panel en focus: `m` -> minimizar
-- [ ] Con panel en focus: `x` -> maximizar
-- [ ] Esc -> restaurar si esta maximizado
+- [x] Con panel en focus: `m` -> minimizar
+- [x] Con panel en focus: `x` -> maximizar
+- [x] Esc -> restaurar si esta maximizado
 
 #### 4G. Indicador visual de focus
 - [x] Borde mas brillante que hover de raton
 - [x] Etiqueta "[FOCUS]" o icono keyboard en el header
-- [ ] Elemento seleccionado: fondo highlight amarillo tenue o borde izquierdo `#FCEE0A` opacity 0.3
+- [x] Elemento seleccionado: fondo highlight amarillo tenue o borde izquierdo `#FCEE0A` opacity 0.3
 - [x] En TabBar/barra de estado: mostrar que panel y elemento tiene focus
 
 #### 4H. Cheat sheet de atajos

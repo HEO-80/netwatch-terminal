@@ -1,4 +1,5 @@
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
 import { useState,useEffect, useCallback, useRef, useMemo, memo } from "react";
 
 const Y   = "#FCEE0A";
@@ -156,6 +157,35 @@ function LogsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
     return { start, end };
   }, [scrollTop, viewH, filtered.length]);
 
+  const [kbIndex, setKbIndex] = useKeyboardNav("logs", filtered.length, focused);
+  const kbIdx = filtered.length > 0 ? Math.min(kbIndex, filtered.length - 1) : -1;
+
+  const filteredRef = useRef(filtered);
+  filteredRef.current = filtered;
+  const kbIdxRef = useRef(kbIdx);
+  kbIdxRef.current = kbIdx;
+
+  // Mantener la fila seleccionada visible
+  useEffect(() => {
+    const el = listRef.current;
+    if (!focused || kbIdx < 0 || !el) return;
+    const top = kbIdx * ROW_H;
+    if (top < el.scrollTop) el.scrollTop = top;
+    else if (top + ROW_H > el.scrollTop + el.clientHeight) el.scrollTop = top + ROW_H - el.clientHeight;
+  }, [kbIdx, focused]);
+
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "logs") return;
+      if (e.detail.action !== "copy") return;
+      const entry = filteredRef.current[kbIdxRef.current];
+      if (entry) navigator.clipboard?.writeText(`${entry.time} ${SEVERITY[entry.severity]?.label || ""} ${entry.text}`.trim());
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  }, [focused]);
+
   const counts = { error: 0, warn: 0, info: 0, debug: 0 };
   entries.forEach(e => counts[e.severity]++);
 
@@ -270,7 +300,7 @@ function LogsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
             ) : (
               <div style={{ height: filtered.length * ROW_H, position: "relative" }}>
                 {filtered.slice(visibleRange.start, visibleRange.end).map((entry, i) => (
-                  <div key={visibleRange.start + i} style={{ position: "absolute", top: (visibleRange.start + i) * ROW_H, left: 0, right: 0, height: ROW_H }}>
+                  <div key={visibleRange.start + i} style={{ position: "absolute", top: (visibleRange.start + i) * ROW_H, left: 0, right: 0, height: ROW_H, ...(focused && visibleRange.start + i === kbIdx ? KB_HIGHLIGHT : {}) }}>
                     <LogLine entry={entry} />
                   </div>
                 ))}

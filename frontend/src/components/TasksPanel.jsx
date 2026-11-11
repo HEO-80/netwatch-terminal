@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -41,7 +42,7 @@ function SectionTitle({ children, color = C, count, isOver }) {
   );
 }
 
-function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging }) {
+function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging, kbActive }) {
   const col = COLUMNS.find(c => c.id === task.status) || COLUMNS[0];
   const nextStatus = task.status === "todo" ? "doing" : task.status === "doing" ? "done" : null;
   const prevStatus = task.status === "done" ? "doing" : task.status === "doing" ? "todo" : null;
@@ -63,6 +64,7 @@ function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging }
         opacity: isDragging ? 0.5 : 1,
         cursor: "grab",
         transition: "border-color 0.15s, opacity 0.15s",
+        ...(kbActive ? KB_HIGHLIGHT : {}),
       }}
       onMouseOver={e => { if (!isDragging) e.currentTarget.style.borderColor = col.color + "44"; }}
       onMouseOut={e => { if (!isDragging) e.currentTarget.style.borderColor = "#2a2a2a"; }}
@@ -201,6 +203,37 @@ function TasksPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }
 
   const byStatus = (status) => tasks.filter(t => t.status === status);
 
+  const navTasks = COLUMNS.flatMap(c => byStatus(c.id));
+  const [kbIndex, setKbIndex] = useKeyboardNav("tasks", navTasks.length, focused);
+
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "tasks") return;
+      const task = navTasks[kbIndex];
+      if (!task) return;
+      const action = e.detail.action;
+      if (action === "enter" || action === "space") {
+        const order = ["todo", "doing", "done"];
+        const idx = order.indexOf(task.status);
+        const next = order[action === "enter" ? idx + 1 : idx - 1];
+        if (!next) return;
+        moveTask(task.id, next);
+        // keep highlight on the moved task (list order is grouped by status)
+        const moved = navTasks.map(t => t.id === task.id ? { ...t, status: next } : t);
+        const newOrder = COLUMNS.flatMap(c => moved.filter(t => t.status === c.id));
+        setKbIndex(newOrder.findIndex(t => t.id === task.id));
+      } else if (action === "copy") {
+        navigator.clipboard?.writeText(task.text).catch(() => {});
+      } else if (action === "delete") {
+        deleteTask(task.id);
+        setKbIndex(Math.min(kbIndex, navTasks.length - 2));
+      }
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  });
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -292,6 +325,7 @@ function TasksPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
                         isDragging={draggingId === task.id}
+                        kbActive={navTasks[kbIndex]?.id === task.id}
                       />
                     ))}
                   </DropZone>

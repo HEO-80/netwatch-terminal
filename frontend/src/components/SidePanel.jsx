@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
+
+const CRYPTO_ITEMS = [
+  { key: "btc", label: "BTC", color: "#FCEE0A" },
+  { key: "eth", label: "ETH", color: "var(--nw-accent)" },
+];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const Y  = "#FCEE0A";
@@ -187,6 +193,24 @@ function SidePanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
   const toggle = (section, index) =>
     setExpanded(prev => (prev?.section === section && prev?.index === index ? null : { section, index }));
   const isOpen = (section, index) => expanded?.section === section && expanded?.index === index;
+
+  // Keyboard navigation
+  const [kbIndex] = useKeyboardNav("crypto", crypto ? CRYPTO_ITEMS.length : 0, focused);
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "crypto") return;
+      const item = crypto ? CRYPTO_ITEMS[kbIndex] : null;
+      if (!item) return;
+      if (e.detail.action === "enter" || e.detail.action === "space") toggle(item.key, 0);
+      else if (e.detail.action === "copy") {
+        const price = crypto[item.key]?.price;
+        if (price != null) navigator.clipboard.writeText(String(price));
+      }
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  });
   const runNw = (cmd) => window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
   const hoverOn  = (e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; };
   const hoverOff = (e) => { e.currentTarget.style.background = "transparent"; };
@@ -270,10 +294,7 @@ function SidePanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
             </div>
           ) : (
             <>
-              {[
-                { key: "btc", label: "BTC", color: Y },
-                { key: "eth", label: "ETH", color: C },
-              ].map(({ key, label, color }) => {
+              {CRYPTO_ITEMS.map(({ key, label, color }, idx) => {
                 const d = crypto[key];
                 return (
                   <div key={key}>
@@ -281,7 +302,7 @@ function SidePanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
                       onClick={() => toggle(key, 0)}
                       onMouseOver={hoverOn}
                       onMouseOut={hoverOff}
-                      style={clickableStyle}
+                      style={{ ...clickableStyle, ...(kbIndex === idx ? KB_HIGHLIGHT : {}) }}
                     >
                       <Row
                         label={label}

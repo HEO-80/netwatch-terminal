@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -39,7 +40,7 @@ function StatusDot({ color, pulse }) {
   );
 }
 
-function FileRow({ file }) {
+function FileRow({ file, kbActive }) {
   const [diff, setDiff] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const statusMap = {
@@ -64,12 +65,23 @@ function FileRow({ file }) {
     setExpanded(true);
   };
 
+  useEffect(() => {
+    if (!kbActive) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "git") return;
+      if (e.detail.action === "enter" || e.detail.action === "space") toggleDiff();
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  });
+
   return (
     <div>
       <div onClick={toggleDiff} style={{
         display: "flex", alignItems: "center", gap: "5px",
         padding: "2px 0", fontFamily: "var(--font-mono)", fontSize: "9px",
         cursor: "pointer",
+        ...(kbActive ? KB_HIGHLIGHT : {}),
       }}
         onMouseOver={e => e.currentTarget.style.background = "#111"}
         onMouseOut={e => e.currentTarget.style.background = "transparent"}
@@ -242,6 +254,23 @@ function GitPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) 
   const unstaged = data?.files?.filter(f => !f.staged) || [];
   const isClean  = data && data.files.length === 0;
 
+  const navFiles = [...staged, ...unstaged];
+  const [kbIndex] = useKeyboardNav("git", navFiles.length, focused);
+
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "git") return;
+      if (e.detail.action === "refresh") refresh();
+      else if (e.detail.action === "copy") {
+        const f = navFiles[kbIndex];
+        if (f) navigator.clipboard?.writeText(f.path).catch(() => {});
+      }
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  });
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -336,7 +365,7 @@ function GitPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) 
                 {staged.length > 0 && (
                   <>
                     <SectionTitle color={G}>Staged</SectionTitle>
-                    {staged.map((f, i) => <FileRow key={i} file={f} />)}
+                    {staged.map((f, i) => <FileRow key={i} file={f} kbActive={kbIndex === i} />)}
                   </>
                 )}
 
@@ -344,7 +373,7 @@ function GitPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) 
                 {unstaged.length > 0 && (
                   <>
                     <SectionTitle color={Y}>Cambios</SectionTitle>
-                    {unstaged.map((f, i) => <FileRow key={i} file={f} />)}
+                    {unstaged.map((f, i) => <FileRow key={i} file={f} kbActive={kbIndex === staged.length + i} />)}
                   </>
                 )}
 

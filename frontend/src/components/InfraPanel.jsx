@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { secureGet } from "../utils/secure-store";
 import WinControls from "./WinControls";
+import { useKeyboardNav, KB_HIGHLIGHT } from "../hooks/useKeyboardNav";
 
 // ── Colores ───────────────────────────────────────────────────────────────────
 const Y   = "#FCEE0A";
@@ -315,6 +316,23 @@ function InfraPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }
     }
   }, [open, refresh]);
 
+  // Keyboard navigation
+  const [kbIndex] = useKeyboardNav("infra", ssh.length, focused);
+  useEffect(() => {
+    if (!focused) return;
+    const onAction = (e) => {
+      if (e.detail.panel !== "infra") return;
+      const action = e.detail.action;
+      if (action === "refresh") { refresh(); return; }
+      const srv = ssh[kbIndex];
+      if (!srv) return;
+      if (action === "enter" || action === "space") toggle("ssh", kbIndex);
+      else if (action === "copy") navigator.clipboard.writeText(srv.host);
+    };
+    window.addEventListener("nw-panel-action", onAction);
+    return () => window.removeEventListener("nw-panel-action", onAction);
+  });
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div
@@ -361,7 +379,7 @@ function InfraPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }
               <div
                 onClick={() => toggle("ssh", i)}
                 {...hoverBg}
-                style={{ display: "flex", alignItems: "center", marginBottom: "6px", cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", marginBottom: "6px", cursor: "pointer", ...(kbIndex === i ? KB_HIGHLIGHT : {}) }}
               >
                 <Dot color={s.online ? G : R} pulse={s.online} />
                 <div style={{ flex: 1 }}>

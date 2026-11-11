@@ -254,6 +254,46 @@ export default function App() {
               window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: "refresh" } }));
               return;
             }
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent("nw-panel-nav", { detail: { panel: focusPanel, dir: e.key === "ArrowUp" ? -1 : 1 } }));
+              return;
+            }
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: e.key === "Enter" ? "enter" : "space" } }));
+              return;
+            }
+            if (e.key === "c") { window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: "copy" } })); return; }
+            if (e.key === "o") { window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: "open" } })); return; }
+            if (e.key === "e") { window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: "edit" } })); return; }
+            if (e.key === "d") { window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: "delete" } })); return; }
+            if (e.key === "m") {
+              setPanelMini(m => ({ ...m, [focusPanel]: !m[focusPanel] }));
+              return;
+            }
+            if (e.key === "x") {
+              setPanelOverlay(p => p === focusPanel ? null : focusPanel);
+              return;
+            }
+            if (e.key === "[") {
+              if (rightPanel) {
+                const idx = panelOrder.indexOf(rightPanel);
+                const prev = panelOrder[(idx - 1 + panelOrder.length) % panelOrder.length];
+                setRightPanel(prev);
+                setFocusPanel(prev);
+              }
+              return;
+            }
+            if (e.key === "]") {
+              if (rightPanel) {
+                const idx = panelOrder.indexOf(rightPanel);
+                const next = panelOrder[(idx + 1) % panelOrder.length];
+                setRightPanel(next);
+                setFocusPanel(next);
+              }
+              return;
+            }
           }
         }
       }
@@ -490,7 +530,17 @@ export default function App() {
                 ["Alt+P", "Ciclar panel derecho"],
               ]},
               { title: "DENTRO DE PANEL", color: "#FCEE0A", keys: [
+                ["↑ / ↓", "Navegar entre elementos"],
+                ["Enter", "Ejecutar / expandir"],
+                ["Space", "Expandir / colapsar"],
+                ["c", "Copiar (IP, precio, path)"],
+                ["o", "Abrir (navegador)"],
+                ["e", "Editar"],
+                ["d", "Eliminar / desconectar"],
                 ["r", "Refrescar datos"],
+                ["m", "Minimizar panel"],
+                ["x", "Maximizar (overlay)"],
+                ["[ / ]", "Ciclar panel derecho"],
                 ["Esc", "Salir del panel"],
               ]},
               { title: "GENERAL", color: "#ff5555", keys: [
