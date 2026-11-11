@@ -65,7 +65,7 @@ async function fetchCryptoData() {
   try {
     // Precios BTC/ETH via CoinGecko (free, no API key)
     const priceRes = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true",
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true",
       { signal: AbortSignal.timeout(5000) }
     );
     const prices = await priceRes.json();
@@ -81,10 +81,14 @@ async function fetchCryptoData() {
       btc: {
         price:  prices?.bitcoin?.usd,
         change: prices?.bitcoin?.usd_24h_change,
+        marketCap: prices?.bitcoin?.usd_market_cap,
+        volume: prices?.bitcoin?.usd_24h_vol,
       },
       eth: {
         price:  prices?.ethereum?.usd,
         change: prices?.ethereum?.usd_24h_change,
+        marketCap: prices?.ethereum?.usd_market_cap,
+        volume: prices?.ethereum?.usd_24h_vol,
       },
       gas: {
         safe:     gasData?.result?.SafeGasPrice,
@@ -145,6 +149,8 @@ function SidePanel({ open }) {
   const [mev,     setMev]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [expanded, setExpanded] = useState(null); // { section, index }
+  const [hovered,  setHovered]  = useState(false);
   const uptime = useUptime();
 
   const refresh = useCallback(async () => {
@@ -177,15 +183,42 @@ function SidePanel({ open }) {
   };
   const changeColor = (n) => !n ? DIM : n >= 0 ? G : R;
 
+  const toggle = (section, index) =>
+    setExpanded(prev => (prev?.section === section && prev?.index === index ? null : { section, index }));
+  const isOpen = (section, index) => expanded?.section === section && expanded?.index === index;
+  const runNw = (cmd) => window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
+  const hoverOn  = (e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; };
+  const hoverOff = (e) => { e.currentTarget.style.background = "transparent"; };
+  const clickableStyle = { cursor: "pointer" };
+  const detailStyle = {
+    padding: "6px 10px", background: "#111",
+    borderLeft: "2px solid var(--nw-accent)",
+    marginBottom: "6px", marginTop: "2px",
+    fontSize: "9px", fontFamily: "var(--font-mono)",
+  };
+  const actionBtn = {
+    background: "transparent", border: "1px solid #333", color: "var(--nw-accent)",
+    fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer",
+  };
+  const DetailLine = ({ label, value }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", color: DIM }}>
+      <span>{label}</span><span style={{ color: "#ccc" }}>{value}</span>
+    </div>
+  );
+
   return (
-    <div style={{
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      boxShadow:  hovered ? "0 0 12px rgba(0,240,255,0.3)" : "none",
       width:      open ? "220px" : "0px",
       minWidth:   open ? "220px" : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderLeft: open ? "1px solid var(--nw-accent)" : "none",
       flexShrink: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
       flexDirection: "column",
       position:   "relative",
@@ -234,18 +267,37 @@ function SidePanel({ open }) {
             </div>
           ) : (
             <>
-              <Row
-                label="BTC"
-                value={formatPrice(crypto.btc?.price)}
-                valueColor={Y}
-                sub={<span style={{ color: changeColor(crypto.btc?.change) }}>{formatChange(crypto.btc?.change)} 24h</span>}
-              />
-              <Row
-                label="ETH"
-                value={formatPrice(crypto.eth?.price)}
-                valueColor={C}
-                sub={<span style={{ color: changeColor(crypto.eth?.change) }}>{formatChange(crypto.eth?.change)} 24h</span>}
-              />
+              {[
+                { key: "btc", label: "BTC", color: Y },
+                { key: "eth", label: "ETH", color: C },
+              ].map(({ key, label, color }) => {
+                const d = crypto[key];
+                return (
+                  <div key={key}>
+                    <div
+                      onClick={() => toggle(key, 0)}
+                      onMouseOver={hoverOn}
+                      onMouseOut={hoverOff}
+                      style={clickableStyle}
+                    >
+                      <Row
+                        label={label}
+                        value={formatPrice(d?.price)}
+                        valueColor={color}
+                        sub={<span style={{ color: changeColor(d?.change) }}>{formatChange(d?.change)} 24h</span>}
+                      />
+                    </div>
+                    {isOpen(key, 0) && (
+                      <div style={detailStyle}>
+                        <DetailLine label="High 24h"   value={formatPrice(d?.high24)} />
+                        <DetailLine label="Low 24h"    value={formatPrice(d?.low24)} />
+                        <DetailLine label="Market Cap" value={formatPrice(d?.marketCap)} />
+                        <DetailLine label="Volume 24h" value={formatPrice(d?.volume)} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Gas */}
               <div style={{ marginTop: "4px", marginBottom: "8px" }}>
@@ -275,15 +327,33 @@ function SidePanel({ open }) {
           ) : docker.containers.length === 0 ? (
             <div style={{ fontSize: "10px", color: DIM, fontFamily: "var(--font-mono)" }}>Sin contenedores</div>
           ) : (
-            docker.containers.map((c, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
-                <Dot color={c.status?.toLowerCase().includes("up") ? G : R} />
-                <div>
-                  <div style={{ fontSize: "10px", color: Y, fontFamily: "var(--font-mono)" }}>{c.name}</div>
-                  <div style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)" }}>{c.status}</div>
+            docker.containers.map((c, i) => {
+              const isUp = c.status?.includes("Up");
+              return (
+                <div key={i} style={{ marginBottom: "5px" }}>
+                  <div
+                    onClick={() => toggle("docker", i)}
+                    onMouseOver={hoverOn}
+                    onMouseOut={hoverOff}
+                    style={{ ...clickableStyle, display: "flex", alignItems: "center" }}
+                  >
+                    <Dot color={c.status?.toLowerCase().includes("up") ? G : R} />
+                    <div>
+                      <div style={{ fontSize: "10px", color: Y, fontFamily: "var(--font-mono)" }}>{c.name}</div>
+                      <div style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)" }}>{c.status}</div>
+                    </div>
+                  </div>
+                  {isOpen("docker", i) && (
+                    <div style={{ ...detailStyle, display: "flex", gap: "6px" }}>
+                      <button style={actionBtn} onClick={() => runNw("nw docker logs " + c.name)}>Logs</button>
+                      {isUp
+                        ? <button style={actionBtn} onClick={() => runNw(`nw docker stop ${c.name}`)}>Stop</button>
+                        : <button style={actionBtn} onClick={() => runNw(`nw docker start ${c.name}`)}>Start</button>}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
 
           {/* ── MEV BOTS ── */}
@@ -293,16 +363,32 @@ function SidePanel({ open }) {
           ) : (
             mev.map((bot, i) => (
               <div key={i} style={{ marginBottom: "8px" }}>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <Dot color={bot.status === "online" ? G : R} />
-                  <span style={{ fontSize: "10px", color: bot.status === "online" ? G : R, fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                    {bot.status.toUpperCase()}
-                  </span>
+                <div
+                  onClick={() => toggle("mev", i)}
+                  onMouseOver={hoverOn}
+                  onMouseOut={hoverOff}
+                  style={clickableStyle}
+                >
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <Dot color={bot.status === "online" ? G : R} />
+                    <span style={{ fontSize: "10px", color: bot.status === "online" ? G : R, fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                      {bot.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "9px", color: Y, fontFamily: "var(--font-mono)", paddingLeft: "11px" }}>{bot.name}</div>
+                  <div style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)", paddingLeft: "11px" }}>
+                    {bot.chain} · last tx {bot.lastTx}
+                  </div>
                 </div>
-                <div style={{ fontSize: "9px", color: Y, fontFamily: "var(--font-mono)", paddingLeft: "11px" }}>{bot.name}</div>
-                <div style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)", paddingLeft: "11px" }}>
-                  {bot.chain} · last tx {bot.lastTx}
-                </div>
+                {isOpen("mev", i) && (
+                  <div style={detailStyle}>
+                    <DetailLine label="Name"     value={bot.name} />
+                    <DetailLine label="Chain"    value={bot.chain} />
+                    <DetailLine label="Strategy" value={bot.strategy || "n/a"} />
+                    <DetailLine label="Status"   value={bot.status} />
+                    <DetailLine label="Last tx"  value={bot.lastTx} />
+                  </div>
+                )}
               </div>
             ))
           )}
