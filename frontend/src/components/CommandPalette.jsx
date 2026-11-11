@@ -81,6 +81,9 @@ const CATEGORIES = [
       { cmd: "nw rec start",         desc: "Grabar sesión de terminal" },
       { cmd: "nw rec stop",          desc: "Parar grabación" },
       { cmd: "nw rec list",          desc: "Listar grabaciones" },
+      { cmd: "nw tail",              desc: "Monitorizar archivo de log" },
+      { cmd: "nw docker ps",         desc: "Contenedores Docker activos" },
+      { cmd: "nw docker logs",       desc: "Logs de un contenedor" },
     ],
   },
   {

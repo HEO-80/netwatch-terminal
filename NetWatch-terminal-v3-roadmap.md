@@ -209,8 +209,8 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Busqueda por texto en tiempo real
 - [x] Auto-scroll con deteccion de scroll manual
 - [x] Pause/resume, limpiar buffer, refresh manual
-- [ ] Monitorear Docker logs, archivos custom (futuro)
-- [ ] Tail -f de archivos arbitrarios (futuro)
+- [x] `nw docker ps/logs/follow` — monitorear contenedores y sus logs
+- [x] `nw tail <archivo> [n]` / `nw tail -f <archivo>` — tail con color-coded errors/warnings
 
 #### Panel NOTES (D)
 - [x] Scratchpad rapido con texto plano / markdown basico

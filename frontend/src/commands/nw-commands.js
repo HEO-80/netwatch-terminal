@@ -81,6 +81,10 @@ async function cmdHelp(args, write) {
     [C.cyan("nw sync push/pull"),     "sincronizar config via git"],
     [C.magenta("nw dojo"),             "abrir tab de entrenamiento"],
     [C.green("nw notebook"),           "abrir tab notebook interactivo"],
+    [C.green("nw tail <archivo>"),     "ver últimas líneas de archivo"],
+    [C.green("nw tail -f <archivo>"),  "seguir archivo en tiempo real"],
+    [C.cyan("nw docker ps"),           "contenedores Docker activos"],
+    [C.cyan("nw docker logs <name>"),  "logs de un contenedor"],
   ];
 
   // DSL nativo (Rust)
@@ -1197,13 +1201,97 @@ async function cmdSync(args, write, sendToShell) {
   write(`  ${C.yellow("nw sync setup <repo>")}  ${C.dim("→")} cambiar repo` + nl + nl);
 }
 
+// ── nw tail — Monitorizar archivos ──────────────────────────────────────────
+async function cmdTail(args, write, sendToShell) {
+  const file = args[0];
+  const lines = parseInt(args[1]) || 20;
+
+  if (!file) {
+    write(nl + C.cyan("◈ NW TAIL — Monitorizar archivos") + nl + SEP + nl + nl);
+    write(`  ${C.yellow("nw tail <archivo>")}      ${C.dim("→")} últimas 20 líneas del archivo` + nl);
+    write(`  ${C.yellow("nw tail <archivo> <n>")}   ${C.dim("→")} últimas N líneas` + nl);
+    write(`  ${C.yellow("nw tail -f <archivo>")}    ${C.dim("→")} seguir archivo en terminal (tail -f)` + nl + nl);
+    write(C.dim("  Ejemplo: nw tail /var/log/syslog 50") + nl);
+    write(C.dim("  Ejemplo: nw tail -f app.log") + nl + nl);
+    return;
+  }
+
+  if (file === "-f" && args[1]) {
+    write(nl + C.cyan(`  ◈ TAIL -F: ${args[1]}`) + nl + C.dim("  Ctrl+C para detener") + nl + nl);
+    sendToShell(`Get-Content "${args[1]}" -Wait -Tail 20\r`);
+    return;
+  }
+
+  const res = await ps(`if (Test-Path "${file}") { Get-Content "${file}" -Tail ${lines} } else { Write-Output "__NOTFOUND__" }`);
+  const output = res?.stdout?.trim();
+  if (!output || output === "__NOTFOUND__") {
+    write(nl + C.red(`  ✗ Archivo no encontrado: ${file}`) + nl + nl);
+    return;
+  }
+  write(nl + C.cyan(`◈ TAIL: ${file}`) + C.dim(` (${lines} líneas)`) + nl + SEP + nl + nl);
+  output.split("\n").forEach(line => {
+    if (line.match(/error|exception|fail/i)) write(`  ${C.red(line)}` + nl);
+    else if (line.match(/warn/i)) write(`  ${C.yellow(line)}` + nl);
+    else write(`  ${C.gray(line)}` + nl);
+  });
+  write(nl);
+}
+
+// ── nw docker — Docker helper ──────────────────────────────────────────────
+async function cmdDocker(args, write, sendToShell) {
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "ps") {
+    write(nl + C.cyan("◈ DOCKER CONTAINERS") + nl + SEP + nl + nl);
+    const res = await ps("docker ps --format '{{.ID}}|{{.Names}}|{{.Status}}|{{.Ports}}|{{.Image}}' 2>$null");
+    const lines = (res?.stdout || "").trim().split("\n").filter(Boolean);
+    if (!lines.length) { write(C.dim("  Sin contenedores activos.") + nl + nl); return; }
+    lines.forEach(line => {
+      const [id, name, status, ports, image] = line.split("|");
+      const running = status?.includes("Up");
+      write(`  ${running ? C.green("●") : C.red("●")} ${C.yellow((name || "").padEnd(20))} ${C.cyan((image || "").padEnd(24))} ${C.dim(id?.slice(0, 12))}` + nl);
+      if (ports) write(`    ${C.gray(ports)}` + nl);
+    });
+    write(nl);
+    return;
+  }
+
+  if (sub === "logs" && args[1]) {
+    const container = args[1];
+    const tail = args[2] || "30";
+    write(nl + C.cyan(`◈ DOCKER LOGS: ${container}`) + C.dim(` (${tail} líneas)`) + nl + SEP + nl + nl);
+    const res = await ps(`docker logs --tail ${tail} "${container}" 2>&1`);
+    const output = (res?.stdout || "").trim();
+    if (!output) { write(C.dim("  Sin output.") + nl + nl); return; }
+    output.split("\n").forEach(line => {
+      if (line.match(/error|exception|fail|panic/i)) write(`  ${C.red(line)}` + nl);
+      else if (line.match(/warn/i)) write(`  ${C.yellow(line)}` + nl);
+      else write(`  ${C.gray(line)}` + nl);
+    });
+    write(nl);
+    return;
+  }
+
+  if (sub === "follow" && args[1]) {
+    write(nl + C.cyan(`  ◈ DOCKER LOGS -F: ${args[1]}`) + nl + C.dim("  Ctrl+C para detener") + nl + nl);
+    sendToShell(`docker logs -f "${args[1]}"\r`);
+    return;
+  }
+
+  write(nl + C.cyan("◈ NW DOCKER") + nl + SEP + nl + nl);
+  write(`  ${C.yellow("nw docker ps")}             ${C.dim("→")} contenedores activos` + nl);
+  write(`  ${C.yellow("nw docker logs <name>")}    ${C.dim("→")} últimas 30 líneas de logs` + nl);
+  write(`  ${C.yellow("nw docker logs <name> <n>")}${C.dim("→")} últimas N líneas` + nl);
+  write(`  ${C.yellow("nw docker follow <name>")} ${C.dim("→")} seguir logs en tiempo real` + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
   config: cmdConfig, theme: cmdTheme, json: cmdJson, fix: cmdFix, clip: cmdClip,
   ctx: cmdCtx, rec: cmdRec, dojo: cmdDojo, notebook: cmdNotebook,
-  plugin: cmdPlugin, profile: cmdProfile, sync: cmdSync,
+  plugin: cmdPlugin, profile: cmdProfile, sync: cmdSync, tail: cmdTail, docker: cmdDocker,
 };
 
 async function tryRustBackend(input) {
