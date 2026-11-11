@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, memo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -129,17 +129,30 @@ function LogsPanel({ open }) {
     return () => clearTimeout(t);
   }, [search]);
 
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewH, setViewH] = useState(300);
+  const ROW_H = 22;
+  const BUFFER = 8;
+
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    setAutoScroll(scrollHeight - scrollTop - clientHeight < 40);
+    const el = listRef.current;
+    setScrollTop(el.scrollTop);
+    setViewH(el.clientHeight);
+    setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
   }, []);
 
-  const filtered = entries.filter(e => {
+  const filtered = useMemo(() => entries.filter(e => {
     if (!filter[e.severity]) return false;
     if (debouncedSearch && !e.text.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
     return true;
-  });
+  }), [entries, filter, debouncedSearch]);
+
+  const visibleRange = useMemo(() => {
+    const start = Math.max(0, Math.floor(scrollTop / ROW_H) - BUFFER);
+    const end = Math.min(filtered.length, Math.ceil((scrollTop + viewH) / ROW_H) + BUFFER);
+    return { start, end };
+  }, [scrollTop, viewH, filtered.length]);
 
   const counts = { error: 0, warn: 0, info: 0, debug: 0 };
   entries.forEach(e => counts[e.severity]++);
@@ -245,7 +258,13 @@ function LogsPanel({ open }) {
                 {loading ? "Cargando logs..." : entries.length === 0 ? "Sin logs todavia." : "Sin resultados para el filtro."}
               </div>
             ) : (
-              filtered.map((entry, i) => <LogLine key={i} entry={entry} />)
+              <div style={{ height: filtered.length * ROW_H, position: "relative" }}>
+                {filtered.slice(visibleRange.start, visibleRange.end).map((entry, i) => (
+                  <div key={visibleRange.start + i} style={{ position: "absolute", top: (visibleRange.start + i) * ROW_H, left: 0, right: 0, height: ROW_H }}>
+                    <LogLine entry={entry} />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

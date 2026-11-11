@@ -317,10 +317,13 @@ const RIGHT_PANEL_META = {
   settings: { label: "SETTINGS", color: "#D9027D" },
 };
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme }) {
-  const rpMeta = rightPanel ? RIGHT_PANEL_META[rightPanel] : null;
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel }) {
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
+  const dragTab = useRef(null);
+  const dragPanel = useRef(null);
+  const [dropTarget, setDropTarget] = useState(null);
+  const [panelDropTarget, setPanelDropTarget] = useState(null);
 
   return (
     <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: `1px solid ${accent}`, flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
@@ -336,20 +339,31 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
       <div style={{ background: "#FCEE0A", color: "#000", padding: "0 10px", display: "flex", alignItems: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>NETWATCH</div>
       <div style={{ width: 0, height: 0, borderTop: "28px solid transparent", borderLeft: "10px solid #FCEE0A", flexShrink: 0 }}/>
 
-      {/* Tabs */}
+      {/* Tabs — draggable to reorder */}
       <div style={{ display: "flex", flex: 1, alignItems: "stretch", overflow: "hidden" }}>
-        {tabs.map(tab => {
+        {tabs.map((tab, idx) => {
           const active = tab.id === activeTab;
+          const isDragOver = dropTarget === idx;
           return (
-            <div key={tab.id} onClick={() => onSelect(tab.id)} style={{
-              display: "flex", alignItems: "center", gap: "5px", padding: "0 12px",
-              background:  active ? "#0d0d00" : "transparent",
-              borderRight: "1px solid #111",
-              borderTop:   active ? "1px solid #FCEE0A" : "1px solid transparent",
-              color:       active ? "#FCEE0A" : "#444",
-              fontSize: "10px", cursor: "pointer", whiteSpace: "nowrap",
-              letterSpacing: "0.05em", userSelect: "none",
-            }}>
+            <div key={tab.id}
+              draggable={tab.closeable}
+              onDragStart={e => { dragTab.current = idx; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "tab"); }}
+              onDragOver={e => { if (dragTab.current !== null) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDropTarget(idx); } }}
+              onDragLeave={() => setDropTarget(null)}
+              onDrop={e => { e.preventDefault(); if (dragTab.current !== null && dragTab.current !== idx) onReorderTabs(dragTab.current, idx); dragTab.current = null; setDropTarget(null); }}
+              onDragEnd={() => { dragTab.current = null; setDropTarget(null); }}
+              onClick={() => onSelect(tab.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: "5px", padding: "0 12px",
+                background:  active ? "#0d0d00" : "transparent",
+                borderRight: "1px solid #111",
+                borderTop:   active ? "1px solid #FCEE0A" : "1px solid transparent",
+                borderLeft:  isDragOver ? `2px solid ${accent}` : "2px solid transparent",
+                color:       active ? "#FCEE0A" : "#444",
+                fontSize: "10px", cursor: tab.closeable ? "grab" : "pointer", whiteSpace: "nowrap",
+                letterSpacing: "0.05em", userSelect: "none",
+                transition: "border-left-color 0.1s",
+              }}>
               <span style={{ fontSize: "9px", opacity: 0.8 }}>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.closeable && (
@@ -394,17 +408,43 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
           onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
         >◈ METRICS</button>
 
-        {/* Right panel cycle — Alt+P */}
+        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
+
+        {/* Panel chips — draggable to reorder, click to toggle */}
+        {panelOrder.map((p, i) => {
+          const meta = RIGHT_PANEL_META[p];
+          const isActive = rightPanel === p;
+          const isDragOver = panelDropTarget === i;
+          return (
+            <button key={p}
+              draggable
+              onDragStart={e => { dragPanel.current = i; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "panel"); }}
+              onDragOver={e => { if (dragPanel.current !== null) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setPanelDropTarget(i); } }}
+              onDragLeave={() => setPanelDropTarget(null)}
+              onDrop={e => { e.preventDefault(); if (dragPanel.current !== null && dragPanel.current !== i) onReorderPanels(dragPanel.current, i); dragPanel.current = null; setPanelDropTarget(null); }}
+              onDragEnd={() => { dragPanel.current = null; setPanelDropTarget(null); }}
+              onClick={() => onTogglePanel(p)}
+              title={`${meta.label} — arrastra para reordenar`}
+              style={{
+                background: isActive ? meta.color : "transparent",
+                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#1a1a1a"}`,
+                color: isActive ? "#000" : "#333",
+                fontFamily: "var(--font-mono)", fontSize: "7px",
+                padding: "1px 4px", cursor: "grab",
+                transition: "border-color 0.1s",
+              }}
+              onMouseOver={e => { if (!isActive) { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; } }}
+              onMouseOut={e => { if (!isActive) { e.currentTarget.style.borderColor = isDragOver ? accent : "#1a1a1a"; e.currentTarget.style.color = "#333"; } }}
+            >{meta.label.slice(0, 3)}</button>
+          );
+        })}
+
+        {/* Alt+P cycle */}
         <button onClick={onCycleRight} title="Alt+P — Ciclar panel derecho"
-          style={{
-            background: rpMeta ? rpMeta.color : "transparent",
-            border: `1px solid ${rpMeta ? rpMeta.color : "#1a1a1a"}`,
-            color: rpMeta ? "#000" : "#333",
-            fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer",
-          }}
-          onMouseOver={e => { if (!rpMeta) { e.target.style.borderColor = accent; e.target.style.color = accent; } }}
-          onMouseOut={e => { if (!rpMeta) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
-        >◈ {rpMeta ? rpMeta.label : "PANEL"}</button>
+          style={{ background: "transparent", border: "1px solid #1a1a1a", color: "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 4px", cursor: "pointer" }}
+          onMouseOver={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
+          onMouseOut={e => { e.currentTarget.style.borderColor = "#1a1a1a"; e.currentTarget.style.color = "#333"; }}
+        >▸</button>
 
         <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
 

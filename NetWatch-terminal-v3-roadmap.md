@@ -287,9 +287,10 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 ### FASE 2.5 — UX & Personalización
 
 #### Paneles reordenables (drag & drop)
-- [ ] Permitir cambiar posición de paneles laterales arrastrando
-- [ ] Mantener estética cyberpunk al reorganizar (bordes, glow, transiciones)
-- [ ] Persistir orden personalizado en store entre sesiones
+- [x] Permitir cambiar posición de paneles laterales arrastrando
+- [x] Mantener estética cyberpunk al reorganizar (bordes, glow, transiciones)
+- [x] Persistir orden personalizado en store entre sesiones
+- [x] Tabs también reordenables con drag & drop
 
 #### Selector de tema de color (botón top-bar)
 - [x] Botón en la barra superior para cambiar esquema de colores
@@ -307,7 +308,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Reducir re-renders innecesarios en paneles (React.memo en 12 componentes)
 - [x] Lazy import de componentes pesados (ya implementado con React.lazy + Suspense)
 - [x] Debounce en búsquedas y filtros de paneles (LogsPanel 300ms debounce ya implementado)
-- [ ] Virtualización de listas largas (logs, procesos, archivos)
+- [x] Virtualización de listas largas (LogsPanel — windowed rendering, solo rows visibles)
 
 ### FASE 3 — Features killer
 
