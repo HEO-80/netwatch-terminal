@@ -14,6 +14,7 @@ const SettingsPanel= lazy(() => import("./components/SettingsPanel"));
 const InfraPanel   = lazy(() => import("./components/InfraPanel"));
 const AIPanel      = lazy(() => import("./components/AIPanel"));
 const MetricsPanel = lazy(() => import("./components/MetricsPanel"));
+const CommandPalette = lazy(() => import("./components/CommandPalette"));
 
 let tabIdCounter = 1;
 function createTab(type = "powershell") {
@@ -116,6 +117,7 @@ export default function App() {
   const [metricsOpen,  setMetricsOpen]  = useState(false);
   const [systemUser,   setSystemUser]   = useState("Usuario");
   const [panelOrder,   setPanelOrder]   = useState(loadPanelOrder);
+  const [paletteOpen,  setPaletteOpen]  = useState(false);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
 
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
@@ -148,6 +150,10 @@ export default function App() {
     setRightPanel(prev => prev === p ? null : p);
   }, []);
 
+  const executePaletteCmd = useCallback((cmd) => {
+    window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
+  }, []);
+
   // Leer usuario del sistema al arrancar
   useEffect(() => {
     import("@tauri-apps/api/core").then(({ invoke }) => {
@@ -163,6 +169,18 @@ export default function App() {
     setBooting(false);
     setActiveTab(tabs[0].id);
   }, [tabs]);
+
+  useEffect(() => {
+    if (booting) return;
+    const paletteHandler = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "P") {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      }
+    };
+    window.addEventListener("keydown", paletteHandler);
+    return () => window.removeEventListener("keydown", paletteHandler);
+  }, [booting]);
 
   useEffect(() => {
     if (booting) return;
@@ -288,6 +306,17 @@ export default function App() {
         <MetricsPanel open={metricsOpen} height={130} />
       </Suspense>
 
+      {/* Command Palette */}
+      <Suspense fallback={null}>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onExecute={(cmd) => {
+            window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
+          }}
+        />
+      </Suspense>
+
       {/* TabBar */}
       {!booting && (
         <TabBar
@@ -304,6 +333,11 @@ export default function App() {
           onTogglePanel={togglePanel}
         />
       )}
+
+      {/* Command Palette (Ctrl+Shift+P) */}
+      <Suspense fallback={null}>
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onExecute={executePaletteCmd} />
+      </Suspense>
     </div>
   );
 }

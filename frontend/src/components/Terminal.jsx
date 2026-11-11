@@ -122,6 +122,24 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
     if (active) setTimeout(() => { fitRef.current?.fit(); termRef.current?.focus(); }, 50);
   }, [active]);
 
+  useEffect(() => {
+    if (!active) return;
+    const onPalette = async (e) => {
+      const cmd = e.detail;
+      if (!cmd || !termRef.current) return;
+      const term = termRef.current;
+      term.write(`\r\n\x1b[33m▸\x1b[0m ${cmd}\r\n`);
+      if (cmd.trim().startsWith("nw")) {
+        await handleNwCommand(cmd, (t) => term.write(t), (c) => sendToShell({ type: "input", data: c }));
+        sendToShell({ type: "input", data: "" });
+      } else {
+        sendToShell({ type: "input", data: cmd + "\r" });
+      }
+    };
+    window.addEventListener("nw-palette-execute", onPalette);
+    return () => window.removeEventListener("nw-palette-execute", onPalette);
+  }, [active]);
+
   const sendToShell = useCallback((msg) => {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
