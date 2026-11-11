@@ -19,6 +19,8 @@ const CATEGORIES = [
       { cmd: "nw theme green",       desc: "Cambiar tema a Verde" },
       { cmd: "nw theme yellow",      desc: "Cambiar tema a Amarillo" },
       { cmd: "nw theme magenta",     desc: "Cambiar tema a Magenta" },
+      { cmd: "nw dojo",              desc: "Abrir tab DOJO (entrenamiento)" },
+      { cmd: "nw notebook",          desc: "Abrir tab NOTEBOOK" },
     ],
   },
   {

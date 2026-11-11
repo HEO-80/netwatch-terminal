@@ -115,21 +115,22 @@ FASE 4 — Dojo integrado (training mode)
 
 Migrar el sistema de entrenamiento de powershell-cyberpunk:
 
- Tab especial “DOJO” con UI propia (no es un panel lateral, es un tab completo como Dashboard)
- Quiz interactivo con preguntas de PowerShell, Linux, redes, Docker, K8s, git
- Modo tatami — sandbox con misiones guiadas paso a paso
- Modo rosetta — equivalencias entre shells (PS vs bash vs cmd)
- Modo forja — escribir scripts desde cero con validación automática
- Progreso persistente: racha diaria, puntos, nivel, historial de aciertos/fallos
- Dashboard visual de progreso con gráficos estilo cyberpunk
- Banco de preguntas ampliable (JSON o base de datos local SQLite)
+- [x] Tab especial “DOJO” con UI propia (no es un panel lateral, es un tab completo como Dashboard)
+- [x] Quiz interactivo con preguntas de PowerShell, Linux, redes, Docker, K8s, git (20+ preguntas)
+- [ ] Modo tatami — sandbox con misiones guiadas paso a paso (futuro)
+- [x] Modo rosetta — equivalencias entre shells (PS vs bash vs cmd), tabla de 12 acciones
+- [ ] Modo forja — escribir scripts desde cero con validación automática (futuro)
+- [x] Progreso persistente: racha diaria, puntos, nivel, historial de aciertos/fallos (XP + streak + localStorage)
+- [x] Dashboard visual de progreso con gráficos estilo cyberpunk (barras por categoría, stats grid)
+- [x] Banco de preguntas ampliable (QUIZ_BANK array extensible, filtro por categoría)
 
 Modo Notebook (tab especial):
 
- Tab “NOTEBOOK” donde puedes mezclar celdas de código (ejecutables en cualquier shell) con celdas de markdown
- Output inline debajo de cada celda de código
- Guardar/cargar notebooks como archivos .nw-notebook o .json
- Ideal para documentar procedures, preparar clases, hacer writeups de CTF
+- [x] Tab “NOTEBOOK” donde puedes mezclar celdas de código (ejecutables) con celdas de markdown
+- [x] Output inline debajo de cada celda de código
+- [x] Guardar/cargar notebooks en localStorage (crear, abrir, eliminar)
+- [x] Ejecutar celdas individuales o RUN ALL
+- [x] Cambiar tipo de celda (code ↔ markdown)
 FASE 5 — Ecosistema
 
 Sistema de plugins:

@@ -430,6 +430,8 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
           { type: "powershell", label: "+ PS",  color: "var(--nw-accent)" },
           { type: "wsl",        label: "+ WSL", color: "#39FF14" },
           { type: "cmd",        label: "+ CMD", color: "#FCEE0A" },
+          { type: "dojo",       label: "⛩ DOJO",   color: "#D9027D" },
+          { type: "notebook",   label: "📓 NB", color: "#39FF14" },
         ].map(btn => (
           <button key={btn.type} onClick={() => onAdd(btn.type)}
             style={{ background: "transparent", border: "1px solid #1a1a1a", color: "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
