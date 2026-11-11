@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { secureGet } from "../utils/secure-store";
 
 // ── Colores ───────────────────────────────────────────────────────────────────
@@ -45,6 +45,40 @@ const Row = ({ label, value, valueColor = G, mono = true }) => (
     </span>
   </div>
 );
+
+const ActionBtn = ({ onClick, children }) => {
+  const [h, setH] = useState(false);
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onMouseOver={() => setH(true)}
+      onMouseOut={() => setH(false)}
+      style={{
+        background: h ? "#1a1a1a" : "transparent",
+        border: `1px solid ${h ? M : "#333"}`,
+        color: M, fontFamily: "var(--font-mono)", fontSize: "8px",
+        padding: "2px 8px", cursor: "pointer",
+        filter: h ? "brightness(1.4)" : "none",
+      }}
+    >
+      {children}
+    </button>
+  );
+};
+
+const detailStyle = (color) => ({
+  padding: "6px 10px", background: "#111",
+  borderLeft: `2px solid ${color}`,
+  marginBottom: "6px", marginTop: "2px",
+  display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center",
+});
+
+const hoverBg = {
+  onMouseOver: (e) => { e.currentTarget.style.background = "#111"; },
+  onMouseOut:  (e) => { e.currentTarget.style.background = "transparent"; },
+};
+
+const BROWSER_PORTS = [3000, 5173, 8080, 4200, 8000];
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
@@ -181,7 +215,10 @@ async function fetchGitHub() {
           .slice(0, 4)
           .map(e => ({
             repo:    e.repo?.name?.split("/")[1] || e.repo?.name,
-            message: e.payload?.commits?.[0]?.message?.slice(0, 32) || "",
+            message: e.payload?.commits?.[0]?.message || "",
+            url:     e.payload?.commits?.[0]?.sha && e.repo?.name
+              ? `https://github.com/${e.repo.name}/commit/${e.payload.commits[0].sha}`
+              : e.repo?.name ? `https://github.com/${e.repo.name}` : null,
             when:    timeAgo(new Date(e.created_at)),
           }))
       : [];
@@ -218,6 +255,23 @@ function InfraPanel({ open }) {
   const [github,  setGithub]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpd, setLastUpd] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+  const [hovered, setHovered] = useState(false);
+  const rootRef = useRef(null);
+
+  const toggle = (section, i) =>
+    setExpanded(expanded?.section === section && expanded?.index === i ? null : { section, index: i });
+  const isOpen = (section, i) => expanded?.section === section && expanded?.index === i;
+
+  // Click fuera cierra el detalle
+  useEffect(() => {
+    if (!expanded) return;
+    const onDown = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setExpanded(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [expanded]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -247,14 +301,19 @@ function InfraPanel({ open }) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{
+    <div
+      ref={rootRef}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      boxShadow:  hovered && open ? "0 0 12px rgba(217,2,125,0.3)" : "none",
       width:      open ? "220px" : "0px",
       minWidth:   open ? "220px" : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderRight: open ? "1px solid var(--nw-accent)" : "none",
       flexShrink: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
       flexDirection: "column",
       order: -1, // siempre a la izquierda
@@ -280,19 +339,31 @@ function InfraPanel({ open }) {
           {/* ── SSH ── */}
           <SectionTitle>SSH Servers</SectionTitle>
           {ssh.map((s, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
-              <Dot color={s.online ? G : R} pulse={s.online} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "10px", color: s.online ? Y : DIM, fontFamily: "var(--font-mono)" }}>{s.name}</span>
-                  <span style={{ fontSize: "9px", color: s.online ? G : R, fontFamily: "var(--font-mono)" }}>
-                    {s.online ? "ONLINE" : "OFFLINE"}
-                  </span>
-                </div>
-                <div style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)" }}>
-                  {s.host}:{s.port}{s.latency ? ` · ${s.latency}` : ""}
+            <div key={i}>
+              <div
+                onClick={() => toggle("ssh", i)}
+                {...hoverBg}
+                style={{ display: "flex", alignItems: "center", marginBottom: "6px", cursor: "pointer" }}
+              >
+                <Dot color={s.online ? G : R} pulse={s.online} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "10px", color: s.online ? Y : DIM, fontFamily: "var(--font-mono)" }}>{s.name}</span>
+                    <span style={{ fontSize: "9px", color: s.online ? G : R, fontFamily: "var(--font-mono)" }}>
+                      {s.online ? "ONLINE" : "OFFLINE"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)" }}>
+                    {s.host}:{s.port}{s.latency ? ` · ${s.latency}` : ""}
+                  </div>
                 </div>
               </div>
+              {isOpen("ssh", i) && (
+                <div style={detailStyle(M)}>
+                  <ActionBtn onClick={() => window.dispatchEvent(new CustomEvent("nw-open-tab", { detail: "powershell" }))}>Conectar</ActionBtn>
+                  <ActionBtn onClick={() => navigator.clipboard.writeText(s.host)}>Copiar IP</ActionBtn>
+                </div>
+              )}
             </div>
           ))}
 
@@ -303,18 +374,40 @@ function InfraPanel({ open }) {
               {loading ? "Escaneando..." : "Ninguno detectado"}
             </div>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              {ports.map((p, i) => (
-                <div key={i} style={{
-                  background: "#0a0a00", border: "1px solid #1a1a1a",
-                  padding: "2px 6px", fontSize: "9px",
-                  fontFamily: "var(--font-mono)",
-                }}>
-                  <span style={{ color: C }}>:{p.port}</span>
-                  <span style={{ color: DIM }}> {p.name}</span>
-                </div>
-              ))}
-            </div>
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                {ports.map((p, i) => (
+                  <div
+                    key={i}
+                    onClick={() => toggle("port", i)}
+                    onMouseOver={(e) => { e.currentTarget.style.background = "#111"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = "#0a0a00"; }}
+                    style={{
+                      background: "#0a0a00",
+                      border: `1px solid ${isOpen("port", i) ? M : "#1a1a1a"}`,
+                      padding: "2px 6px", fontSize: "9px",
+                      fontFamily: "var(--font-mono)", cursor: "pointer",
+                    }}
+                  >
+                    <span style={{ color: C }}>:{p.port}</span>
+                    <span style={{ color: DIM }}> {p.name}</span>
+                  </div>
+                ))}
+              </div>
+              {expanded?.section === "port" && ports[expanded.index] && (() => {
+                const p = ports[expanded.index];
+                return (
+                  <div style={{ ...detailStyle(M), marginTop: "6px" }}>
+                    <span style={{ fontSize: "9px", color: Y, fontFamily: "var(--font-mono)" }}>
+                      {p.name} :{p.port}
+                    </span>
+                    {BROWSER_PORTS.includes(p.port) && (
+                      <ActionBtn onClick={() => window.open(`http://localhost:${p.port}`, "_blank")}>Abrir en navegador</ActionBtn>
+                    )}
+                  </div>
+                );
+              })()}
+            </>
           )}
 
           {/* ── KUBERNETES ── */}
@@ -387,14 +480,30 @@ function InfraPanel({ open }) {
             <>
               {/* Últimos commits */}
               {github.commits.slice(0, 3).map((c, i) => (
-                <div key={i} style={{ marginBottom: "6px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "9px", color: C, fontFamily: "var(--font-mono)" }}>{c.repo}</span>
-                    <span style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)" }}>{c.when}</span>
+                <div key={i}>
+                  <div
+                    onClick={() => toggle("github", i)}
+                    {...hoverBg}
+                    style={{ marginBottom: "6px", cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "9px", color: C, fontFamily: "var(--font-mono)" }}>{c.repo}</span>
+                      <span style={{ fontSize: "8px", color: DIM, fontFamily: "var(--font-mono)" }}>{c.when}</span>
+                    </div>
+                    <div style={{ fontSize: "9px", color: W, fontFamily: "var(--font-mono)", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {c.message.split("\n")[0].slice(0, 32)}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "9px", color: W, fontFamily: "var(--font-mono)", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {c.message}
-                  </div>
+                  {isOpen("github", i) && (
+                    <div style={{ ...detailStyle(M), flexDirection: "column", alignItems: "flex-start" }}>
+                      <div style={{ fontSize: "9px", color: W, fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                        {c.message || "(sin mensaje)"}
+                      </div>
+                      {c.url && (
+                        <ActionBtn onClick={() => window.open(c.url, "_blank")}>Abrir en GitHub</ActionBtn>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
 
