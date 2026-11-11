@@ -357,7 +357,14 @@ La categoria **QUICK RUN** es contextual: muestra los scripts npm detectados del
 
 ## Dojo (entrenamiento)
 
-Abre con `nw dojo` o desde el Command Palette. Es un tab completo con 3 modos:
+Abre con `nw dojo` o desde el Command Palette. Es un tab completo con 4 modos:
+
+```
+nw dojo          — abrir Dojo (modo por defecto)
+nw dojo quiz     — ir directo al modo Quiz
+nw dojo tatami   — ir directo al modo Tatami
+nw dojo rosetta  — ir directo al modo Rosetta
+```
 
 ### Quiz
 Preguntas interactivas sobre PowerShell, Linux, redes, Docker, K8s y git. 25+ preguntas organizadas por categoria.
@@ -365,6 +372,28 @@ Preguntas interactivas sobre PowerShell, Linux, redes, Docker, K8s y git. 25+ pr
 - Selecciona una respuesta, gana **10 XP** por acierto
 - **Bonus por racha**: respuestas consecutivas correctas dan XP extra
 - Filtro por categoria con botones en la parte superior
+
+### Tatami (misiones guiadas)
+Modo sandbox con misiones paso a paso. Ejecuta comandos reales en tu terminal y valida cada paso.
+
+- **8 misiones** organizadas por categoria: filesystem, services, networking, git, docker, powershell
+- Cada mision tiene **pasos secuenciales** con instrucciones claras
+- Boton **MOSTRAR PISTA** revela el comando exacto
+- Boton **VALIDAR PASO** ejecuta una comprobacion real en el sistema
+- Si Docker no esta instalado, las misiones Docker se pueden saltar
+- Al completar una mision ganas **XP bonus** (20-30 segun dificultad)
+- Progreso guardado: misiones completadas persisten entre sesiones
+- Barra de progreso visual por pasos dentro de cada mision
+
+**Categorias de misiones:**
+| Categoria   | Misiones | Contenido |
+|-------------|----------|-----------|
+| filesystem  | 2        | Crear directorios, archivos, buscar y filtrar |
+| services    | 1        | Consultar servicios de Windows |
+| networking  | 2        | Diagnostico de red, DNS |
+| git         | 1        | Inicializar repo y hacer commits |
+| docker      | 1        | Primeros pasos con Docker |
+| powershell  | 1        | Procesos y rendimiento del sistema |
 
 ### Rosetta
 Tabla de equivalencias entre shells: 15 acciones comunes mostrando el comando en PowerShell, Bash y CMD lado a lado.

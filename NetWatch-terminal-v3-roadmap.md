@@ -357,7 +357,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 
 - [x] Tab especial "DOJO" con UI propia (DojoPanel.jsx con quiz, rosetta, stats)
 - [x] Quiz interactivo (PowerShell, Linux, redes, Docker, K8s, git) — 25+ preguntas, categorías
-- [ ] Modo tatami — sandbox con misiones guiadas (futuro)
+- [x] Modo tatami — sandbox con misiones guiadas (8 misiones, 6 categorías, validación PowerShell)
 - [x] Modo rosetta — equivalencias entre shells (PS vs bash vs cmd) — tabla 15 acciones
 - [ ] Modo forja — escribir scripts con validacion automatica (futuro)
 - [x] Progreso persistente: racha diaria, puntos XP, nivel, historial (localStorage)

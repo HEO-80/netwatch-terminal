@@ -1082,7 +1082,20 @@ export function recordCommand(input, output) {
 // ── nw dojo / nw notebook ──────────────────────────────────────────────────
 async function cmdDojo(args, write) {
   window.dispatchEvent(new CustomEvent("nw-open-tab", { detail: "dojo" }));
-  write(nl + C.magenta("⛩ Abriendo DOJO — entrenamiento interactivo") + nl + nl);
+  const sub = args[0]?.toLowerCase();
+  if (sub === "tatami") {
+    window.dispatchEvent(new CustomEvent("nw-dojo-mode", { detail: "tatami" }));
+    write(nl + C.magenta("⛩ Abriendo DOJO → Modo TATAMI — misiones guiadas") + nl + nl);
+  } else if (sub === "quiz") {
+    window.dispatchEvent(new CustomEvent("nw-dojo-mode", { detail: "quiz" }));
+    write(nl + C.magenta("⛩ Abriendo DOJO → Modo QUIZ") + nl + nl);
+  } else if (sub === "rosetta") {
+    window.dispatchEvent(new CustomEvent("nw-dojo-mode", { detail: "rosetta" }));
+    write(nl + C.magenta("⛩ Abriendo DOJO → Modo ROSETTA") + nl + nl);
+  } else {
+    write(nl + C.magenta("⛩ Abriendo DOJO — entrenamiento interactivo") + nl);
+    write(C.dim("  Submodos: nw dojo quiz | tatami | rosetta") + nl + nl);
+  }
 }
 
 async function cmdNotebook(args, write) {

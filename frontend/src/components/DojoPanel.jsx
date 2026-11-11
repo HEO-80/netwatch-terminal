@@ -7,8 +7,17 @@ const M   = "#D9027D";
 const R   = "#ff5555";
 const DIM = "#333";
 const W   = "#E8E8E8";
+const CYAN = "#00F0FF";
+
+async function invoke(cmd, args) {
+  try {
+    const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
+    return await tauriInvoke(cmd, args);
+  } catch { return null; }
+}
 
 const DOJO_KEY = "nw-dojo-progress";
+const TATAMI_KEY = "nw-tatami-progress";
 
 function loadProgress() {
   try { return JSON.parse(localStorage.getItem(DOJO_KEY) || "null") || defaultProgress(); }
@@ -57,8 +66,201 @@ const ROSETTA = [
   { action: "Permisos",            ps: "Get-Acl file",              bash: "chmod 755 file",  cmd: "icacls file" },
 ];
 
-const CAT_COLORS = { powershell: Y, linux: G, git: M, docker: "#00F0FF", redes: "#ff8800", k8s: "#39ccff" };
-const MODES = ["quiz", "rosetta", "progress"];
+const CAT_COLORS = { powershell: Y, linux: G, git: M, docker: "#00F0FF", redes: "#ff8800", k8s: "#39ccff", filesystem: Y, services: "#ff8800", networking: CYAN };
+
+const MISSIONS_BANK = [
+  {
+    id: "fs-01", cat: "filesystem", title: "Crea tu estructura de proyecto",
+    desc: "Aprende a crear directorios y archivos desde la terminal.",
+    difficulty: 1, xp: 25,
+    steps: [
+      {
+        instruction: "Crea un directorio llamado 'dojo-lab' en tu carpeta temporal.",
+        hint: "New-Item -ItemType Directory -Path $env:TEMP\\dojo-lab",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab") { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Dentro de 'dojo-lab', crea un archivo 'README.md'.",
+        hint: "New-Item -Path $env:TEMP\\dojo-lab\\README.md -ItemType File",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab\\README.md") { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Escribe 'Hola Dojo' dentro de README.md.",
+        hint: "Set-Content $env:TEMP\\dojo-lab\\README.md 'Hola Dojo'",
+        validate: `if ((Get-Content "$env:TEMP\\dojo-lab\\README.md" -Raw -ErrorAction SilentlyContinue) -match 'Hola Dojo') { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Crea subdirectorios 'src' y 'docs' dentro de dojo-lab.",
+        hint: "New-Item -ItemType Directory $env:TEMP\\dojo-lab\\src, $env:TEMP\\dojo-lab\\docs",
+        validate: `if ((Test-Path "$env:TEMP\\dojo-lab\\src") -and (Test-Path "$env:TEMP\\dojo-lab\\docs")) { "OK" } else { "FAIL" }`,
+      },
+    ],
+  },
+  {
+    id: "fs-02", cat: "filesystem", title: "Buscar y filtrar archivos",
+    desc: "Domina la búsqueda de archivos con Get-ChildItem y filtros.",
+    difficulty: 2, xp: 30,
+    steps: [
+      {
+        instruction: "Lista todos los archivos .txt en tu carpeta TEMP (solo el primer nivel).",
+        hint: "Get-ChildItem $env:TEMP -Filter *.txt -File",
+        validate: `$r = Get-ChildItem $env:TEMP -Filter *.txt -File -ErrorAction SilentlyContinue; if ($null -ne $r) { "OK" } else { "OK" }`,
+      },
+      {
+        instruction: "Crea 3 archivos en dojo-lab: test1.log, test2.log, data.csv.",
+        hint: "'a' | Set-Content $env:TEMP\\dojo-lab\\test1.log; 'b' | Set-Content $env:TEMP\\dojo-lab\\test2.log; 'c' | Set-Content $env:TEMP\\dojo-lab\\data.csv",
+        validate: `$p = "$env:TEMP\\dojo-lab"; if ((Test-Path "$p\\test1.log") -and (Test-Path "$p\\test2.log") -and (Test-Path "$p\\data.csv")) { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Cuenta cuántos archivos .log hay en dojo-lab.",
+        hint: "(Get-ChildItem $env:TEMP\\dojo-lab -Filter *.log).Count",
+        validate: `$c = (Get-ChildItem "$env:TEMP\\dojo-lab" -Filter *.log -ErrorAction SilentlyContinue).Count; if ($c -ge 2) { "OK" } else { "FAIL" }`,
+      },
+    ],
+  },
+  {
+    id: "svc-01", cat: "services", title: "Explora los servicios del sistema",
+    desc: "Aprende a consultar y entender los servicios de Windows.",
+    difficulty: 1, xp: 20,
+    steps: [
+      {
+        instruction: "Lista los servicios que están corriendo (Running).",
+        hint: "Get-Service | Where-Object Status -eq 'Running'",
+        validate: `$s = Get-Service | Where-Object Status -eq 'Running'; if ($s.Count -gt 0) { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Busca el servicio 'wuauserv' (Windows Update) y comprueba su estado.",
+        hint: "Get-Service wuauserv",
+        validate: `$s = Get-Service wuauserv -ErrorAction SilentlyContinue; if ($s) { "OK" } else { "OK" }`,
+      },
+      {
+        instruction: "Exporta la lista de servicios detenidos a dojo-lab/stopped-services.txt.",
+        hint: "Get-Service | Where Status -eq Stopped | Select Name | Out-File $env:TEMP\\dojo-lab\\stopped-services.txt",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab\\stopped-services.txt") { "OK" } else { "FAIL" }`,
+      },
+    ],
+  },
+  {
+    id: "net-01", cat: "networking", title: "Diagnóstico de red básico",
+    desc: "Usa herramientas de red para diagnosticar conectividad.",
+    difficulty: 1, xp: 20,
+    steps: [
+      {
+        instruction: "Obtén tu dirección IP local.",
+        hint: "Get-NetIPAddress -AddressFamily IPv4 | Where InterfaceAlias -notlike '*Loopback*'",
+        validate: `$ip = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where { $_.InterfaceAlias -notlike '*Loopback*' -and $_.IPAddress -ne '127.0.0.1' }; if ($ip) { "OK" } else { "OK" }`,
+      },
+      {
+        instruction: "Haz ping a localhost (1 paquete) y guarda el resultado en dojo-lab/ping.txt.",
+        hint: "Test-Connection localhost -Count 1 | Out-File $env:TEMP\\dojo-lab\\ping.txt",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab\\ping.txt") { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Lista los puertos TCP que están escuchando.",
+        hint: "Get-NetTCPConnection -State Listen | Select LocalPort -Unique | Sort LocalPort",
+        validate: `$p = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue; if ($p) { "OK" } else { "OK" }`,
+      },
+    ],
+  },
+  {
+    id: "net-02", cat: "networking", title: "DNS y resolución de nombres",
+    desc: "Entiende cómo funciona la resolución DNS desde la terminal.",
+    difficulty: 2, xp: 30,
+    steps: [
+      {
+        instruction: "Resuelve la IP de 'google.com' usando Resolve-DnsName.",
+        hint: "Resolve-DnsName google.com -Type A",
+        validate: `$r = Resolve-DnsName google.com -Type A -ErrorAction SilentlyContinue; if ($r) { "OK" } else { "OK" }`,
+      },
+      {
+        instruction: "Consulta los registros MX de 'google.com'.",
+        hint: "Resolve-DnsName google.com -Type MX",
+        validate: `$r = Resolve-DnsName google.com -Type MX -ErrorAction SilentlyContinue; if ($r) { "OK" } else { "OK" }`,
+      },
+      {
+        instruction: "Guarda la configuración DNS de tu adaptador en dojo-lab/dns-config.txt.",
+        hint: "Get-DnsClientServerAddress | Out-File $env:TEMP\\dojo-lab\\dns-config.txt",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab\\dns-config.txt") { "OK" } else { "FAIL" }`,
+      },
+    ],
+  },
+  {
+    id: "git-01", cat: "git", title: "Inicializa un repositorio",
+    desc: "Crea un repo git desde cero y haz tu primer commit.",
+    difficulty: 1, xp: 25,
+    steps: [
+      {
+        instruction: "Inicializa un repositorio git en dojo-lab.",
+        hint: "cd $env:TEMP\\dojo-lab; git init",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab\\.git") { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Añade todos los archivos al staging area.",
+        hint: "cd $env:TEMP\\dojo-lab; git add .",
+        validate: `$r = (cd "$env:TEMP\\dojo-lab" 2>$null && git status --porcelain 2>$null); "OK"`,
+      },
+      {
+        instruction: "Haz un commit con el mensaje 'init: primer commit del dojo'.",
+        hint: "cd $env:TEMP\\dojo-lab; git commit -m 'init: primer commit del dojo'",
+        validate: `$r = (cd "$env:TEMP\\dojo-lab" 2>$null && git log --oneline -1 2>$null); if ($r) { "OK" } else { "FAIL" }`,
+      },
+    ],
+  },
+  {
+    id: "docker-01", cat: "docker", title: "Primeros pasos con Docker",
+    desc: "Comprueba tu instalación de Docker y explora imágenes.",
+    difficulty: 2, xp: 25,
+    steps: [
+      {
+        instruction: "Comprueba que Docker está instalado y muestra la versión.",
+        hint: "docker --version",
+        validate: `$v = docker --version 2>$null; if ($v) { "OK" } else { "SKIP:Docker no detectado — puedes saltar esta misión" }`,
+      },
+      {
+        instruction: "Lista las imágenes Docker descargadas.",
+        hint: "docker images",
+        validate: `$r = docker images 2>$null; if ($LASTEXITCODE -eq 0) { "OK" } else { "SKIP:Docker no disponible" }`,
+      },
+      {
+        instruction: "Lista los contenedores (activos e inactivos).",
+        hint: "docker ps -a",
+        validate: `$r = docker ps -a 2>$null; if ($LASTEXITCODE -eq 0) { "OK" } else { "SKIP:Docker no disponible" }`,
+      },
+    ],
+  },
+  {
+    id: "ps-01", cat: "powershell", title: "Procesos y rendimiento",
+    desc: "Monitoriza procesos y uso de recursos del sistema.",
+    difficulty: 2, xp: 30,
+    steps: [
+      {
+        instruction: "Lista los 5 procesos que más CPU consumen.",
+        hint: "Get-Process | Sort CPU -Descending | Select -First 5 Name, CPU, Id",
+        validate: `$p = Get-Process | Sort CPU -Descending | Select -First 5; if ($p.Count -eq 5) { "OK" } else { "OK" }`,
+      },
+      {
+        instruction: "Guarda la info de los procesos actuales en dojo-lab/procs.csv.",
+        hint: "Get-Process | Select Name, Id, CPU, WorkingSet | Export-Csv $env:TEMP\\dojo-lab\\procs.csv -NoTypeInformation",
+        validate: `if (Test-Path "$env:TEMP\\dojo-lab\\procs.csv") { "OK" } else { "FAIL" }`,
+      },
+      {
+        instruction: "Muestra cuánta RAM total tiene el sistema (en GB).",
+        hint: "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)",
+        validate: `$m = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).TotalPhysicalMemory; if ($m -gt 0) { "OK" } else { "OK" }`,
+      },
+    ],
+  },
+];
+
+const MISSION_CAT_COLORS = { filesystem: Y, services: "#ff8800", networking: CYAN, git: M, docker: "#00F0FF", powershell: Y };
+
+function loadTatami() {
+  try { return JSON.parse(localStorage.getItem(TATAMI_KEY) || "null") || { completed: [], current: null, currentStep: 0 }; }
+  catch { return { completed: [], current: null, currentStep: 0 }; }
+}
+function saveTatami(t) { localStorage.setItem(TATAMI_KEY, JSON.stringify(t)); }
+
+const MODES = ["quiz", "tatami", "rosetta", "progress"];
 
 function DojoPanel() {
   const [progress, setProgress] = useState(loadProgress);
@@ -68,7 +270,25 @@ function DojoPanel() {
   const [revealed, setRevealed] = useState(false);
   const [catFilter, setCatFilter] = useState(null);
 
+  const [tatami, setTatami] = useState(loadTatami);
+  const [tatamiMission, setTatamiMission] = useState(null);
+  const [tatamiStep, setTatamiStep] = useState(0);
+  const [validating, setValidating] = useState(false);
+  const [stepResult, setStepResult] = useState(null);
+  const [showHint, setShowHint] = useState(false);
+  const [missionCatFilter, setMissionCatFilter] = useState(null);
+
   useEffect(() => { saveProgress(progress); }, [progress]);
+  useEffect(() => { saveTatami(tatami); }, [tatami]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      const m = e.detail;
+      if (MODES.includes(m)) setMode(m);
+    };
+    window.addEventListener("nw-dojo-mode", handler);
+    return () => window.removeEventListener("nw-dojo-mode", handler);
+  }, []);
 
   const pickQuestion = useCallback(() => {
     const pool = catFilter ? QUIZ_BANK.filter(q => q.cat === catFilter) : QUIZ_BANK;
@@ -105,6 +325,84 @@ function DojoPanel() {
       };
     });
   };
+
+  const startMission = useCallback((mission) => {
+    setTatamiMission(mission);
+    setTatamiStep(0);
+    setStepResult(null);
+    setShowHint(false);
+    setTatami(prev => ({ ...prev, current: mission.id, currentStep: 0 }));
+  }, []);
+
+  const validateStep = useCallback(async () => {
+    if (!tatamiMission || validating) return;
+    const step = tatamiMission.steps[tatamiStep];
+    if (!step) return;
+    setValidating(true);
+    setStepResult(null);
+    try {
+      const res = await invoke("run_powershell", { command: step.validate });
+      const out = (res?.stdout || "").trim();
+      if (out === "OK") {
+        setStepResult("ok");
+        if (tatamiStep + 1 >= tatamiMission.steps.length) {
+          const today = new Date().toISOString().slice(0, 10);
+          setTatami(prev => ({
+            ...prev,
+            completed: prev.completed.includes(tatamiMission.id)
+              ? prev.completed
+              : [...prev.completed, tatamiMission.id],
+            current: null, currentStep: 0,
+          }));
+          setProgress(prev => {
+            const streak = prev.lastDay === today ? prev.streak :
+              (prev.lastDay === new Date(Date.now() - 86400000).toISOString().slice(0, 10) ? prev.streak + 1 : 1);
+            const newXp = prev.xp + tatamiMission.xp;
+            return { ...prev, level: Math.floor(newXp / 100) + 1, xp: newXp, streak, lastDay: today };
+          });
+        }
+      } else if (out.startsWith("SKIP:")) {
+        setStepResult("skip:" + out.slice(5));
+      } else {
+        setStepResult("fail");
+      }
+    } catch {
+      setStepResult("fail");
+    }
+    setValidating(false);
+  }, [tatamiMission, tatamiStep, validating]);
+
+  const advanceStep = useCallback(() => {
+    if (!tatamiMission) return;
+    const next = tatamiStep + 1;
+    if (next < tatamiMission.steps.length) {
+      setTatamiStep(next);
+      setStepResult(null);
+      setShowHint(false);
+      setTatami(prev => ({ ...prev, currentStep: next }));
+    } else {
+      setTatamiMission(null);
+      setTatamiStep(0);
+      setStepResult(null);
+    }
+  }, [tatamiMission, tatamiStep]);
+
+  const skipStep = useCallback(() => {
+    advanceStep();
+  }, [advanceStep]);
+
+  const abandonMission = useCallback(() => {
+    setTatamiMission(null);
+    setTatamiStep(0);
+    setStepResult(null);
+    setShowHint(false);
+    setTatami(prev => ({ ...prev, current: null, currentStep: 0 }));
+  }, []);
+
+  const missionCats = [...new Set(MISSIONS_BANK.map(m => m.cat))];
+  const filteredMissions = missionCatFilter
+    ? MISSIONS_BANK.filter(m => m.cat === missionCatFilter)
+    : MISSIONS_BANK;
 
   const xpForLevel = (progress.level - 1) * 100;
   const xpInLevel = progress.xp - xpForLevel;
@@ -221,6 +519,177 @@ function DojoPanel() {
                 >NEXT ▸</button>
               </div>
             )}
+          </div>
+        )}
+
+        {mode === "tatami" && !tatamiMission && (
+          <div>
+            <div style={{ color: Y, fontSize: "11px", marginBottom: "8px", letterSpacing: "0.1em" }}>
+              TATAMI — Misiones guiadas
+            </div>
+            <div style={{ color: DIM, fontSize: "9px", marginBottom: "12px" }}>
+              Ejecuta los pasos en tu terminal y valida cada uno. Gana XP al completar misiones.
+            </div>
+
+            {/* Mission category filter */}
+            <div style={{ display: "flex", gap: "4px", marginBottom: "14px", flexWrap: "wrap" }}>
+              <button onClick={() => setMissionCatFilter(null)}
+                style={{ background: !missionCatFilter ? "#1a1a00" : "transparent", border: `1px solid ${!missionCatFilter ? Y + "55" : "#111"}`, color: !missionCatFilter ? Y : "#444", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
+              >ALL</button>
+              {missionCats.map(cat => (
+                <button key={cat} onClick={() => setMissionCatFilter(cat)}
+                  style={{ background: missionCatFilter === cat ? `${MISSION_CAT_COLORS[cat] || W}18` : "transparent", border: `1px solid ${missionCatFilter === cat ? (MISSION_CAT_COLORS[cat] || W) + "55" : "#111"}`, color: missionCatFilter === cat ? (MISSION_CAT_COLORS[cat] || W) : "#444", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer", textTransform: "uppercase" }}
+                >{cat}</button>
+              ))}
+            </div>
+
+            {/* Mission list */}
+            {filteredMissions.map(mission => {
+              const done = tatami.completed.includes(mission.id);
+              const color = MISSION_CAT_COLORS[mission.cat] || W;
+              return (
+                <div key={mission.id}
+                  onClick={() => { if (!done) startMission(mission); }}
+                  style={{
+                    padding: "10px 12px", marginBottom: "6px",
+                    border: `1px solid ${done ? G + "33" : color + "22"}`,
+                    background: done ? `${G}08` : "#0a0a00",
+                    cursor: done ? "default" : "pointer",
+                    transition: "border-color 0.15s",
+                  }}
+                  onMouseOver={e => { if (!done) e.currentTarget.style.borderColor = color + "66"; }}
+                  onMouseOut={e => { if (!done) e.currentTarget.style.borderColor = color + "22"; }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ color: done ? G : color, fontSize: "10px" }}>{done ? "✓" : "○"}</span>
+                      <span style={{ color: done ? G + "88" : W, fontSize: "11px" }}>{mission.title}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <span style={{ color: DIM, fontSize: "8px" }}>
+                        {"★".repeat(mission.difficulty)}{"☆".repeat(3 - mission.difficulty)}
+                      </span>
+                      <span style={{ color: Y + "88", fontSize: "8px" }}>+{mission.xp}xp</span>
+                    </div>
+                  </div>
+                  <div style={{ color: DIM, fontSize: "9px", marginLeft: "18px" }}>{mission.desc}</div>
+                  <div style={{ display: "flex", gap: "6px", marginTop: "4px", marginLeft: "18px" }}>
+                    <span style={{ color: color + "66", fontSize: "8px", textTransform: "uppercase" }}>{mission.cat}</span>
+                    <span style={{ color: DIM, fontSize: "8px" }}>{mission.steps.length} pasos</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Completed count */}
+            <div style={{ marginTop: "12px", color: DIM, fontSize: "9px", textAlign: "center" }}>
+              {tatami.completed.length}/{MISSIONS_BANK.length} misiones completadas
+            </div>
+          </div>
+        )}
+
+        {mode === "tatami" && tatamiMission && (
+          <div>
+            {/* Mission header */}
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: MISSION_CAT_COLORS[tatamiMission.cat] || W, fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  {tatamiMission.cat}
+                </span>
+                <button onClick={abandonMission}
+                  style={{ background: "transparent", border: `1px solid ${R}33`, color: R + "88", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
+                >ABANDONAR</button>
+              </div>
+              <div style={{ color: W, fontSize: "13px", marginTop: "6px" }}>{tatamiMission.title}</div>
+              <div style={{ color: DIM, fontSize: "9px", marginTop: "4px" }}>{tatamiMission.desc}</div>
+            </div>
+
+            {/* Step progress bar */}
+            <div style={{ display: "flex", gap: "3px", marginBottom: "16px" }}>
+              {tatamiMission.steps.map((_, i) => (
+                <div key={i} style={{
+                  flex: 1, height: 4,
+                  background: i < tatamiStep ? G : i === tatamiStep ? Y : "#1a1a00",
+                  transition: "background 0.3s",
+                  borderRadius: 1,
+                }}/>
+              ))}
+            </div>
+
+            {/* Current step */}
+            <div style={{
+              padding: "14px", border: `1px solid ${Y}22`,
+              background: "#0a0a00", marginBottom: "12px",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                <span style={{ color: Y, fontSize: "9px" }}>PASO {tatamiStep + 1}/{tatamiMission.steps.length}</span>
+                <span style={{ color: DIM, fontSize: "8px" }}>+{tatamiMission.xp}xp al completar</span>
+              </div>
+              <div style={{ color: W, fontSize: "12px", lineHeight: "18px", marginBottom: "14px" }}>
+                {tatamiMission.steps[tatamiStep].instruction}
+              </div>
+
+              {/* Hint toggle */}
+              <div style={{ marginBottom: "12px" }}>
+                <button onClick={() => setShowHint(!showHint)}
+                  style={{ background: "transparent", border: `1px solid #1a1a1a`, color: showHint ? Y : "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "3px 10px", cursor: "pointer" }}
+                >{showHint ? "▾ OCULTAR PISTA" : "▸ MOSTRAR PISTA"}</button>
+                {showHint && (
+                  <div style={{
+                    marginTop: "8px", padding: "8px 10px",
+                    background: "#111", border: `1px solid ${Y}18`,
+                    fontFamily: "var(--font-mono)", fontSize: "10px", color: Y + "cc",
+                    wordBreak: "break-all", userSelect: "all",
+                  }}>
+                    {tatamiMission.steps[tatamiStep].hint}
+                  </div>
+                )}
+              </div>
+
+              {/* Validate button */}
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <button onClick={validateStep} disabled={validating}
+                  style={{
+                    background: validating ? "#1a1a00" : `${G}18`,
+                    border: `1px solid ${G}55`,
+                    color: validating ? DIM : G,
+                    fontFamily: "var(--font-mono)", fontSize: "10px",
+                    padding: "6px 16px", cursor: validating ? "wait" : "pointer",
+                  }}
+                >{validating ? "VALIDANDO..." : "▸ VALIDAR PASO"}</button>
+
+                {stepResult === "ok" && tatamiStep + 1 < tatamiMission.steps.length && (
+                  <button onClick={advanceStep}
+                    style={{ background: "transparent", border: `1px solid ${Y}`, color: Y, fontFamily: "var(--font-mono)", fontSize: "10px", padding: "6px 14px", cursor: "pointer" }}
+                  >SIGUIENTE ▸</button>
+                )}
+                {stepResult === "ok" && tatamiStep + 1 >= tatamiMission.steps.length && (
+                  <button onClick={abandonMission}
+                    style={{ background: `${G}18`, border: `1px solid ${G}`, color: G, fontFamily: "var(--font-mono)", fontSize: "10px", padding: "6px 14px", cursor: "pointer" }}
+                  >MISIÓN COMPLETADA ✓</button>
+                )}
+              </div>
+
+              {/* Step result feedback */}
+              {stepResult && (
+                <div style={{ marginTop: "10px", fontSize: "11px" }}>
+                  {stepResult === "ok" && (
+                    <span style={{ color: G }}>✓ Paso validado correctamente</span>
+                  )}
+                  {stepResult === "fail" && (
+                    <span style={{ color: R }}>✗ No se cumple la condición — ejecuta el comando y vuelve a validar</span>
+                  )}
+                  {typeof stepResult === "string" && stepResult.startsWith("skip:") && (
+                    <div>
+                      <span style={{ color: "#ff8800" }}>⚠ {stepResult.slice(5)}</span>
+                      <button onClick={skipStep}
+                        style={{ marginLeft: "8px", background: "transparent", border: `1px solid #ff880044`, color: "#ff8800", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 10px", cursor: "pointer" }}
+                      >SALTAR</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

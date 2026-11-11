@@ -23,6 +23,8 @@ const CATEGORIES = [
       { cmd: "nw theme blade-runner", desc: "Tema Blade Runner (rojo)" },
       { cmd: "nw theme ghost",       desc: "Tema Ghost in Shell (magenta)" },
       { cmd: "nw dojo",              desc: "Abrir tab DOJO (entrenamiento)" },
+      { cmd: "nw dojo tatami",       desc: "Misiones guiadas paso a paso" },
+      { cmd: "nw dojo quiz",         desc: "Preguntas de entrenamiento" },
       { cmd: "nw notebook",          desc: "Abrir tab NOTEBOOK" },
     ],
   },
