@@ -257,22 +257,22 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 ### FASE 2 — DSL propio en Rust (lenguaje nw)
 
 #### Parser basico
-- [ ] Crear modulo `nw-lang/` en `src-tauri/src/` con parser (`pest` o `nom`)
-- [ ] Sintaxis base: `nw <comando> [args] [| pipe] [> output]`
-- [ ] Bridge: si el parser no reconoce el comando, pasarlo al shell activo
+- [x] Crear modulo `nw_lang/` en `src-tauri/src/` con parser (hand-rolled tokenizer + pipeline)
+- [x] Sintaxis base: `nw <comando> [args] [| pipe] [> output]`
+- [x] Bridge: si el parser no reconoce el comando, pasarlo al frontend JS (que mantiene los comandos originales)
 
 #### Comandos core del DSL
-- [ ] `nw proc` — lista procesos (top CPU)
-- [ ] `nw proc | filter cpu > 50 | top 10` — pipes con filter y top
-- [ ] `nw ports` — puertos activos (migrar de PS)
-- [ ] `nw kill <nombre>` — matar proceso
-- [ ] `nw find <patron>` — buscar archivos
-- [ ] `nw size [n]` — archivos mas grandes
+- [x] `nw proc` — lista procesos (top CPU) via `sysinfo` nativo
+- [x] `nw proc | filter cpu > 50 | top 10` — pipes con filter, top, grep
+- [x] `nw ports` — puertos activos TCP (via PowerShell bridge)
+- [x] `nw kill <nombre>` — matar proceso por nombre o PID via `sysinfo`
+- [x] `nw find <patron>` — buscar archivos via `walkdir`
+- [x] `nw size [n]` — archivos mas grandes via `walkdir`
 - [ ] `nw dupes [ruta]` — encontrar duplicados
-- [ ] `nw hash <archivo>` — hash de archivo
-- [ ] `nw diff <a> <b>` — comparar archivos
-- [ ] `nw clean [--dry]` — limpiar logs/tmp
-- [ ] `nw help` — listar todos los comandos con descripcion
+- [x] `nw hash <archivo>` — SHA-256 via `sha2`
+- [x] `nw diff <a> <b>` — comparar archivos linea a linea
+- [x] `nw clean [--dry]` — limpiar logs/tmp/bak con dry-run
+- [x] `nw help` — listar todos los comandos (JS + Rust nativos ⚡)
 
 #### Variables de entorno NETWATCH
 - [ ] `$NW_PROJECTS` — ruta a proyectos

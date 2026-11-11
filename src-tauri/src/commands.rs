@@ -3,6 +3,8 @@ use std::process::Command;
 use sysinfo::{System, Disks, Networks};
 use tauri::{AppHandle, Manager};
 
+use crate::nw_lang;
+
 // ── System Info ───────────────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize)]
@@ -281,4 +283,11 @@ pub fn get_system_metrics() -> SystemMetrics {
         net,
         uptime_secs: System::uptime(),
     }
+}
+
+// ── NW DSL execution ─────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn execute_nw(input: String) -> nw_lang::NwResult {
+    nw_lang::execute(&input).await
 }

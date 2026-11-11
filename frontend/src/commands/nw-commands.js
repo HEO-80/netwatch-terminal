@@ -62,10 +62,29 @@ async function cmdHelp(args, write) {
     [C.cyan("nw config"),           "abrir panel de Settings / API keys"],
   ];
 
+  // DSL nativo (Rust)
+  const rustCmds = [
+    [C.green("nw proc"),             "lista procesos (top CPU) ⚡"],
+    [C.green("nw ports"),            "puertos TCP escuchando ⚡"],
+    [C.green("nw kill <nombre|pid>"),"matar proceso ⚡"],
+    [C.green("nw find <patron>"),    "buscar archivos ⚡"],
+    [C.green("nw size [n]"),         "archivos más grandes ⚡"],
+    [C.green("nw hash <archivo>"),   "SHA-256 de un archivo ⚡"],
+    [C.green("nw diff <a> <b>"),     "comparar dos archivos ⚡"],
+    [C.green("nw clean [--dry]"),    "limpiar logs/tmp/bak ⚡"],
+  ];
+
   cmds.forEach(([cmd, desc]) => {
     write(`  ${cmd.padEnd ? cmd : cmd}${" ".repeat(Math.max(1, 32 - cmd.replace(/\x1b\[[0-9;]*m/g,"").length))}${C.dim("→")} ${C.gray(desc)}` + nl);
   });
-  write(nl + C.dim("  PowerShell, git, npm, yarn — funcionan normalmente.") + nl + nl);
+
+  write(nl + `  ${C.green("NETWATCH")} ${C.dim("DSL — Nativos Rust ⚡")}` + nl + nl);
+  rustCmds.forEach(([cmd, desc]) => {
+    write(`  ${cmd.padEnd ? cmd : cmd}${" ".repeat(Math.max(1, 32 - cmd.replace(/\x1b\[[0-9;]*m/g,"").length))}${C.dim("→")} ${C.gray(desc)}` + nl);
+  });
+
+  write(nl + C.dim("  ⚡ = Rust nativo, sin PowerShell. Pipes: nw proc | filter cpu > 50 | top 5") + nl);
+  write(C.dim("  PowerShell, git, npm, yarn — funcionan normalmente.") + nl + nl);
 }
 
 // ── nw status ─────────────────────────────────────────────────────────────────
@@ -493,9 +512,25 @@ export const NW_COMMANDS = {
   config: cmdConfig,
 };
 
+async function tryRustBackend(input) {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return await invoke("execute_nw", { input });
+  } catch { return null; }
+}
+
 export async function handleNwCommand(input, write, sendToShell, context = {}) {
   const trimmed = input.trim();
   if (!trimmed.startsWith("nw ") && trimmed !== "nw") return { handled: false };
+
+  // Try Rust native DSL first
+  const rustResult = await tryRustBackend(trimmed);
+  if (rustResult?.handled) {
+    write(rustResult.output);
+    return { handled: true };
+  }
+
+  // Fall back to JS commands
   const parts   = trimmed.split(/\s+/);
   const sub     = parts[1]?.toLowerCase();
   const args    = parts.slice(2);

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod nw_lang;
 
 use tauri::Manager;
 use std::process::{Command, Child};
@@ -85,6 +86,7 @@ fn main() {
             commands::get_system_metrics,
             commands::get_docker_status,
             commands::run_powershell,
+            commands::execute_nw,
             commands::open_url,
             commands::open_vscode,
             commands::ssh_beelink,
