@@ -3,6 +3,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read;
 use std::path::Path;
+use std::collections::HashMap;
 use sysinfo::System;
 use walkdir::WalkDir;
 
@@ -19,42 +20,46 @@ const NL: &str = "\r\n";
 const SEP: &str = "\x1b[38;5;237m────────────────────────────────────────────────────────\x1b[0m";
 
 pub async fn dispatch(pipeline: NwPipeline) -> NwResult {
-    let result = match pipeline.command.as_str() {
-        "proc"  => cmd_proc(&pipeline.args),
-        "ports" => cmd_ports(&pipeline.args),
-        "kill"  => cmd_kill(&pipeline.args),
-        "find"  => cmd_find(&pipeline.args),
-        "size"  => cmd_size(&pipeline.args),
-        "hash"  => cmd_hash(&pipeline.args),
-        "diff"  => cmd_diff(&pipeline.args),
-        "clean" => cmd_clean(&pipeline.args),
-        "help2" => cmd_help_rust(),
-        _ => {
-            return NwResult {
-                handled: false,
-                output: String::new(),
-                error: None,
-            };
-        }
+    let result = if pipeline.command == "run" {
+        cmd_run(&pipeline.args)
+    } else {
+        run_command(&pipeline.command, &pipeline.args)
     };
 
     match result {
         Ok(mut output) => {
-            // Apply pipe stages
             for pipe in &pipeline.pipes {
                 output = apply_pipe(&output, pipe);
             }
-            NwResult {
-                handled: true,
-                output,
-                error: None,
-            }
+            NwResult { handled: true, output, error: None }
         }
+        Err(ref e) if e == "NOT_HANDLED" => NwResult {
+            handled: false,
+            output: String::new(),
+            error: None,
+        },
         Err(e) => NwResult {
             handled: true,
             output: format!("{nl}{err}{nl}", nl = NL, err = r!(format!("✗ Error: {}", e))),
             error: Some(e),
         },
+    }
+}
+
+fn run_command(command: &str, args: &[String]) -> Result<String, String> {
+    match command {
+        "proc"  => cmd_proc(args),
+        "ports" => cmd_ports(args),
+        "kill"  => cmd_kill(args),
+        "find"  => cmd_find(args),
+        "size"  => cmd_size(args),
+        "hash"  => cmd_hash(args),
+        "diff"  => cmd_diff(args),
+        "clean" => cmd_clean(args),
+        "dupes" => cmd_dupes(args),
+        "env"   => cmd_env(args),
+        "help2" => cmd_help_rust(),
+        _ => Err("NOT_HANDLED".to_string()),
     }
 }
 
@@ -502,6 +507,401 @@ fn cmd_clean(args: &[String]) -> Result<String, String> {
     Ok(out)
 }
 
+// ── nw dupes ────────────────────────────────────────────────────────────────
+fn cmd_dupes(args: &[String]) -> Result<String, String> {
+    let base = if args.is_empty() { "." } else { &args[0] };
+    let base_path = Path::new(base);
+
+    if !base_path.exists() {
+        return Ok(format!("{nl}  {} Ruta '{}' no existe{nl}{nl}",
+            r!("✗"), base, nl = NL));
+    }
+
+    let mut out = String::new();
+    out.push_str(&format!("{nl}{header}{nl}{sep}{nl}{nl}",
+        nl = NL, header = c!("◈ DUPLICATE FILES"), sep = SEP));
+
+    let mut size_map: HashMap<u64, Vec<String>> = HashMap::new();
+    for entry in WalkDir::new(base_path)
+        .max_depth(6)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.') && name != "node_modules" && name != "target"
+        })
+        .filter_map(|e| e.ok())
+    {
+        if entry.file_type().is_file() {
+            if let Ok(meta) = entry.metadata() {
+                if meta.len() > 0 {
+                    size_map.entry(meta.len()).or_default()
+                        .push(entry.path().display().to_string());
+                }
+            }
+        }
+    }
+
+    let mut dupe_groups: Vec<(String, Vec<String>, u64)> = Vec::new();
+    for (size, paths) in &size_map {
+        if paths.len() < 2 { continue; }
+        let mut hash_map: HashMap<String, Vec<String>> = HashMap::new();
+        for path in paths {
+            if let Ok(h) = hash_file(path) {
+                hash_map.entry(h).or_default().push(path.clone());
+            }
+        }
+        for (hash, group) in hash_map {
+            if group.len() >= 2 {
+                dupe_groups.push((hash, group, *size));
+            }
+        }
+    }
+
+    if dupe_groups.is_empty() {
+        out.push_str(&format!("  {}{nl}{nl}",
+            g!("✓ No se encontraron duplicados"), nl = NL));
+    } else {
+        dupe_groups.sort_by(|a, b| b.2.cmp(&a.2));
+        let mut total_waste: u64 = 0;
+
+        for (i, (hash, group, size)) in dupe_groups.iter().enumerate() {
+            if i >= 20 {
+                out.push_str(&format!("  {} ... y {} grupos más{nl}",
+                    y!("⚠"), dupe_groups.len() - 20, nl = NL));
+                break;
+            }
+            let waste = size * (group.len() as u64 - 1);
+            total_waste += waste;
+
+            out.push_str(&format!("  {} {} ({} copias, {}){nl}",
+                y!(format!("#{}", i + 1)),
+                dim!(&hash[..16]),
+                r!(group.len()),
+                c!(format_size(*size)),
+                nl = NL));
+
+            for path in group {
+                let short = if path.len() > 60 {
+                    format!("...{}", &path[path.len() - 57..])
+                } else {
+                    path.clone()
+                };
+                out.push_str(&format!("    {} {}{nl}",
+                    dim!("·"), c!(&short), nl = NL));
+            }
+            out.push_str(NL);
+        }
+
+        out.push_str(&format!("  {} grupo(s), {} desperdiciado{nl}{nl}",
+            y!(dupe_groups.len()),
+            r!(format_size(total_waste)),
+            nl = NL));
+    }
+    Ok(out)
+}
+
+fn hash_file(path: &str) -> Result<String, String> {
+    let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = file.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break; }
+        hasher.update(&buf[..n]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+// ── nw env ──────────────────────────────────────────────────────────────────
+fn env_file_path() -> std::path::PathBuf {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_else(|_| ".".to_string());
+    let dir = Path::new(&home).join(".netwatch");
+    if !dir.exists() {
+        let _ = fs::create_dir_all(&dir);
+    }
+    dir.join("env.json")
+}
+
+fn load_env() -> HashMap<String, String> {
+    let path = env_file_path();
+    fs::read_to_string(&path)
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok())
+        .unwrap_or_default()
+}
+
+fn save_env(vars: &HashMap<String, String>) {
+    if let Ok(json) = serde_json::to_string_pretty(vars) {
+        let _ = fs::write(env_file_path(), json);
+    }
+}
+
+fn cmd_env(args: &[String]) -> Result<String, String> {
+    let sub = args.first().map(|s| s.as_str()).unwrap_or("list");
+    let mut vars = load_env();
+
+    match sub {
+        "set" => {
+            if args.len() < 3 {
+                return Ok(format!("{nl}  {}{nl}{nl}",
+                    dim!("Uso: nw env set <clave> <valor>"), nl = NL));
+            }
+            let key = args[1].to_uppercase();
+            let value = args[2..].join(" ");
+            vars.insert(key.clone(), value.clone());
+            save_env(&vars);
+            Ok(format!("{nl}  {} {} = {}{nl}{nl}",
+                g!("✓"), c!(&key), y!(&value), nl = NL))
+        }
+        "get" => {
+            if args.len() < 2 {
+                return Ok(format!("{nl}  {}{nl}{nl}",
+                    dim!("Uso: nw env get <clave>"), nl = NL));
+            }
+            let key = args[1].to_uppercase();
+            match vars.get(&key) {
+                Some(v) => Ok(format!("{nl}  {} = {}{nl}{nl}",
+                    c!(&key), y!(v), nl = NL)),
+                None => Ok(format!("{nl}  {} Variable '{}' no definida{nl}{nl}",
+                    r!("✗"), key, nl = NL)),
+            }
+        }
+        "del" | "rm" => {
+            if args.len() < 2 {
+                return Ok(format!("{nl}  {}{nl}{nl}",
+                    dim!("Uso: nw env del <clave>"), nl = NL));
+            }
+            let key = args[1].to_uppercase();
+            if vars.remove(&key).is_some() {
+                save_env(&vars);
+                Ok(format!("{nl}  {} Variable '{}' eliminada{nl}{nl}",
+                    g!("✓"), key, nl = NL))
+            } else {
+                Ok(format!("{nl}  {} Variable '{}' no existe{nl}{nl}",
+                    r!("✗"), key, nl = NL))
+            }
+        }
+        _ => {
+            let mut out = String::new();
+            out.push_str(&format!("{nl}{header}{nl}{sep}{nl}{nl}",
+                nl = NL, header = c!("◈ NETWATCH ENV"), sep = SEP));
+
+            let defaults = [
+                ("NW_PROJECTS", "ruta a proyectos"),
+                ("NW_SERVERS", "servidores SSH guardados"),
+                ("NW_SHELL", "shell activo (ps, wsl, cmd)"),
+            ];
+
+            for (key, desc) in &defaults {
+                let label = format!("${}", key);
+                let has_val = vars.contains_key(*key);
+                let display_val = if has_val {
+                    y!(vars.get(*key).unwrap())
+                } else {
+                    dim!("(no definido)").to_string()
+                };
+                out.push_str(&format!("  {:<20} {} {} {}{nl}",
+                    c!(&label), d!("="), display_val, dim!(desc), nl = NL));
+            }
+
+            let custom: Vec<_> = vars.keys()
+                .filter(|k| !defaults.iter().any(|(d, _)| *d == k.as_str()))
+                .cloned()
+                .collect();
+
+            if !custom.is_empty() {
+                out.push_str(&format!("{nl}  {}{nl}", d!("Variables custom:"), nl = NL));
+                for key in &custom {
+                    let label = format!("${}", key);
+                    out.push_str(&format!("  {:<20} {} {}{nl}",
+                        c!(&label), d!("="), y!(vars.get(key).unwrap()), nl = NL));
+                }
+            }
+
+            out.push_str(&format!("{nl}  {}{nl}{nl}",
+                dim!("nw env set <clave> <valor> · nw env get · nw env del"), nl = NL));
+            Ok(out)
+        }
+    }
+}
+
+// ── nw run (scripting .nw) ──────────────────────────────────────────────────
+fn cmd_run(args: &[String]) -> Result<String, String> {
+    if args.is_empty() {
+        return Ok(format!("{nl}  {}{nl}{nl}",
+            dim!("Uso: nw run <script.nw>"), nl = NL));
+    }
+
+    let path = &args[0];
+    if !Path::new(path).exists() {
+        return Ok(format!("{nl}  {} Archivo '{}' no existe{nl}{nl}",
+            r!("✗"), path, nl = NL));
+    }
+
+    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
+
+    let mut out = String::new();
+    out.push_str(&format!("{nl}{header}{nl}{sep}{nl}{nl}",
+        nl = NL, header = c!(format!("◈ RUN {}", path)), sep = SEP));
+
+    let mut vars = load_env();
+    execute_block(&lines, 0, lines.len(), &mut vars, &mut out)?;
+
+    out.push_str(&format!("{nl}  {} Script completado{nl}{nl}",
+        g!("✓"), nl = NL));
+    Ok(out)
+}
+
+fn execute_block(
+    lines: &[String], start: usize, end: usize,
+    vars: &mut HashMap<String, String>, out: &mut String,
+) -> Result<(), String> {
+    let mut i = start;
+    while i < end {
+        let line = substitute_vars(lines[i].trim(), vars);
+        if line.is_empty() || line.starts_with('#') { i += 1; continue; }
+
+        if line.starts_with("let ") {
+            if let Some(eq) = line.find('=') {
+                let name = line[4..eq].trim().to_string();
+                let value = line[eq + 1..].trim().to_string();
+                vars.insert(name, value);
+            }
+            i += 1;
+            continue;
+        }
+        if line.starts_with("if ") {
+            i = script_if(lines, i, vars, out)?;
+            continue;
+        }
+        if line.starts_with("for ") {
+            i = script_for(lines, i, vars, out)?;
+            continue;
+        }
+        if line.starts_with("nw ") {
+            run_nw_line(&line, out);
+            i += 1;
+            continue;
+        }
+        i += 1;
+    }
+    Ok(())
+}
+
+fn find_block_end(lines: &[String], start: usize) -> (Option<usize>, Option<usize>) {
+    let mut else_idx = None;
+    let mut depth = 0;
+    for i in (start + 1)..lines.len() {
+        let t = lines[i].trim();
+        if t.starts_with("if ") || t.starts_with("for ") { depth += 1; }
+        if t == "end" {
+            if depth == 0 { return (Some(i), else_idx); }
+            depth -= 1;
+        }
+        if t == "else" && depth == 0 { else_idx = Some(i); }
+    }
+    (None, else_idx)
+}
+
+fn script_if(
+    lines: &[String], start: usize,
+    vars: &mut HashMap<String, String>, out: &mut String,
+) -> Result<usize, String> {
+    let line = substitute_vars(lines[start].trim(), vars);
+    let cond_str = line[3..].trim();
+    let cond = eval_condition(cond_str);
+
+    let (end_idx, else_idx) = find_block_end(lines, start);
+    let end_idx = end_idx.ok_or("Script error: 'if' sin 'end'")?;
+
+    let (exec_start, exec_end) = if cond {
+        (start + 1, else_idx.unwrap_or(end_idx))
+    } else if let Some(ei) = else_idx {
+        (ei + 1, end_idx)
+    } else {
+        (end_idx, end_idx)
+    };
+
+    execute_block(lines, exec_start, exec_end, vars, out)?;
+    Ok(end_idx + 1)
+}
+
+fn script_for(
+    lines: &[String], start: usize,
+    vars: &mut HashMap<String, String>, out: &mut String,
+) -> Result<usize, String> {
+    let line = substitute_vars(lines[start].trim(), vars);
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 4 || parts[2] != "in" {
+        return Err("Syntax: for VAR in item1 item2 ...".to_string());
+    }
+
+    let var_name = parts[1].to_string();
+    let items: Vec<String> = parts[3..].iter().map(|s| s.to_string()).collect();
+
+    let (end_idx, _) = find_block_end(lines, start);
+    let end_idx = end_idx.ok_or("Script error: 'for' sin 'end'")?;
+
+    for item in &items {
+        vars.insert(var_name.clone(), item.clone());
+        execute_block(lines, start + 1, end_idx, vars, out)?;
+    }
+    Ok(end_idx + 1)
+}
+
+fn substitute_vars(line: &str, vars: &HashMap<String, String>) -> String {
+    let mut result = line.to_string();
+    let mut keys: Vec<&String> = vars.keys().collect();
+    keys.sort_by(|a, b| b.len().cmp(&a.len()));
+    for key in keys {
+        result = result.replace(&format!("${}", key), &vars[key]);
+    }
+    result
+}
+
+fn eval_condition(cond: &str) -> bool {
+    let parts: Vec<&str> = cond.split_whitespace().collect();
+    match parts.len() {
+        3 => {
+            let (left, op, right) = (parts[0], parts[1], parts[2]);
+            match op {
+                "==" | "=" => left == right,
+                "!=" => left != right,
+                ">"  => left.parse::<f64>().unwrap_or(0.0) > right.parse::<f64>().unwrap_or(0.0),
+                "<"  => left.parse::<f64>().unwrap_or(0.0) < right.parse::<f64>().unwrap_or(0.0),
+                ">=" => left.parse::<f64>().unwrap_or(0.0) >= right.parse::<f64>().unwrap_or(0.0),
+                "<=" => left.parse::<f64>().unwrap_or(0.0) <= right.parse::<f64>().unwrap_or(0.0),
+                _ => false,
+            }
+        }
+        1 => !parts[0].is_empty() && parts[0] != "false" && parts[0] != "0",
+        _ => false,
+    }
+}
+
+fn run_nw_line(line: &str, out: &mut String) {
+    if let Some(pipeline) = super::parse(line) {
+        match run_command(&pipeline.command, &pipeline.args) {
+            Ok(mut output) => {
+                for pipe in &pipeline.pipes {
+                    output = apply_pipe(&output, pipe);
+                }
+                out.push_str(&output);
+            }
+            Err(ref e) if e == "NOT_HANDLED" => {
+                out.push_str(&format!("  {} Comando '{}' no disponible en scripts{nl}",
+                    r!("✗"), pipeline.command, nl = NL));
+            }
+            Err(e) => {
+                out.push_str(&format!("  {} {}{nl}", r!("✗"), e, nl = NL));
+            }
+        }
+    }
+}
+
 // ── nw help2 (Rust-native commands) ──────────────────────────────────────────
 fn cmd_help_rust() -> Result<String, String> {
     let mut out = String::new();
@@ -516,9 +916,12 @@ fn cmd_help_rust() -> Result<String, String> {
         ("nw kill <nombre|pid>", "matar proceso por nombre o PID"),
         ("nw find <patron>",     "buscar archivos por nombre"),
         ("nw size [n]",          "archivos más grandes (default 15)"),
+        ("nw dupes [ruta]",      "encontrar archivos duplicados"),
         ("nw hash <archivo>",    "SHA-256 de un archivo"),
         ("nw diff <a> <b>",      "comparar dos archivos"),
         ("nw clean [--dry]",     "limpiar logs/tmp/bak"),
+        ("nw env [set|get|del]", "variables NETWATCH persistentes"),
+        ("nw run <script.nw>",   "ejecutar script .nw"),
     ];
 
     for (cmd, desc) in &cmds {

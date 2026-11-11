@@ -268,21 +268,43 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] `nw kill <nombre>` — matar proceso por nombre o PID via `sysinfo`
 - [x] `nw find <patron>` — buscar archivos via `walkdir`
 - [x] `nw size [n]` — archivos mas grandes via `walkdir`
-- [ ] `nw dupes [ruta]` — encontrar duplicados
+- [x] `nw dupes [ruta]` — encontrar duplicados via SHA-256 + walkdir
 - [x] `nw hash <archivo>` — SHA-256 via `sha2`
 - [x] `nw diff <a> <b>` — comparar archivos linea a linea
 - [x] `nw clean [--dry]` — limpiar logs/tmp/bak con dry-run
 - [x] `nw help` — listar todos los comandos (JS + Rust nativos ⚡)
 
 #### Variables de entorno NETWATCH
-- [ ] `$NW_PROJECTS` — ruta a proyectos
-- [ ] `$NW_SERVERS` — lista de servidores SSH guardados
-- [ ] `$NW_SHELL` — shell activo (ps, wsl, cmd)
-- [ ] Persistir variables en store de Tauri entre sesiones
+- [x] `$NW_PROJECTS` — ruta a proyectos
+- [x] `$NW_SERVERS` — lista de servidores SSH guardados
+- [x] `$NW_SHELL` — shell activo (ps, wsl, cmd)
+- [x] Persistir variables en `~/.netwatch/env.json` entre sesiones
 
 #### Scripting .nw
-- [ ] Soporte para `nw run script.nw`
-- [ ] Variables (`let x = ...`), condicionales (`if/else`), loops (`for/each`), funciones (`fn`)
+- [x] Soporte para `nw run script.nw`
+- [x] Variables (`let x = ...`), condicionales (`if/else`), loops (`for/each`), sustitución `$var`
+
+### FASE 2.5 — UX & Personalización
+
+#### Paneles reordenables (drag & drop)
+- [ ] Permitir cambiar posición de paneles laterales arrastrando
+- [ ] Mantener estética cyberpunk al reorganizar (bordes, glow, transiciones)
+- [ ] Persistir orden personalizado en store entre sesiones
+
+#### Selector de tema de color (botón top-bar)
+- [ ] Botón en la barra superior para cambiar esquema de colores
+- [ ] Tema default: Cyan/Azul (actual cyberpunk-2077)
+- [ ] Tema Rojo: bordes y acentos en rojo (#ff5555 / #ff0033)
+- [ ] Tema Amarillo: bordes y acentos en amarillo (#FCEE0A / #FFD700)
+- [ ] Tema Verde: bordes y acentos en verde (#39FF14 / #00FF41)
+- [ ] Cada tema mantiene esencia cyberpunk (fondo oscuro, glow, tipografía)
+- [ ] Hot-switch sin recargar — CSS custom properties
+
+#### Optimización general
+- [ ] Reducir re-renders innecesarios en paneles (React.memo, useMemo)
+- [ ] Lazy import de componentes pesados (AIPanel, InfraPanel)
+- [ ] Debounce en búsquedas y filtros de paneles
+- [ ] Virtualización de listas largas (logs, procesos, archivos)
 
 ### FASE 3 — Features killer
 

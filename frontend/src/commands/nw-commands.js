@@ -69,9 +69,12 @@ async function cmdHelp(args, write) {
     [C.green("nw kill <nombre|pid>"),"matar proceso ⚡"],
     [C.green("nw find <patron>"),    "buscar archivos ⚡"],
     [C.green("nw size [n]"),         "archivos más grandes ⚡"],
+    [C.green("nw dupes [ruta]"),     "encontrar duplicados ⚡"],
     [C.green("nw hash <archivo>"),   "SHA-256 de un archivo ⚡"],
     [C.green("nw diff <a> <b>"),     "comparar dos archivos ⚡"],
     [C.green("nw clean [--dry]"),    "limpiar logs/tmp/bak ⚡"],
+    [C.green("nw env [set|get|del]"),"variables NETWATCH ⚡"],
+    [C.green("nw run <script.nw>"),  "ejecutar script .nw ⚡"],
   ];
 
   cmds.forEach(([cmd, desc]) => {
