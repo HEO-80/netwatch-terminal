@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
-import { secureGet } from "../utils/secure-store";
+import { secureGet, secureSet } from "../utils/secure-store";
 
 // ── Paleta NETWATCH ───────────────────────────────────────────────────────────
 const Y   = "#FCEE0A";
@@ -198,14 +198,14 @@ function ProviderBadge({ provider, active, available, warming, onClick }) {
   return (
     <button
       onClick={onClick}
-      title={!available ? `${provider.name} no disponible — ${provider.install}` : undefined}
+      title={!available ? `${provider.name} no configurado — click para configurar` : undefined}
       style={{
         background: active ? color : "transparent",
         border: `1px solid ${active ? color : "#1a1a00"}`,
         color: active ? BG : color,
         fontFamily: "var(--font-mono)", fontSize: "9px",
-        padding: "2px 8px", cursor: available ? "pointer" : "default",
-        letterSpacing: "0.06em", opacity: available ? 1 : 0.35,
+        padding: "2px 8px", cursor: "pointer",
+        letterSpacing: "0.06em", opacity: available ? 1 : 0.6,
         transition: "all 0.15s", display: "flex", alignItems: "center", gap: "4px",
       }}
     >
@@ -324,6 +324,60 @@ function QuickCommandBar({ onSelect, activeCmd }) {
   );
 }
 
+const CFG_BTN = { background: "transparent", border: "1px solid #333", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" };
+
+function ProviderConfig({ provider, onSaved }) {
+  const [value, setValue]   = useState("");
+  const [saved, setSaved]   = useState(false);
+  const [status, setStatus] = useState("checking...");
+
+  useEffect(() => {
+    if (provider.id !== "ollama") return;
+    let alive = true;
+    provider.check().then(r => { if (alive) setStatus(r.available ? "running" : "not running"); });
+    return () => { alive = false; };
+  }, [provider]);
+
+  const save = async () => {
+    if (!value.trim()) return;
+    await secureSet(provider.id + "-key", value.trim());
+    setValue(""); setSaved(true);
+    onSaved?.();
+  };
+
+  const txt = { fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM };
+  return (
+    <div style={{
+      background: "#111", borderLeft: `2px solid ${provider.color}`, padding: "6px 10px",
+      display: "flex", alignItems: "center", gap: "8px", flexShrink: 0,
+    }}>
+      {provider.id === "ollama" ? (
+        <>
+          <span style={txt}>Status: <span style={{ color: status === "running" ? G : Y }}>{status}</span></span>
+          <span style={{ ...txt, color: Y }}>{provider.install}</span>
+          <button style={{ ...CFG_BTN, color: provider.color }}
+            onClick={() => navigator.clipboard?.writeText(provider.install)}>Copiar</button>
+        </>
+      ) : (
+        <>
+          <span style={txt}>{provider.name} API key</span>
+          <input
+            type="password" value={value} placeholder="API key..."
+            onChange={e => { setValue(e.target.value); setSaved(false); }}
+            onKeyDown={e => { if (e.key === "Enter") save(); }}
+            style={{
+              flex: 1, maxWidth: 280, background: "#0a0a0a", border: "1px solid #333", outline: "none",
+              color: "#E8E8E8", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 6px",
+            }}
+          />
+          <button style={{ ...CFG_BTN, color: provider.color }} onClick={save}>Guardar</button>
+          {saved && <span style={{ ...txt, color: G }}>guardada</span>}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Main AIPanel ──────────────────────────────────────────────────────────────
 function AIPanel({ open, height = 340 }) {
   const [providers,   setProviders]   = useState({});
@@ -334,6 +388,8 @@ function AIPanel({ open, height = 340 }) {
   const [streaming,   setStreaming]   = useState(false);
   const [checking,    setChecking]    = useState(true);
   const [warming,     setWarming]     = useState(false); // warmup en curso
+  const [hovered,     setHovered]     = useState(false);
+  const [expanded,    setExpanded]    = useState(null); // id del provider expandido
 
   const inputRef  = useRef(null);
   const bottomRef = useRef(null);
@@ -393,9 +449,16 @@ function AIPanel({ open, height = 340 }) {
     if (messages.length > 0) saveHistory(messages);
   }, [messages]);
 
+  const recheckProviders = useCallback(async () => {
+    const results = await Promise.all(
+      Object.values(PROVIDERS).map(async p => [p.id, await p.check()])
+    );
+    setProviders(Object.fromEntries(results));
+  }, []);
+
   const activateProvider = useCallback((id) => {
     const status = providers[id];
-    if (!status?.available) return;
+    if (!status?.available) { setExpanded(prev => prev === id ? null : id); return; }
     setActiveId(id);
     setActiveModel(status.models[0] || PROVIDERS[id].defaultModel);
   }, [providers]);
@@ -484,14 +547,18 @@ function AIPanel({ open, height = 340 }) {
   }, []);
 
   return (
-    <div style={{
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
       height:        open ? `${height}px` : "0px",
       minHeight:     open ? `${height}px` : "0px",
       overflow:      "hidden",
       background:    BG2,
       borderBottom:  open ? "1px solid var(--nw-accent)" : "none",
       flexShrink:    0,
-      transition:    "height 0.2s ease, min-height 0.2s ease",
+      boxShadow:     hovered ? "0 0 12px rgba(57,255,20,0.25)" : "none",
+      transition:    "height 0.2s ease, min-height 0.2s ease, box-shadow 0.2s ease",
       display:       "flex",
       flexDirection: "column",
     }}>
@@ -578,6 +645,11 @@ function AIPanel({ open, height = 340 }) {
             </button>
           </div>
 
+          {/* ── Config inline del provider no configurado ── */}
+          {expanded && PROVIDERS[expanded] && !providers[expanded]?.available && (
+            <ProviderConfig key={expanded} provider={PROVIDERS[expanded]} onSaved={recheckProviders} />
+          )}
+
           {/* ── Barra de comandos rápidos ── */}
           <QuickCommandBar onSelect={handleQuickCommand} activeCmd={activeCmd} />
 
@@ -612,7 +684,13 @@ function AIPanel({ open, height = 340 }) {
                   <div>
                     <div style={{ color: M, marginBottom: "8px" }}>● No hay ningún provider disponible</div>
                     {Object.values(PROVIDERS).map(p => (
-                      <div key={p.id} style={{ marginTop: "4px", paddingLeft: "10px" }}>
+                      <div
+                        key={p.id}
+                        onClick={() => setExpanded(prev => prev === p.id ? null : p.id)}
+                        style={{ marginTop: "4px", paddingLeft: "10px", cursor: "pointer" }}
+                        onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
+                        onMouseOut={e => e.currentTarget.style.background = "transparent"}
+                      >
                         <span style={{ color: p.color }}>{p.name}</span>
                         <span style={{ color: DIM }}> → </span>
                         <span style={{ color: Y }}>{p.install}</span>

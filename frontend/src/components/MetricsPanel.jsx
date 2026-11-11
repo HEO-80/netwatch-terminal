@@ -150,8 +150,27 @@ function useMetrics(active) {
   return m;
 }
 
+const BTN = { background: "transparent", border: "1px solid #333", color: G, fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" };
+const EXPAND_H = 40;
+
 function MetricsPanel({ open, height = 130 }) {
   const m = useMetrics(open);
+  const [hovered, setHovered]   = useState(false);
+  const [expanded, setExpanded] = useState(null); // null | "cpu" | "ram" | "disk"
+  const [hoverKey, setHoverKey] = useState(null);
+  const toggle = (k) => setExpanded(prev => prev === k ? null : k);
+  const run = (cmd) => window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
+  const clickable = (k) => ({
+    onClick: () => toggle(k),
+    onMouseEnter: () => setHoverKey(k),
+    onMouseLeave: () => setHoverKey(null),
+    style: {
+      cursor: "pointer",
+      background: hoverKey === k || expanded === k ? "rgba(255,255,255,0.03)" : "transparent",
+      transition: "background 0.2s",
+    },
+  });
+  const panelH = open ? height + (expanded ? EXPAND_H : 0) : 0;
   const cpuC = m.cpu    > 90 ? M : m.cpu    > 70 ? Y : G;
   const ramC = m.ramPct > 90 ? M : m.ramPct > 70 ? Y : C;
 
@@ -159,15 +178,26 @@ function MetricsPanel({ open, height = 130 }) {
   const col1 = m.disks.filter((_, i) => i % 2 === 0);
   const col2 = m.disks.filter((_, i) => i % 2 === 1);
 
+  const tips = {
+    cpu:  { tip: "Top 5 procesos por CPU: usa `nw proc`.", cmd: "nw proc", label: "Run nw proc" },
+    ram:  { tip: `Usada ${m.ramUsed} / ${m.ramTotal} GB (${m.ramPct}%). Prueba: Get-Process | Sort WS -Desc | Select -First 5`, cmd: "nw proc", label: "Run nw proc" },
+    disk: { tip: m.disks.length ? m.disks.map(d => `${d.name}: ${d.used}/${d.total} GB`).join(" · ") : "Sin info de particiones. Usa `nw size`.", cmd: "nw size", label: "Run nw size" },
+  };
+  const tip = expanded ? tips[expanded] : null;
+
   return (
-    <div style={{
-      height:        open ? `${height}px` : "0px",
-      minHeight:     open ? `${height}px` : "0px",
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      height:        `${panelH}px`,
+      minHeight:     `${panelH}px`,
       overflow:      "hidden",
       background:    "#090909",
       borderTop:     open ? "1px solid var(--nw-accent)" : "none",
       flexShrink:    0,
-      transition:    "height 0.2s ease, min-height 0.2s ease",
+      boxShadow:     hovered ? "0 0 12px rgba(57,255,20,0.3)" : "none",
+      transition:    "height 0.2s ease, min-height 0.2s ease, box-shadow 0.2s ease",
       display:       "flex",
       flexDirection: "column",
     }}>
@@ -197,7 +227,7 @@ function MetricsPanel({ open, height = 130 }) {
           }}>
 
             {/* ── CPU — ancho fijo ── */}
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", width: 140, flexShrink: 0, paddingRight: 12 }}>
+            <div {...clickable("cpu")} style={{ ...clickable("cpu").style,  display: "flex", flexDirection: "column", justifyContent: "center", width: 140, flexShrink: 0, paddingRight: 12 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: DIM, letterSpacing: "0.1em", marginBottom: 3 }}>CPU</span>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
@@ -214,7 +244,7 @@ function MetricsPanel({ open, height = 130 }) {
             <div style={{ width: 1, background: "#0f1a0f", alignSelf: "stretch", flexShrink: 0 }}/>
 
             {/* ── RAM — ancho fijo ── */}
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", width: 150, flexShrink: 0, padding: "0 12px" }}>
+            <div {...clickable("ram")} style={{ ...clickable("ram").style,  display: "flex", flexDirection: "column", justifyContent: "center", width: 150, flexShrink: 0, padding: "0 12px" }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: DIM, letterSpacing: "0.1em", marginBottom: 3 }}>MEMORY</span>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
@@ -232,7 +262,7 @@ function MetricsPanel({ open, height = 130 }) {
             <div style={{ width: 1, background: "#0f1a0f", alignSelf: "stretch", flexShrink: 0 }}/>
 
             {/* ── DISCOS — flex 1, 2 columnas ── */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", minWidth: 0 }}>
+            <div {...clickable("disk")} style={{ ...clickable("disk").style,  flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", minWidth: 0 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: DIM, letterSpacing: "0.1em", marginBottom: 4 }}>DISK</span>
               {m.disks.length === 0 ? (
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>detectando...</span>
@@ -273,6 +303,17 @@ function MetricsPanel({ open, height = 130 }) {
             </div>
 
           </div>
+
+          {/* ── Expansión inline ── */}
+          {tip && (
+            <div style={{
+              background: "#111", borderLeft: `2px solid ${G}`, padding: "6px 10px",
+              margin: "0 12px 4px", display: "flex", alignItems: "center", gap: "10px", flexShrink: 0,
+            }}>
+              <span style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-mono)", fontSize: "9px", color: "#9aa", lineHeight: 1.4 }}>{tip.tip}</span>
+              <button style={BTN} onClick={() => run(tip.cmd)}>{tip.label}</button>
+            </div>
+          )}
         </>
       )}
     </div>
