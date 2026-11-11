@@ -24,14 +24,15 @@ function saveTasks(tasks) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }
 
-function SectionTitle({ children, color = C, count }) {
+function SectionTitle({ children, color = C, count, isOver }) {
   return (
     <div style={{
       fontFamily: "var(--font-mono)", fontSize: "9px", color,
       letterSpacing: "0.12em", textTransform: "uppercase",
-      borderBottom: "1px solid #1a1a1a",
+      borderBottom: isOver ? `1px solid ${color}` : "1px solid #1a1a1a",
       paddingBottom: "4px", marginBottom: "6px", marginTop: "12px",
       display: "flex", justifyContent: "space-between",
+      transition: "border-color 0.15s",
     }}>
       <span>{children}</span>
       {count > 0 && <span style={{ color: DIM }}>{count}</span>}
@@ -39,22 +40,35 @@ function SectionTitle({ children, color = C, count }) {
   );
 }
 
-function TaskItem({ task, onMove, onDelete }) {
+function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging }) {
   const col = COLUMNS.find(c => c.id === task.status) || COLUMNS[0];
   const nextStatus = task.status === "todo" ? "doing" : task.status === "doing" ? "done" : null;
   const prevStatus = task.status === "done" ? "doing" : task.status === "doing" ? "todo" : null;
 
   return (
-    <div style={{
-      display: "flex", alignItems: "flex-start", gap: "6px",
-      padding: "4px 6px", marginBottom: "3px",
-      background: "#0a0a00", border: "1px solid #111",
-      transition: "border-color 0.15s",
-    }}
-      onMouseOver={e => e.currentTarget.style.borderColor = col.color + "44"}
-      onMouseOut={e => e.currentTarget.style.borderColor = "#111"}
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", String(task.id));
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart(task.id);
+      }}
+      onDragEnd={onDragEnd}
+      style={{
+        display: "flex", alignItems: "flex-start", gap: "6px",
+        padding: "4px 6px", marginBottom: "3px",
+        background: isDragging ? "#1a1a00" : "#0a0a00",
+        border: isDragging ? `1px dashed ${Y}44` : "1px solid #111",
+        opacity: isDragging ? 0.5 : 1,
+        cursor: "grab",
+        transition: "border-color 0.15s, opacity 0.15s",
+      }}
+      onMouseOver={e => { if (!isDragging) e.currentTarget.style.borderColor = col.color + "44"; }}
+      onMouseOut={e => { if (!isDragging) e.currentTarget.style.borderColor = "#111"; }}
     >
-      {/* Advance button */}
+      {/* Drag handle + advance */}
+      <span style={{ color: "#222", fontSize: "8px", cursor: "grab", flexShrink: 0, marginTop: "2px", userSelect: "none" }}>⠿</span>
+
       {nextStatus && (
         <span
           onClick={() => onMove(task.id, nextStatus)}
@@ -105,9 +119,39 @@ function TaskItem({ task, onMove, onDelete }) {
   );
 }
 
+function DropZone({ columnId, color, isOver, onDrop, children }) {
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+      onDragEnter={(e) => e.preventDefault()}
+      onDrop={onDrop}
+      style={{
+        minHeight: "24px",
+        borderRadius: "2px",
+        background: isOver ? (color + "0a") : "transparent",
+        border: isOver ? `1px dashed ${color}44` : "1px dashed transparent",
+        transition: "background 0.15s, border-color 0.15s",
+        padding: isOver ? "2px" : "0",
+      }}
+    >
+      {children}
+      {isOver && (
+        <div style={{
+          fontFamily: "var(--font-mono)", fontSize: "8px", color: color + "66",
+          textAlign: "center", padding: "4px 0",
+        }}>
+          soltar aqui
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TasksPanel({ open }) {
   const [tasks, setTasks] = useState(() => loadTasks());
   const [input, setInput] = useState("");
+  const [draggingId, setDraggingId] = useState(null);
+  const [overColumn, setOverColumn] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => { saveTasks(tasks); }, [tasks]);
@@ -131,6 +175,27 @@ function TasksPanel({ open }) {
   const clearDone = useCallback(() => {
     setTasks(prev => prev.filter(t => t.status !== "done"));
   }, []);
+
+  const handleDragStart = useCallback((id) => setDraggingId(id), []);
+  const handleDragEnd = useCallback(() => { setDraggingId(null); setOverColumn(null); }, []);
+
+  const handleColumnDragOver = useCallback((colId) => {
+    setOverColumn(prev => prev === colId ? prev : colId);
+  }, []);
+
+  const handleColumnDragLeave = useCallback((colId) => {
+    setOverColumn(prev => prev === colId ? null : prev);
+  }, []);
+
+  const handleDrop = useCallback((colId, e) => {
+    e.preventDefault();
+    const taskId = parseInt(e.dataTransfer.getData("text/plain"));
+    if (taskId && !isNaN(taskId)) {
+      moveTask(taskId, colId);
+    }
+    setDraggingId(null);
+    setOverColumn(null);
+  }, [moveTask]);
 
   const byStatus = (status) => tasks.filter(t => t.status === status);
 
@@ -189,23 +254,39 @@ function TasksPanel({ open }) {
             </div>
           </div>
 
-          {/* Task lists */}
+          {/* Task lists with drag & drop */}
           <div style={{ flex: 1, overflowY: "auto", padding: "0 14px 12px 14px" }}>
             {COLUMNS.map(col => {
               const items = byStatus(col.id);
+              const isOver = overColumn === col.id && draggingId !== null;
               return (
-                <div key={col.id}>
-                  <SectionTitle color={col.color} count={items.length}>
+                <div
+                  key={col.id}
+                  onDragOver={(e) => { e.preventDefault(); handleColumnDragOver(col.id); }}
+                  onDragLeave={() => handleColumnDragLeave(col.id)}
+                  onDrop={(e) => handleDrop(col.id, e)}
+                >
+                  <SectionTitle color={col.color} count={items.length} isOver={isOver}>
                     {col.icon} {col.label}
                   </SectionTitle>
-                  {items.length === 0 && (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#222", padding: "2px 0" }}>
-                      —
-                    </div>
-                  )}
-                  {items.map(task => (
-                    <TaskItem key={task.id} task={task} onMove={moveTask} onDelete={deleteTask} />
-                  ))}
+                  <DropZone columnId={col.id} color={col.color} isOver={isOver && items.length === 0}>
+                    {items.length === 0 && !isOver && (
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#222", padding: "2px 0" }}>
+                        —
+                      </div>
+                    )}
+                    {items.map(task => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onMove={moveTask}
+                        onDelete={deleteTask}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        isDragging={draggingId === task.id}
+                      />
+                    ))}
+                  </DropZone>
                 </div>
               );
             })}
@@ -232,7 +313,7 @@ function TasksPanel({ open }) {
             padding: "4px 14px", borderTop: "1px solid #1a1a00",
             fontFamily: "var(--font-mono)", fontSize: "8px", color: "#222", textAlign: "center",
           }}>
-            Alt+P para ciclar paneles
+            arrastra tareas entre columnas · Alt+P ciclar
           </div>
         </div>
       )}

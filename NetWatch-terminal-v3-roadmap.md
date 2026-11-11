@@ -192,7 +192,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] `nw task list` — listar desde terminal
 - [x] Persistente en localStorage (migrar a tauri-store despues)
 - [x] Panel visual con input, botones avanzar/retroceder, limpiar completadas
-- [ ] Drag visual para mover entre columnas (futuro)
+- [x] Drag visual para mover tareas entre columnas (HTML5 drag & drop con drop zones)
 
 #### Panel GIT (B)
 - [x] Rama actual, commits ahead/behind, archivos modified/staged/stash
@@ -399,3 +399,24 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Métricas nativas via `sysinfo` crate (funciona en Linux/Mac)
 - [ ] Build Linux testeado y distribuido
 - [ ] Build macOS si hay demanda
+
+---
+
+## PRIORIDAD DE LO PENDIENTE
+
+### Bloque 1 — Ahora (frontend, autocontenidos)
+- [x] **Task drag & drop** — mover tareas entre columnas arrastrando (HTML5 DnD en TasksPanel)
+- [ ] **Archivos .nw-theme custom** — crear temas propios en JSON (paleta, fuente, opacidad, efectos)
+
+### Bloque 2 — Siguiente (Dojo avanzado, perfil docente ASIR)
+- [ ] **Modo tatami** — sandbox con misiones guiadas y validacion de estado (¿archivo creado? ¿servicio corriendo?)
+- [ ] **Modo forja** — escribir scripts desde cero con linter/validator integrado
+> Estos dos son los que mas diferencian NETWATCH — sistema de entrenamiento para alumnos de ASIR/ASO/SRI con bancos de misiones reales.
+
+### Bloque 3 — Cuando haya tiempo largo
+- [ ] **PTY nativo en Rust** (`portable-pty`) — eliminar sidecar Node.js, arranque mas rapido, bundle mas limpio
+- [ ] **Worker Rust con eventos Tauri** (`emit`) — metricas event-driven en vez de request-response
+
+### Bloque 4 — Cuando todo lo demas este estable
+- [ ] **Build Linux** testeado y distribuido
+- [ ] **Build macOS** si hay demanda
