@@ -224,6 +224,15 @@ function MessageBubble({ msg }) {
   const isUser = msg.role === "user";
   const cmd = isUser ? getActiveCommand(msg.content) : null;
   const accentCmd = cmd ? cmd.color : (isUser ? Y : "#2a4a2a");
+  const [copiedId, setCopiedId] = useState(null);
+  const copied = copiedId === msg.id;
+
+  const copyMsg = () => {
+    if (!msg.content || msg.streaming) return;
+    navigator.clipboard?.writeText(msg.content);
+    setCopiedId(msg.id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
   return (
     <div style={{
@@ -255,9 +264,12 @@ function MessageBubble({ msg }) {
             {cmd.label} — {cmd.hint}
           </div>
         )}
-        <div style={{
+        <div onClick={copyMsg} title="Click para copiar" style={{
+          position: "relative", cursor: "pointer",
           background: isUser ? "#0f0e00" : "#090d09",
           border: `1px solid ${isUser ? "#2a2700" : "#0d1f0d"}`,
+          borderLeft: `2px solid ${copied ? G : (isUser ? "#2a2700" : "#0d1f0d")}`,
+          transition: "border-color 0.3s",
           padding: "8px 10px",
           fontFamily: "var(--font-mono)", fontSize: "12px",
           color: isUser ? Y : "#E8E8E8",
@@ -271,6 +283,12 @@ function MessageBubble({ msg }) {
               animation: "blink 1s step-end infinite",
             }} />
           )}
+          <span style={{
+            position: "absolute", top: 3, right: 6,
+            fontFamily: "var(--font-mono)", fontSize: "9px", color: G,
+            opacity: copied ? 1 : 0, transition: "opacity 0.6s ease",
+            pointerEvents: "none",
+          }}>📋 Copiado</span>
         </div>
         {/* Timestamp + tokens */}
         {msg.ts && !msg.streaming && (

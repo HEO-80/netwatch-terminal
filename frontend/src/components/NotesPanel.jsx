@@ -18,8 +18,33 @@ function saveNotes(notes) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
 }
 
-function NoteItem({ note, onDelete, onPin }) {
+const ACT_BTN = {
+  background: "transparent", border: "1px solid #333",
+  fontFamily: "var(--font-mono)", fontSize: "8px",
+  padding: "1px 8px", cursor: "pointer",
+};
+
+function NoteItem({ note, expanded, onToggle, onDelete, onPin, onEdit }) {
   const isPinned = note.pinned;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState(note.text);
+  const [copied, setCopied]   = useState(false);
+
+  // Cerrar la edición si la nota se colapsa
+  useEffect(() => { if (!expanded) setEditing(false); }, [expanded]);
+
+  const startEdit = () => { setDraft(note.text); setEditing(true); };
+  const saveEdit = () => {
+    const t = draft.trim();
+    if (t) onEdit(note.id, t);
+    setEditing(false);
+  };
+  const copy = () => {
+    navigator.clipboard?.writeText(note.text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
   return (
     <div style={{
       padding: "5px 7px", marginBottom: "4px",
@@ -30,13 +55,46 @@ function NoteItem({ note, onDelete, onPin }) {
       onMouseOver={e => e.currentTarget.style.borderColor = isPinned ? Y + "66" : "#222"}
       onMouseOut={e => e.currentTarget.style.borderColor = isPinned ? Y + "33" : "#111"}
     >
-      <div style={{
-        fontFamily: "var(--font-mono)", fontSize: "10px",
-        color: "#ccc", lineHeight: "1.5",
-        whiteSpace: "pre-wrap", wordBreak: "break-word",
-      }}>
-        {note.text}
-      </div>
+      {editing ? (
+        <textarea
+          autoFocus
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+            if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
+          }}
+          rows={3}
+          style={{
+            width: "100%", background: "#0a0a00", border: `1px solid ${G}`,
+            color: "#ccc", fontFamily: "var(--font-mono)", fontSize: "10px",
+            padding: "3px 5px", outline: "none", resize: "none", lineHeight: "1.4",
+          }}
+        />
+      ) : (
+        <div
+          onClick={() => onToggle(note.id)}
+          style={{
+            fontFamily: "var(--font-mono)", fontSize: "10px",
+            color: "#ccc", lineHeight: "1.5",
+            whiteSpace: "pre-wrap", wordBreak: "break-word", cursor: "pointer",
+          }}
+        >
+          {note.text}
+        </div>
+      )}
+      {expanded && !editing && (
+        <div style={{
+          background: "#111", borderLeft: `2px solid ${G}`,
+          padding: "4px 8px", marginTop: "3px",
+          display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap",
+        }}>
+          <button style={{ ...ACT_BTN, color: Y }} onClick={startEdit}>Editar</button>
+          <button style={{ ...ACT_BTN, color: copied ? G : DIM }} onClick={copy}>
+            {copied ? "Copiado!" : "Copiar"}
+          </button>
+        </div>
+      )}
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         marginTop: "3px",
@@ -75,7 +133,16 @@ function NotesPanel({ open, focused, onFocus, onOverlay }) {
   const [notes, setNotes] = useState(() => loadNotes());
   const [input, setInput] = useState("");
   const [hovered, setHovered] = useState(false);
+  const [expanded, setExpanded] = useState(null);
   const inputRef = useRef(null);
+
+  const toggleExpanded = useCallback((id) => {
+    setExpanded(prev => prev === id ? null : id);
+  }, []);
+
+  const editNote = useCallback((id, text) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, text } : n));
+  }, []);
 
   useEffect(() => { saveNotes(notes); }, [notes]);
   useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 80); }, [open]);
@@ -180,7 +247,12 @@ function NotesPanel({ open, focused, onFocus, onOverlay }) {
               </div>
             ) : (
               sorted.map(note => (
-                <NoteItem key={note.id} note={note} onDelete={deleteNote} onPin={togglePin} />
+                <NoteItem
+                  key={note.id} note={note}
+                  expanded={expanded === note.id}
+                  onToggle={toggleExpanded}
+                  onDelete={deleteNote} onPin={togglePin} onEdit={editNote}
+                />
               ))
             )}
           </div>

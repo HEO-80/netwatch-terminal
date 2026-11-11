@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { secureGet } from "../utils/secure-store";
+import WinControls from "./WinControls";
 
 // ── Colores ───────────────────────────────────────────────────────────────────
 const Y   = "#FCEE0A";
@@ -247,7 +248,7 @@ function timeAgo(date) {
 }
 
 // ── Main InfraPanel ───────────────────────────────────────────────────────────
-function InfraPanel({ open, focused, onFocus, onOverlay }) {
+function InfraPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) {
   const [k8s,     setK8s]     = useState(null);
   const [tf,      setTf]      = useState(null);
   const [ssh,     setSsh]     = useState([]);
@@ -257,7 +258,22 @@ function InfraPanel({ open, focused, onFocus, onOverlay }) {
   const [lastUpd, setLastUpd] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [hovered, setHovered] = useState(false);
+  const [pingResult, setPingResult] = useState({});
   const rootRef = useRef(null);
+
+  const pingHost = async (host) => {
+    setPingResult(prev => ({ ...prev, [host]: "Ping..." }));
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const res = await invoke("run_powershell", {
+        command: `Test-Connection -ComputerName ${host} -Count 1 -Quiet`,
+      });
+      const ok = res.stdout?.trim().toLowerCase() === "true";
+      setPingResult(prev => ({ ...prev, [host]: ok ? "Responde al ping" : "Servidor no responde" }));
+    } catch {
+      setPingResult(prev => ({ ...prev, [host]: "Ping fallido" }));
+    }
+  };
 
   const toggle = (section, i) =>
     setExpanded(expanded?.section === section && expanded?.index === i ? null : { section, index: i });
@@ -319,22 +335,24 @@ function InfraPanel({ open, focused, onFocus, onOverlay }) {
       order: -1, // siempre a la izquierda
     }}>
       {open && (
-        <div style={{ padding: "12px 14px", overflowY: "auto", flex: 1 }}>
+        <div style={{ padding: "12px 14px", overflowY: minimized ? "hidden" : "auto", flex: minimized ? "none" : 1, height: minimized ? "28px" : undefined, boxSizing: "border-box" }}>
 
           {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }} onDoubleClick={onOverlay}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }} onDoubleClick={onOverlay}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: M, letterSpacing: "0.1em", cursor: "pointer" }} onClick={onFocus}>
               ◈ INFRA {focused ? "⊟" : ""}
             </span>
             <button
               onClick={refresh}
-              style={{ background: "transparent", border: "none", color: loading ? DIM : M, fontFamily: "var(--font-mono)", fontSize: "9px", cursor: "pointer", padding: 0 }}
+              style={{ marginLeft: "auto", background: "transparent", border: "none", color: loading ? DIM : M, fontFamily: "var(--font-mono)", fontSize: "9px", cursor: "pointer", padding: 0 }}
               title="Actualizar"
             >
               {loading ? "···" : "↺"}
             </button>
+            <WinControls minimized={minimized} onMinimize={onMinimize} onOverlay={onOverlay} color={M} dim={DIM} />
           </div>
-          {lastUpd && <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
+          {!minimized && <>
+          {lastUpd &&<div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
 
           {/* ── SSH ── */}
           <SectionTitle>SSH Servers</SectionTitle>
@@ -358,7 +376,17 @@ function InfraPanel({ open, focused, onFocus, onOverlay }) {
                   </div>
                 </div>
               </div>
-              {isOpen("ssh", i) && (
+              {isOpen("ssh", i) && !s.online && (
+                <div style={detailStyle(M)}>
+                  <span style={{ fontSize: "9px", color: DIM, fontFamily: "var(--font-mono)", width: "100%" }}>
+                    {pingResult[s.host] ? pingResult[s.host] : "Servidor no responde"}
+                  </span>
+                  <ActionBtn onClick={() => pingHost(s.host)}>Ping</ActionBtn>
+                  <ActionBtn onClick={() => navigator.clipboard.writeText(s.host)}>Copiar IP</ActionBtn>
+                  <ActionBtn onClick={refresh}>Reintentar</ActionBtn>
+                </div>
+              )}
+              {isOpen("ssh", i) && s.online && (
                 <div style={detailStyle(M)}>
                   <ActionBtn onClick={() => window.dispatchEvent(new CustomEvent("nw-open-tab", { detail: "powershell" }))}>Conectar</ActionBtn>
                   <ActionBtn onClick={() => navigator.clipboard.writeText(s.host)}>Copiar IP</ActionBtn>
@@ -522,6 +550,7 @@ function InfraPanel({ open, focused, onFocus, onOverlay }) {
           <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", textAlign: "center" }}>
             Alt+I para cerrar
           </div>
+          </>}
         </div>
       )}
     </div>
