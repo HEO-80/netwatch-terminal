@@ -408,6 +408,7 @@ function AIPanel({ open, height = 340 }) {
   const [warming,     setWarming]     = useState(false); // warmup en curso
   const [hovered,     setHovered]     = useState(false);
   const [expanded,    setExpanded]    = useState(null); // id del provider expandido
+  const [collapsed,   setCollapsed]   = useState(false);
 
   const inputRef  = useRef(null);
   const bottomRef = useRef(null);
@@ -420,6 +421,14 @@ function AIPanel({ open, height = 340 }) {
   const accentColor    = isAvailable ? activeProvider.color : DIM;
   const activeCmd      = getActiveCommand(input);
   const totalToks      = totalTokens(messages);
+  const noProvider     = !checking && !isAvailable;
+  const effectiveHeight = noProvider && collapsed ? 28 : height;
+
+  // Al cambiar la disponibilidad, resetear el estado colapsado
+  useEffect(() => {
+    if (checking) return;
+    setCollapsed(!isAvailable);
+  }, [isAvailable, checking]);
 
   // Solo detectar providers y warmup cuando el panel se abre por primera vez
   const checkedRef = useRef(false);
@@ -569,8 +578,8 @@ function AIPanel({ open, height = 340 }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-      height:        open ? `${height}px` : "0px",
-      minHeight:     open ? `${height}px` : "0px",
+      height:        open ? `${effectiveHeight}px` : "0px",
+      minHeight:     open ? `${effectiveHeight}px` : "0px",
       overflow:      "hidden",
       background:    BG2,
       borderBottom:  open ? "1px solid var(--nw-accent)" : "none",
@@ -580,7 +589,24 @@ function AIPanel({ open, height = 340 }) {
       display:       "flex",
       flexDirection: "column",
     }}>
-      {open && (
+      {open && noProvider && collapsed ? (
+        <div onClick={() => setCollapsed(false)} style={{
+          height: "28px", display: "flex", alignItems: "center", gap: "8px",
+          padding: "0 12px", cursor: "pointer", flexShrink: 0,
+          fontFamily: "var(--font-mono)", fontSize: "10px",
+        }}>
+          <span style={{ color: DIM }}>◈ AI · sin provider</span>
+          <span style={{ color: DIM }}>— click para configurar</span>
+          <div style={{ display: "flex", gap: "4px", marginLeft: "auto" }}>
+            {Object.values(PROVIDERS).map(p => (
+              <ProviderBadge
+                key={p.id} provider={p} active={false} available={false} warming={false}
+                onClick={e => { e.stopPropagation(); setCollapsed(false); setExpanded(p.id); }}
+              />
+            ))}
+          </div>
+        </div>
+      ) : open && (
         <>
           {/* ── Header ── */}
           <div style={{
@@ -673,7 +699,7 @@ function AIPanel({ open, height = 340 }) {
 
           {/* ── Mensajes ── */}
           <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column" }}>
-            {messages.length === 0 && !checking && (
+            {(messages.length === 0 || !isAvailable) && !checking && (
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: DIM, lineHeight: "1.9" }}>
                 {isAvailable ? (
                   <>
@@ -719,7 +745,7 @@ function AIPanel({ open, height = 340 }) {
               </div>
             )}
 
-            {messages.map(msg => (
+            {isAvailable && messages.map(msg => (
               <MessageBubble key={msg.id} msg={msg} />
             ))}
             <div ref={bottomRef} />
