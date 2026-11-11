@@ -58,10 +58,14 @@ async function cmdHelp(args, write) {
     [C.green("nw note"),              "listar notas"],
     [C.green("nw note add <texto>"),"guardar nota rapida"],
     [C.green("nw note rm <n>"),     "eliminar nota N"],
+    [C.green("nw note pin <n>"),   "fijar/desfijar nota N"],
+    [C.green("nw note export"),    "exportar notas como markdown"],
     [C.green("nw note clear"),      "borrar todas las notas"],
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
     [C.cyan("nw config"),           "abrir panel de Settings / API keys"],
-    [C.cyan("nw theme [nombre]"),   "cambiar tema de color (cyan/red/yellow/green/magenta)"],
+    [C.cyan("nw theme [nombre]"),   "cambiar tema (built-in + custom)"],
+    [C.cyan("nw theme create <n> <hex>"), "crear tema custom"],
+    [C.cyan("nw theme delete <n>"), "eliminar tema custom"],
     [C.cyan("nw json <cmd>"),       "ejecutar comando y formatear JSON"],
     [C.cyan("nw json table <cmd>"), "renderizar JSON array como tabla"],
     [C.yellow("nw fix"),             "sugerir fix para el último error"],
@@ -535,6 +539,38 @@ async function cmdNote(args, write) {
     return;
   }
 
+  if (sub === "export") {
+    const notes = load();
+    if (!notes.length) { write(nl + C.dim("  Sin notas para exportar.") + nl + nl); return; }
+    let md = `# NETWATCH Notes\n\n_Exported: ${new Date().toLocaleString("es-ES")}_\n\n`;
+    const pinned = notes.filter(n => n.pinned);
+    const unpinned = notes.filter(n => !n.pinned);
+    if (pinned.length) {
+      md += `## ★ Pinned\n\n`;
+      pinned.forEach(n => { md += `- ${n.text} _(${n.time})_\n`; });
+      md += "\n";
+    }
+    md += `## Notes\n\n`;
+    unpinned.forEach(n => { md += `- ${n.text} _(${n.time})_\n`; });
+    try { await navigator.clipboard.writeText(md); } catch {}
+    write(nl + C.green(`✓ ${notes.length} notas exportadas como markdown al portapapeles`) + nl + nl);
+    return;
+  }
+
+  if (sub === "pin" && args[1]) {
+    const notes = load();
+    const num = parseInt(args[1]);
+    if (num >= 1 && num <= notes.length) {
+      notes[num - 1].pinned = !notes[num - 1].pinned;
+      save(notes);
+      const action = notes[num - 1].pinned ? "fijada" : "desfijada";
+      write(nl + C.green(`✓ Nota #${num} ${action}`) + nl + nl);
+    } else {
+      write(nl + C.red(`✗ Nota #${num} no encontrada`) + nl + nl);
+    }
+    return;
+  }
+
   // Default: list
   const notes = load();
   if (!notes.length) {
@@ -550,7 +586,7 @@ async function cmdNote(args, write) {
     write(`  ${C.yellow(String(i + 1).padStart(2))} ${pin}${C.white(n.text)}` + nl);
     write(`      ${C.dim(n.time)}` + nl);
   });
-  write(nl + C.dim("  nw note <texto> · nw note rm <n> · nw note clear") + nl + nl);
+  write(nl + C.dim("  nw note <texto> · nw note rm <n> · nw note pin <n> · nw note export · nw note clear") + nl + nl);
 }
 
 // ── nw config ────────────────────────────────────────────────────────────────
@@ -567,6 +603,14 @@ async function cmdConfig(args, write) {
 
 // ── nw theme ────────────────────────────────────────────────────────────────
 const THEME_LIST = ["cyan", "red", "yellow", "green", "magenta"];
+const THEME_ALIASES = {
+  "cyberpunk": "cyan", "cyberpunk-2077": "cyan", "2077": "cyan",
+  "blade-runner": "red", "bladerunner": "red", "blade": "red",
+  "deus-ex": "yellow", "deusex": "yellow", "deus": "yellow",
+  "matrix": "green",
+  "ghost": "magenta", "ghost-in-shell": "magenta", "gits": "magenta",
+  "minimal": "cyan", "minimal-dark": "cyan",
+};
 const CUSTOM_THEMES_KEY = "nw-custom-themes";
 function loadCustomThemes() { try { return JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY) || "{}"); } catch { return {}; } }
 function saveCustomThemes(t) { localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(t)); }
@@ -582,8 +626,9 @@ function applyCustomTheme(name, colors) {
 }
 
 async function cmdTheme(args, write) {
-  const sub = args[0]?.toLowerCase();
+  let sub = args[0]?.toLowerCase();
   const customThemes = loadCustomThemes();
+  if (sub && THEME_ALIASES[sub]) sub = THEME_ALIASES[sub];
 
   if (sub && THEME_LIST.includes(sub)) {
     document.documentElement.style.removeProperty("--nw-accent");

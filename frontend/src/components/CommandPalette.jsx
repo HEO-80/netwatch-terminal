@@ -19,6 +19,9 @@ const CATEGORIES = [
       { cmd: "nw theme green",       desc: "Cambiar tema a Verde" },
       { cmd: "nw theme yellow",      desc: "Cambiar tema a Amarillo" },
       { cmd: "nw theme magenta",     desc: "Cambiar tema a Magenta" },
+      { cmd: "nw theme matrix",      desc: "Tema Matrix (verde)" },
+      { cmd: "nw theme blade-runner", desc: "Tema Blade Runner (rojo)" },
+      { cmd: "nw theme ghost",       desc: "Tema Ghost in Shell (magenta)" },
       { cmd: "nw dojo",              desc: "Abrir tab DOJO (entrenamiento)" },
       { cmd: "nw notebook",          desc: "Abrir tab NOTEBOOK" },
     ],
@@ -47,6 +50,7 @@ const CATEGORIES = [
       { cmd: "nw task add",          desc: "Añadir tarea nueva" },
       { cmd: "nw note",              desc: "Listar notas" },
       { cmd: "nw note add",          desc: "Crear nota rápida" },
+      { cmd: "nw note export",       desc: "Exportar notas como markdown" },
     ],
   },
   {
@@ -93,6 +97,8 @@ const CATEGORIES = [
     label: "ECOSYSTEM",
     color: "#00F0FF",
     items: [
+      { cmd: "nw theme create",       desc: "Crear tema custom" },
+      { cmd: "nw theme delete",       desc: "Eliminar tema custom" },
       { cmd: "nw plugin",            desc: "Listar plugins instalados" },
       { cmd: "nw plugin install",    desc: "Instalar plugin" },
       { cmd: "nw plugin remove",     desc: "Eliminar plugin" },

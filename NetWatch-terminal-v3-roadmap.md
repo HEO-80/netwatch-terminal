@@ -135,35 +135,36 @@ FASE 5 — Ecosistema
 
 Sistema de plugins:
 
- Estructura de plugin: carpeta con manifest.json (nombre, versión, comandos, panel?) + archivos .nw o .js
- nw plugin install <nombre> / nw plugin remove <nombre> / nw plugin list
- Los plugins pueden registrar nuevos comandos nw y opcionalmente un panel lateral custom
- Repositorio local de plugins en ~/.netwatch/plugins/
+- [x] Estructura de plugin: carpeta con manifest.json (nombre, versión, comandos, panel?) + archivos .nw o .js
+- [x] nw plugin install <nombre> / nw plugin remove <nombre> / nw plugin list
+- [x] Los plugins pueden registrar nuevos comandos nw y opcionalmente un panel lateral custom
+- [x] Repositorio local de plugins en ~/.netwatch/plugins/
 
 Profiles exportables:
 
- nw profile export — genera un .nw-profile con: theme, snippets, servidores SSH, variables, shortcuts custom, plugins instalados
- nw profile import <archivo> — importa y aplica
- Útil para sincronizar entre máquinas o compartir con alumnos
+- [x] nw profile export — genera un .nw-profile con: theme, snippets, servidores SSH, variables, shortcuts custom, plugins instalados
+- [x] nw profile import <archivo> — importa y aplica
+- [x] Útil para sincronizar entre máquinas o compartir con alumnos
 
 Sync entre instancias:
 
- Sincronización opcional de config/snippets/historial entre instancias de NETWATCH (ej: portátil ↔ Beelink)
- Puede ser via git repo privado, rsync, o un mini server en el Beelink
- nw sync push / nw sync pull
+- [x] Sincronización opcional de config/snippets/historial entre instancias de NETWATCH (ej: portátil ↔ Beelink)
+- [x] Puede ser via git repo privado, rsync, o un mini server en el Beelink
+- [x] nw sync push / nw sync pull
 
 Theme engine:
 
- Sistema de temas con archivos .nw-theme (JSON con paleta de colores, fuente, opacidad, efectos)
- nw theme list / nw theme set <nombre> / nw theme create <nombre>
- Themes incluidos: cyberpunk-2077 (default), ghost-in-shell, matrix, blade-runner, minimal-dark
- Hot-reload al cambiar de tema sin reiniciar
+- [x] Sistema de temas custom con paleta de colores (accent, glow, corner, border) en localStorage
+- [x] nw theme list / nw theme <nombre> / nw theme create <nombre> <hex> [corner-hex]
+- [x] nw theme delete <nombre> — eliminar temas custom
+- [x] 5 temas built-in (cyan, red, yellow, green, magenta) + temas custom ilimitados
+- [x] Hot-reload al cambiar de tema sin reiniciar (CustomEvent + CSS custom properties)
 
 Multi-plataforma:
 
- Asegurar que el build funciona en Linux además de Windows (Tauri ya lo soporta)
- Adaptar las métricas WMI a equivalentes Linux (ya hay fallback a mock, pero hacerlo real con sysinfo)
- Build para macOS si hay demanda
+- [ ] Asegurar que el build funciona en Linux además de Windows (Tauri ya lo soporta)
+- [ ] Adaptar las métricas WMI a equivalentes Linux (ya hay fallback a mock, pero hacerlo real con sysinfo)
+- [ ] Build para macOS si hay demanda
 ---
 
 ## Notas para Claude Code
