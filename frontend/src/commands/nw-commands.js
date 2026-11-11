@@ -62,7 +62,14 @@ async function cmdHelp(args, write) {
     [C.green("nw note export"),    "exportar notas como markdown"],
     [C.green("nw note clear"),      "borrar todas las notas"],
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
-    [C.cyan("nw config"),           "abrir panel de Settings / API keys"],
+    [C.cyan("nw config"),              "ver/cambiar módulos activos"],
+    [C.cyan("nw config on/off <mod>"), "activar/desactivar módulo"],
+    [C.cyan("nw config preset <n>"),   "aplicar preset (minimal/developer/sysadmin/full)"],
+    [C.cyan("nw config reset"),        "restaurar defaults"],
+    [C.yellow("nw setup"),             "wizard de configuración inicial"],
+    [C.green("nw perf"),               "rendimiento: uptime, RAM, módulos"],
+    [C.green("nw storage"),            "uso de almacenamiento"],
+    [C.green("nw storage clean"),      "limpiar cache"],
     [C.cyan("nw theme [nombre]"),   "cambiar tema (built-in + custom)"],
     [C.cyan("nw theme create <n> <hex>"), "crear tema custom"],
     [C.cyan("nw theme delete <n>"), "eliminar tema custom"],
@@ -595,13 +602,178 @@ async function cmdNote(args, write) {
 
 // ── nw config ────────────────────────────────────────────────────────────────
 async function cmdConfig(args, write) {
-  window.dispatchEvent(new CustomEvent("nw-open-settings"));
-  write(nl + C.green("✓ Panel SETTINGS abierto") + nl + nl);
-  write(C.yellow("  Keys configurables:") + nl);
-  write(`  ${C.cyan("gemini-key")}     ${C.dim("→")} ${C.gray("Google Gemini API key")}` + nl);
-  write(`  ${C.magenta("claude-key")}     ${C.dim("→")} ${C.gray("Anthropic Claude API key")}` + nl);
-  write(`  ${C.green("github-token")}   ${C.dim("→")} ${C.gray("GitHub personal access token")}` + nl);
-  write(`  ${C.green("github-user")}    ${C.dim("→")} ${C.gray("GitHub username")}` + nl);
+  const { MODULE_DEFS, PRESETS, loadConfig, saveConfig, getDefaults, applyPreset, isModuleEnabled } = await import("../config/modules.js");
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "on" || sub === "off") {
+    const key = args[1];
+    if (!key || !MODULE_DEFS[key]) {
+      write(nl + C.red("✗ Módulo no encontrado: " + (key || "(vacío)")) + nl);
+      write(C.gray("  Usa 'nw config' para ver módulos disponibles.") + nl + nl);
+      return;
+    }
+    const config = loadConfig() || getDefaults();
+    config[key] = sub === "on";
+    config._preset = "custom";
+    saveConfig(config);
+    const def = MODULE_DEFS[key];
+    write(nl + C.green(`✓ ${def.label} ${sub === "on" ? "activado" : "desactivado"}`) + nl);
+    write(C.dim("  Recarga la app para aplicar cambios.") + nl + nl);
+    window.dispatchEvent(new CustomEvent("nw-config-changed"));
+    return;
+  }
+
+  if (sub === "preset") {
+    const name = args[1]?.toLowerCase();
+    if (!name) {
+      write(nl + C.yellow("  Presets disponibles:") + nl);
+      for (const [key, p] of Object.entries(PRESETS)) {
+        write(`  ${C.cyan(key.padEnd(12))} ${C.dim("→")} ${C.gray(p.description)}` + nl);
+      }
+      write(nl + C.dim("  Uso: nw config preset <nombre>") + nl + nl);
+      return;
+    }
+    const result = applyPreset(name);
+    if (!result) {
+      write(nl + C.red("✗ Preset no encontrado: " + name) + nl + nl);
+      return;
+    }
+    write(nl + C.green(`✓ Preset "${name}" aplicado: ${PRESETS[name].description}`) + nl);
+    write(C.dim("  Recarga la app para aplicar cambios.") + nl + nl);
+    window.dispatchEvent(new CustomEvent("nw-config-changed"));
+    return;
+  }
+
+  if (sub === "keys") {
+    window.dispatchEvent(new CustomEvent("nw-open-settings"));
+    write(nl + C.green("✓ Panel SETTINGS abierto") + nl + nl);
+    return;
+  }
+
+  if (sub === "reset") {
+    const config = getDefaults();
+    saveConfig(config);
+    write(nl + C.green("✓ Config restaurada a defaults") + nl + nl);
+    window.dispatchEvent(new CustomEvent("nw-config-changed"));
+    return;
+  }
+
+  // Default: show current config
+  const config = loadConfig() || getDefaults();
+  write(nl + C.yellow("  NETWATCH MODULE CONFIG") + nl);
+  write(SEP + nl);
+  write(`  Preset: ${C.cyan(config._preset || "custom")}` + nl + nl);
+
+  const categories = { panel: "PANELS", feature: "FEATURES" };
+  for (const [cat, title] of Object.entries(categories)) {
+    write(`  ${C.magenta(title)}` + nl);
+    for (const [key, def] of Object.entries(MODULE_DEFS)) {
+      if (def.category !== cat) continue;
+      const on = isModuleEnabled(config, key);
+      const dot = on ? C.green("●") : C.dim("○");
+      const status = on ? C.green("on ") : C.dim("off");
+      write(`    ${dot} ${C.white(def.label.padEnd(18))} ${status}  ${C.gray(def.description)}` + nl);
+    }
+    write(nl);
+  }
+  write(C.dim("  nw config on/off <módulo>  |  nw config preset <nombre>  |  nw config reset") + nl + nl);
+}
+
+// ── nw setup ────────────────────────────────────────────────────────────────
+async function cmdSetup(args, write) {
+  write(nl + C.yellow("  NETWATCH SETUP") + nl);
+  write(SEP + nl);
+  write(C.gray("  Abriendo wizard de configuración...") + nl + nl);
+  window.dispatchEvent(new CustomEvent("nw-open-setup"));
+}
+
+// ── nw perf ─────────────────────────────────────────────────────────────────
+async function cmdPerf(args, write) {
+  const { MODULE_DEFS, loadConfig, getDefaults, isModuleEnabled } = await import("../config/modules.js");
+  const config = loadConfig() || getDefaults();
+  const active = Object.keys(MODULE_DEFS).filter(k => isModuleEnabled(config, k));
+
+  write(nl + C.yellow("  NETWATCH PERFORMANCE") + nl);
+  write(SEP + nl);
+
+  const bootTime = performance.now();
+  write(`  ${C.gray("Uptime:")}          ${C.green(Math.round(bootTime / 1000) + "s")}` + nl);
+
+  if (performance.memory) {
+    const used = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+    const total = (performance.memory.totalJSHeapSize / 1048576).toFixed(1);
+    write(`  ${C.gray("JS Heap:")}         ${C.cyan(used + "MB")} / ${C.dim(total + "MB")}` + nl);
+  }
+
+  write(`  ${C.gray("Módulos activos:")}  ${C.cyan(String(active.length))} / ${C.dim(String(Object.keys(MODULE_DEFS).length))}` + nl);
+  write(nl);
+
+  active.forEach(k => {
+    const def = MODULE_DEFS[k];
+    write(`    ${C.green("●")} ${C.white(def.label)}` + nl);
+  });
+
+  write(nl + C.dim("  Objetivo: minimal < 500ms, full < 2s") + nl + nl);
+}
+
+// ── nw storage ──────────────────────────────────────────────────────────────
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+}
+
+async function cmdStorage(args, write) {
+  const sub = args[0]?.toLowerCase();
+
+  write(nl + C.yellow("  NETWATCH STORAGE") + nl);
+  write(SEP + nl);
+
+  let total = 0;
+  const entries = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const val = localStorage.getItem(key);
+    const size = (key.length + (val?.length || 0)) * 2; // UTF-16
+    total += size;
+    entries.push({ key, size });
+  }
+
+  write(`  ${C.gray("Total localStorage:")} ${C.cyan(formatBytes(total))}` + nl);
+  write(nl);
+
+  const groups = { "nw-tasks": 0, "nw-notes": 0, "nw-log": 0, "nw-module": 0, "nw-snip": 0, "nw-": 0, "other": 0 };
+  const groupLabels = { "nw-tasks": "Tasks", "nw-notes": "Notes", "nw-log": "Logs config", "nw-module": "Module config", "nw-snip": "Snippets", "nw-": "NETWATCH otros", "other": "Otros" };
+  entries.forEach(({ key, size }) => {
+    let matched = false;
+    for (const prefix of Object.keys(groups)) {
+      if (prefix !== "other" && key.startsWith(prefix)) {
+        groups[prefix] += size;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) groups.other += size;
+  });
+
+  for (const [prefix, size] of Object.entries(groups)) {
+    if (size === 0) continue;
+    write(`    ${C.dim(groupLabels[prefix].padEnd(18))} ${C.cyan(formatBytes(size))}` + nl);
+  }
+
+  if (sub === "clean") {
+    let cleaned = 0;
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith("nw-log-cache") || key.startsWith("nw-clip-") || key.startsWith("nw-rec-")) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach(k => { cleaned += localStorage.getItem(k)?.length || 0; localStorage.removeItem(k); });
+    write(nl + C.green(`  ✓ Limpiados ${toRemove.length} items de cache (${formatBytes(cleaned * 2)})`) + nl);
+  }
+
   write(nl);
 }
 
@@ -1390,6 +1562,7 @@ export const NW_COMMANDS = {
   config: cmdConfig, theme: cmdTheme, json: cmdJson, fix: cmdFix, clip: cmdClip,
   ctx: cmdCtx, rec: cmdRec, dojo: cmdDojo, notebook: cmdNotebook,
   plugin: cmdPlugin, profile: cmdProfile, sync: cmdSync, tail: cmdTail, docker: cmdDocker,
+  setup: cmdSetup, perf: cmdPerf, storage: cmdStorage,
 };
 
 async function tryRustBackend(input) {

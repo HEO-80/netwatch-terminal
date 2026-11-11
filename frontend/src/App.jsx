@@ -18,6 +18,7 @@ const MetricsPanel = lazy(() => import("./components/MetricsPanel"));
 const CommandPalette = lazy(() => import("./components/CommandPalette"));
 const DojoPanel      = lazy(() => import("./components/DojoPanel"));
 const NotebookPanel  = lazy(() => import("./components/NotebookPanel"));
+const SetupWizard    = lazy(() => import("./components/SetupWizard"));
 
 let tabIdCounter = 1;
 function createTab(type = "powershell") {
@@ -136,7 +137,21 @@ function AppInner() {
   const [panelMini,    setPanelMini]    = useState({});
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
-  const { isEnabled } = useModuleConfig();
+  const [showSetup, setShowSetup] = useState(false);
+  const { isEnabled, firstRunDone } = useModuleConfig();
+
+  useEffect(() => {
+    if (!booting && !firstRunDone) setShowSetup(true);
+    const onSetup = () => setShowSetup(true);
+    window.addEventListener("nw-open-setup", onSetup);
+    return () => window.removeEventListener("nw-open-setup", onSetup);
+  }, [booting, firstRunDone]);
+
+  useEffect(() => {
+    const onChanged = () => window.location.reload();
+    window.addEventListener("nw-config-changed", onChanged);
+    return () => window.removeEventListener("nw-config-changed", onChanged);
+  }, []);
 
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
 
@@ -492,6 +507,13 @@ function AppInner() {
           backdropFilter: "blur(2px)",
           pointerEvents: "auto",
         }}/>
+      )}
+
+      {/* Setup wizard (first run / nw setup) */}
+      {showSetup && (
+        <Suspense fallback={null}>
+          <SetupWizard onDone={() => setShowSetup(false)} />
+        </Suspense>
       )}
 
       {/* Cheat sheet (? / F12) */}

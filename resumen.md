@@ -435,61 +435,61 @@ Tercero (largo plazo):
 ### FASE 5: Arquitectura modular
 
 #### 5A. Core (siempre incluido, no desactivable)
-- [ ] Ventana Tauri con titlebar custom
-- [ ] xterm.js multi-tab (PowerShell, WSL, CMD)
-- [ ] WebSocket PTY bridge
-- [ ] Paleta de colores cyberpunk + sistema de temas
-- [ ] Comandos basicos: `nw help`, `nw config`
-- [ ] TabBar con tabs de terminal
-- [ ] Boot screen (skipeable/desactivable en config)
+- [x] Ventana Tauri con titlebar custom
+- [x] xterm.js multi-tab (PowerShell, WSL, CMD)
+- [x] WebSocket PTY bridge
+- [x] Paleta de colores cyberpunk + sistema de temas
+- [x] Comandos basicos: `nw help`, `nw config`
+- [x] TabBar con tabs de terminal
+- [x] Boot screen (skipeable/desactivable en config)
 
 #### 5B. Modulos opcionales (activables con `nw config`)
-- [ ] Panel AI — `nw config panels.ai on/off` (default: off hasta configurar provider)
-- [ ] Panel METRICS — `nw config panels.metrics on/off` (default: on)
-- [ ] Panel INFRA — `nw config panels.infra on/off` (default: off)
-- [ ] Panel CRYPTO — `nw config panels.crypto on/off` (default: off)
-- [ ] Panel GIT — `nw config panels.git on/off` (default: off, auto si hay repo git)
-- [ ] Panel TASKS — `nw config panels.tasks on/off` (default: off)
-- [ ] Panel NOTES — `nw config panels.notes on/off` (default: off)
-- [ ] Panel LOGS — `nw config panels.logs on/off` (default: off)
-- [ ] Dashboard — `nw config dashboard on/off` (default: on)
-- [ ] Dojo (quiz/tatami/forja) — `nw config dojo on/off` (default: off)
-- [ ] Notebook — `nw config notebook on/off` (default: off)
-- [ ] Clipboard manager — `nw config clipboard on/off` (default: off)
+- [x] Panel AI — `nw config panels.ai on/off` (default: off hasta configurar provider)
+- [x] Panel METRICS — `nw config panels.metrics on/off` (default: on)
+- [x] Panel INFRA — `nw config panels.infra on/off` (default: off)
+- [x] Panel CRYPTO — `nw config panels.crypto on/off` (default: off)
+- [x] Panel GIT — `nw config panels.git on/off` (default: off, auto si hay repo git)
+- [x] Panel TASKS — `nw config panels.tasks on/off` (default: off)
+- [x] Panel NOTES — `nw config panels.notes on/off` (default: off)
+- [x] Panel LOGS — `nw config panels.logs on/off` (default: off)
+- [x] Dashboard — siempre incluido en core
+- [x] Dojo (quiz/tatami/forja) — `nw config features.dojo on/off` (default: off)
+- [x] Notebook — `nw config features.notebook on/off` (default: off)
+- [x] Clipboard manager — `nw config features.clipboard on/off` (default: on)
 - [ ] Session recording — `nw config recording on/off` (default: off)
-- [ ] Command Palette — `nw config palette on/off` (default: on)
-- [ ] Smart output (JSON -> tabla) — `nw config smartoutput on/off` (default: on)
-- [ ] Snippets — `nw config snippets on/off` (default: on)
+- [x] Command Palette — `nw config features.palette on/off` (default: on)
+- [x] Smart output (JSON -> tabla) — `nw config features.smartOutput on/off` (default: on)
+- [x] Snippets — `nw config features.snippets on/off` (default: on)
 
 #### 5C. Lazy loading obligatorio
-- [ ] Modulos desactivados NO se importan en React (React.lazy + Suspense)
+- [x] Modulos desactivados NO se importan en React (React.lazy + Suspense)
 - [ ] Paneles activados pero ocultos (toggle off) no hacen fetch ni polling
 - [ ] Backend Rust solo arranca workers de modulos activos
 - [ ] API keys solo se validan al activar el modulo correspondiente
 
 #### 5D. First-run wizard
-- [ ] Wizard rapido (3 pasos max) en primera ejecucion
-- [ ] Paso 1: "Solo terminal o tambien paneles?"
-- [ ] Paso 2: Checkboxes para elegir paneles (con descripcion)
-- [ ] Paso 3: "Tienes provider de AI?" -> configurar key o skip
-- [ ] Re-lanzable con `nw setup`
-- [ ] Configuracion en store de Tauri, aplicacion inmediata
+- [x] Wizard rapido (3 pasos max) en primera ejecucion
+- [x] Paso 1: Elegir preset (Minimal/Developer/SysAdmin/Full)
+- [x] Paso 2: Checkboxes para elegir modulos (con descripcion)
+- [x] Paso 3: Resumen + boton iniciar
+- [x] Re-lanzable con `nw setup`
+- [x] Configuracion en localStorage, aplicacion inmediata
 
 #### 5E. Presets de configuracion
-- [ ] `nw config preset minimal` — solo terminal, cero paneles
-- [ ] `nw config preset developer` — terminal + git + metrics + palette + smart output
-- [ ] `nw config preset sysadmin` — terminal + infra + metrics + logs + SSH
-- [ ] `nw config preset full` — todo activado
-- [ ] `nw config preset custom` — lo configurado manualmente
+- [x] `nw config preset minimal` — solo terminal, cero paneles
+- [x] `nw config preset developer` — terminal + git + metrics + palette + smart output
+- [x] `nw config preset sysadmin` — terminal + infra + metrics + logs + SSH
+- [x] `nw config preset full` — todo activado
+- [x] `nw config preset custom` — lo configurado manualmente
 
 #### 5F. Metricas de rendimiento
-- [ ] `nw perf` — tiempo de arranque, RAM, modulos cargados, fetch activos
-- [ ] Objetivo: minimal < 500ms, full < 2s
+- [x] `nw perf` — uptime, RAM heap, modulos cargados
+- [ ] Objetivo: minimal < 500ms, full < 2s (medicion real)
 - [ ] Warning si un modulo tarda > 200ms en cargar
 
 #### 5G. Gestion de almacenamiento
-- [ ] `nw storage` — cuanto ocupa cada modulo en disco y store
-- [ ] `nw storage clean` — limpiar cache, historiales antiguos, datos de modulos desactivados
+- [x] `nw storage` — cuanto ocupa cada modulo en localStorage
+- [x] `nw storage clean` — limpiar cache, historiales antiguos
 
 ### FASE 6: Programming Mode + AI Copilot
 
