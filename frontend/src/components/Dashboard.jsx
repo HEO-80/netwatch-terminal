@@ -59,8 +59,18 @@ const FeatureRow = ({ keybind, label, desc }) => (
   </div>
 );
 
+// ── StatusChip ────────────────────────────────────────────────────────────────
+const StatusChip = ({ icon, label, value, color }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+    <span style={{ fontSize: "12px" }}>{icon}</span>
+    <span style={{ color: "#555", fontSize: "10px" }}>{label}:</span>
+    <span style={{ color, fontSize: "11px" }}>{value}</span>
+  </div>
+);
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 function Dashboard({ onLaunchTerminal }) {
+  const [quickStatus, setQuickStatus] = useState(null);
   const [sysInfo, setSysInfo] = useState(null);
   const [docker,  setDocker]  = useState(null);
   const [loading, setLoading] = useState(true);
@@ -83,6 +93,28 @@ function Dashboard({ onLaunchTerminal }) {
       setLoading(false);
     }
     load();
+  }, []);
+
+  useEffect(() => {
+    async function loadStatus() {
+      const gitRes = await invoke("run_powershell", {
+        command: "$b = git branch --show-current 2>$null; $m = (git status --porcelain 2>$null | Measure-Object).Count; if ($b) { Write-Output \"$b ($m cambios)\" } else { Write-Output 'no git' }"
+      });
+      const gitLine = gitRes?.stdout?.trim() || "no git";
+
+      const portRes = await invoke("run_powershell", {
+        command: "(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(3000,5173,8080,7777,27017) } | Measure-Object).Count"
+      });
+      const portCount = portRes?.stdout?.trim() || "0";
+
+      const uptimeRes = await invoke("run_powershell", {
+        command: "$ts = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime; \"$([int]$ts.TotalHours)h $($ts.Minutes)m\""
+      });
+      const uptime = uptimeRes?.stdout?.trim() || "?";
+
+      setQuickStatus({ gitLine, portCount, uptime });
+    }
+    loadStatus();
   }, []);
 
   const shortcut = async (action) => {
@@ -177,6 +209,20 @@ function Dashboard({ onLaunchTerminal }) {
           <span style={G}>{c.status}</span>
         </div>
       ))}
+
+      {/* Estado Rapido */}
+      {quickStatus && (
+        <>
+          <Sep color="var(--nw-accent)" />
+          <div style={{ ...C, fontSize: "13px", marginBottom: "8px" }}>Estado Rápido</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px 32px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+            <StatusChip icon="⛩" label="Git" value={quickStatus.gitLine} color="#D9027D" />
+            <StatusChip icon="🔌" label="Puertos" value={`${quickStatus.portCount} activos`} color="var(--nw-accent)" />
+            <StatusChip icon="⏱" label="Uptime" value={quickStatus.uptime} color="#39FF14" />
+            <StatusChip icon="🐳" label="Docker" value={docker?.containers?.length ? `${docker.containers.length} containers` : "parado"} color="#FCEE0A" />
+          </div>
+        </>
+      )}
 
       <Sep color="#39FF14" />
 
