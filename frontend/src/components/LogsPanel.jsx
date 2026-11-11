@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -85,10 +85,11 @@ function parseEventLines(raw) {
   });
 }
 
-export default function LogsPanel({ open }) {
+function LogsPanel({ open }) {
   const [entries, setEntries] = useState([]);
   const [filter, setFilter] = useState({ error: true, warn: true, info: true, debug: false });
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [source, setSource] = useState("sys");
   const [loading, setLoading] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -123,6 +124,11 @@ export default function LogsPanel({ open }) {
     }
   }, [entries, autoScroll]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
@@ -131,7 +137,7 @@ export default function LogsPanel({ open }) {
 
   const filtered = entries.filter(e => {
     if (!filter[e.severity]) return false;
-    if (search && !e.text.toLowerCase().includes(search.toLowerCase())) return false;
+    if (debouncedSearch && !e.text.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
     return true;
   });
 
@@ -259,3 +265,5 @@ export default function LogsPanel({ open }) {
     </div>
   );
 }
+
+export default memo(LogsPanel);

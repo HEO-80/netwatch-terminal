@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -105,7 +105,7 @@ function TaskItem({ task, onMove, onDelete }) {
   );
 }
 
-export default function TasksPanel({ open }) {
+function TasksPanel({ open }) {
   const [tasks, setTasks] = useState(() => loadTasks());
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
@@ -239,3 +239,5 @@ export default function TasksPanel({ open }) {
     </div>
   );
 }
+
+export default memo(TasksPanel);

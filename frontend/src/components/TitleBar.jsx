@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab, activeTabLabel }) {
+function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab, activeTabLabel }) {
 
   const handleClose    = (e) => { e.stopPropagation(); invoke("close_window").catch(() => {}); };
   const handleMinimize = (e) => { e.stopPropagation(); invoke("minimize_window").catch(() => {}); };
@@ -87,3 +88,5 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
     </div>
   );
 }
+
+export default memo(TitleBar);

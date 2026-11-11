@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { secureGet } from "../utils/secure-store";
 
 // ── Colores ───────────────────────────────────────────────────────────────────
@@ -210,7 +210,7 @@ function timeAgo(date) {
 }
 
 // ── Main InfraPanel ───────────────────────────────────────────────────────────
-export default function InfraPanel({ open }) {
+function InfraPanel({ open }) {
   const [k8s,     setK8s]     = useState(null);
   const [tf,      setTf]      = useState(null);
   const [ssh,     setSsh]     = useState([]);
@@ -418,3 +418,5 @@ export default function InfraPanel({ open }) {
     </div>
   );
 }
+
+export default memo(InfraPanel);

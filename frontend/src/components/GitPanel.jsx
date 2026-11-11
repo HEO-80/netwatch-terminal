@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -123,7 +123,7 @@ async function fetchGitData() {
   return { repoName, branch, ahead, behind, stash, lastMsg, lastWhen, files };
 }
 
-export default function GitPanel({ open }) {
+function GitPanel({ open }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpd, setLastUpd] = useState(null);
@@ -290,3 +290,5 @@ export default function GitPanel({ open }) {
     </div>
   );
 }
+
+export default memo(GitPanel);

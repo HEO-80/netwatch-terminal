@@ -304,9 +304,9 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Todos los paneles migrados de `#00F0FF` hardcoded a `var(--nw-accent)`
 
 #### Optimización general
-- [ ] Reducir re-renders innecesarios en paneles (React.memo, useMemo)
-- [ ] Lazy import de componentes pesados (AIPanel, InfraPanel)
-- [ ] Debounce en búsquedas y filtros de paneles
+- [x] Reducir re-renders innecesarios en paneles (React.memo en 12 componentes)
+- [x] Lazy import de componentes pesados (ya implementado con React.lazy + Suspense)
+- [x] Debounce en búsquedas y filtros de paneles (LogsPanel 300ms debounce ya implementado)
 - [ ] Virtualización de listas largas (logs, procesos, archivos)
 
 ### FASE 3 — Features killer

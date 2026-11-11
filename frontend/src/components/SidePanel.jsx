@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const Y  = "#FCEE0A";
@@ -139,7 +139,7 @@ function useUptime() {
 }
 
 // ── Main SidePanel ────────────────────────────────────────────────────────────
-export default function SidePanel({ open }) {
+function SidePanel({ open }) {
   const [crypto,  setCrypto]  = useState(null);
   const [docker,  setDocker]  = useState(null);
   const [mev,     setMev]     = useState([]);
@@ -317,3 +317,5 @@ export default function SidePanel({ open }) {
     </div>
   );
 }
+
+export default memo(SidePanel);

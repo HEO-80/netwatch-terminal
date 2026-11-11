@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 
 const invoke = async (cmd, args) => {
   try {
@@ -60,7 +60,7 @@ const FeatureRow = ({ keybind, label, desc }) => (
 );
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function Dashboard({ onLaunchTerminal }) {
+function Dashboard({ onLaunchTerminal }) {
   const [sysInfo, setSysInfo] = useState(null);
   const [docker,  setDocker]  = useState(null);
   const [loading, setLoading] = useState(true);
@@ -206,3 +206,5 @@ export default function Dashboard({ onLaunchTerminal }) {
     </div>
   );
 }
+
+export default memo(Dashboard);

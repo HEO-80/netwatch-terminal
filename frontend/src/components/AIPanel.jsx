@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { secureGet } from "../utils/secure-store";
 
 // ── Paleta NETWATCH ───────────────────────────────────────────────────────────
@@ -325,7 +325,7 @@ function QuickCommandBar({ onSelect, activeCmd }) {
 }
 
 // ── Main AIPanel ──────────────────────────────────────────────────────────────
-export default function AIPanel({ open, height = 340 }) {
+function AIPanel({ open, height = 340 }) {
   const [providers,   setProviders]   = useState({});
   const [activeId,    setActiveId]    = useState("ollama");
   const [activeModel, setActiveModel] = useState("");
@@ -702,3 +702,5 @@ export default function AIPanel({ open, height = 340 }) {
     </div>
   );
 }
+
+export default memo(AIPanel);

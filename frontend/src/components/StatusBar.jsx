@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 
-export default function StatusBar({ user = "Usuario", screen = "dashboard" }) {
+function StatusBar({ user = "Usuario", screen = "dashboard" }) {
   const [time, setTime] = useState(getTime());
 
   useEffect(() => {
@@ -114,3 +114,5 @@ export default function StatusBar({ user = "Usuario", screen = "dashboard" }) {
 function getTime() {
   return new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 }
+
+export default memo(StatusBar);

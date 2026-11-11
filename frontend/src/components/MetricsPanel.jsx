@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -150,7 +150,7 @@ function useMetrics(active) {
   return m;
 }
 
-export default function MetricsPanel({ open, height = 130 }) {
+function MetricsPanel({ open, height = 130 }) {
   const m = useMetrics(open);
   const cpuC = m.cpu    > 90 ? M : m.cpu    > 70 ? Y : G;
   const ramC = m.ramPct > 90 ? M : m.ramPct > 70 ? Y : C;
@@ -278,3 +278,5 @@ export default function MetricsPanel({ open, height = 130 }) {
     </div>
   );
 }
+
+export default memo(MetricsPanel);

@@ -96,11 +96,14 @@ function BootScreen({ onDone }) {
   );
 }
 
-const RIGHT_PANELS = [null, "crypto", "tasks", "git", "notes", "logs", "settings"];
-
-function cycleRight(cur) {
-  const idx = RIGHT_PANELS.indexOf(cur);
-  return RIGHT_PANELS[(idx + 1) % RIGHT_PANELS.length];
+const DEFAULT_PANEL_ORDER = ["crypto", "tasks", "git", "notes", "logs", "settings"];
+function loadPanelOrder() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("nw-panel-order"));
+    if (Array.isArray(stored) && stored.length === DEFAULT_PANEL_ORDER.length
+        && stored.every(p => DEFAULT_PANEL_ORDER.includes(p))) return stored;
+  } catch {}
+  return [...DEFAULT_PANEL_ORDER];
 }
 
 export default function App() {
@@ -112,7 +115,38 @@ export default function App() {
   const [aiOpen,       setAiOpen]       = useState(false);
   const [metricsOpen,  setMetricsOpen]  = useState(false);
   const [systemUser,   setSystemUser]   = useState("Usuario");
+  const [panelOrder,   setPanelOrder]   = useState(loadPanelOrder);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
+
+  useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
+
+  const cycleRight = useCallback((cur) => {
+    const order = [null, ...panelOrder];
+    const idx = order.indexOf(cur);
+    return order[(idx + 1) % order.length];
+  }, [panelOrder]);
+
+  const reorderTabs = useCallback((fromIdx, toIdx) => {
+    setTabs(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const reorderPanels = useCallback((fromIdx, toIdx) => {
+    setPanelOrder(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const togglePanel = useCallback((p) => {
+    setRightPanel(prev => prev === p ? null : p);
+  }, []);
 
   // Leer usuario del sistema al arrancar
   useEffect(() => {
@@ -152,7 +186,7 @@ export default function App() {
       window.removeEventListener("keydown", handler);
       window.removeEventListener("nw-open-settings", openSettings);
     };
-  }, [booting, tabs, activeTab]);
+  }, [booting, tabs, activeTab, cycleRight]);
 
   const addTab = useCallback((type) => {
     const t = createTab(type);
@@ -265,6 +299,9 @@ export default function App() {
           onToggleAi={() => setAiOpen(o => !o)}
           onToggleMetrics={() => setMetricsOpen(o => !o)}
           accent={accent} theme={theme} onCycleTheme={cycleTheme}
+          onReorderTabs={reorderTabs}
+          panelOrder={panelOrder} onReorderPanels={reorderPanels}
+          onTogglePanel={togglePanel}
         />
       )}
     </div>

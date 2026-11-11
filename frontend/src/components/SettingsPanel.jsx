@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { secureGet, secureSet, secureDelete, isSecureBackend } from "../utils/secure-store";
 
 const Y   = "#FCEE0A";
@@ -20,7 +20,7 @@ function mask(val) {
   return val.slice(0, 4) + "•".repeat(Math.min(val.length - 8, 20)) + val.slice(-4);
 }
 
-export default function SettingsPanel({ open }) {
+function SettingsPanel({ open }) {
   const [values, setValues]     = useState({});
   const [editing, setEditing]   = useState(null);
   const [editVal, setEditVal]   = useState("");
@@ -249,3 +249,5 @@ export default function SettingsPanel({ open }) {
     </div>
   );
 }
+
+export default memo(SettingsPanel);

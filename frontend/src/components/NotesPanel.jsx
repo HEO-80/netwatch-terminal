@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -71,7 +71,7 @@ function NoteItem({ note, onDelete, onPin }) {
   );
 }
 
-export default function NotesPanel({ open }) {
+function NotesPanel({ open }) {
   const [notes, setNotes] = useState(() => loadNotes());
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
@@ -201,3 +201,5 @@ export default function NotesPanel({ open }) {
     </div>
   );
 }
+
+export default memo(NotesPanel);
