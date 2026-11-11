@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 
 const Y = "#FCEE0A";
 const G = "#39FF14";
@@ -86,6 +86,24 @@ const PANELS_INFO = [
 
 function HelpModal({ onClose }) {
   const [tab, setTab] = useState(0);
+  const [fade, setFade] = useState(false);
+  const innerRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState("auto");
+
+  const switchTab = (i) => {
+    if (i === tab) return;
+    setFade(true);
+    setTimeout(() => { setTab(i); setFade(false); }, 120);
+  };
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setContentHeight(el.scrollHeight));
+    ro.observe(el);
+    setContentHeight(el.scrollHeight);
+    return () => ro.disconnect();
+  }, [tab]);
 
   return (
     <div onClick={onClose} style={{
@@ -120,7 +138,7 @@ function HelpModal({ onClose }) {
           borderBottom: "1px solid #1a1a00",
         }}>
           {TABS.map((t, i) => (
-            <button key={t} onClick={() => setTab(i)} style={{
+            <button key={t} onClick={() => switchTab(i)} style={{
               background: "transparent", border: "none", borderBottom: tab === i ? `2px solid ${C}` : "2px solid transparent",
               color: tab === i ? C : "#555",
               fontFamily: "var(--font-mono)", fontSize: "9px",
@@ -134,8 +152,17 @@ function HelpModal({ onClose }) {
           ))}
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        {/* Content — animated height */}
+        <div ref={contentRef} style={{
+          overflow: "hidden",
+          transition: "height 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          height: contentHeight === "auto" ? "auto" : contentHeight,
+        }}>
+        <div ref={innerRef} style={{
+          overflowY: "auto", padding: "16px 20px", maxHeight: "calc(80vh - 120px)",
+          opacity: fade ? 0 : 1,
+          transition: "opacity 0.12s ease",
+        }}>
           {tab === 0 && SHORTCUTS.map(section => (
             <div key={section.title} style={{ marginBottom: "14px" }}>
               <div style={{
@@ -212,6 +239,7 @@ function HelpModal({ onClose }) {
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Footer hint */}

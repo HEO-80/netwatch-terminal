@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { MODULE_DEFS, PRESETS } from "../config/modules";
 import { useModuleConfig } from "../hooks/useModuleConfig.jsx";
 
@@ -14,9 +14,27 @@ const TABS = ["PRESETS", "MÓDULOS", "GENERAL"];
 function SettingsModal({ onClose, onOpenSetup }) {
   const { isEnabled, setModule, setPreset, preset, config } = useModuleConfig();
   const [tab, setTab] = useState(0);
+  const [fade, setFade] = useState(false);
   const [bootEnabled, setBootEnabled] = useState(() => {
     try { return localStorage.getItem("nw-skip-boot") !== "1"; } catch { return true; }
   });
+  const innerRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState("auto");
+
+  const switchTab = (i) => {
+    if (i === tab) return;
+    setFade(true);
+    setTimeout(() => { setTab(i); setFade(false); }, 120);
+  };
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setContentHeight(el.scrollHeight));
+    ro.observe(el);
+    setContentHeight(el.scrollHeight);
+    return () => ro.disconnect();
+  }, [tab]);
 
   const handlePreset = (name) => {
     setPreset(name);
@@ -70,7 +88,7 @@ function SettingsModal({ onClose, onOpenSetup }) {
           borderBottom: "1px solid #1a1a00",
         }}>
           {TABS.map((t, i) => (
-            <button key={t} onClick={() => setTab(i)} style={{
+            <button key={t} onClick={() => switchTab(i)} style={{
               background: "transparent", border: "none", borderBottom: tab === i ? `2px solid ${G}` : "2px solid transparent",
               color: tab === i ? G : "#555",
               fontFamily: "var(--font-mono)", fontSize: "9px",
@@ -84,8 +102,17 @@ function SettingsModal({ onClose, onOpenSetup }) {
           ))}
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        {/* Content — animated height */}
+        <div style={{
+          overflow: "hidden",
+          transition: "height 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          height: contentHeight === "auto" ? "auto" : contentHeight,
+        }}>
+        <div ref={innerRef} style={{
+          overflowY: "auto", padding: "16px 20px", maxHeight: "calc(80vh - 120px)",
+          opacity: fade ? 0 : 1,
+          transition: "opacity 0.12s ease",
+        }}>
 
           {/* PRESETS TAB */}
           {tab === 0 && (
@@ -327,6 +354,7 @@ function SettingsModal({ onClose, onOpenSetup }) {
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Footer */}
