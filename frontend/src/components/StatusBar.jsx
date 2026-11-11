@@ -14,7 +14,7 @@ export default function StatusBar({ user = "Usuario", screen = "dashboard" }) {
       alignItems: "center",
       height: "26px",
       background: "#000000",
-      borderTop: "1px solid #00F0FF",
+      borderTop: "1px solid var(--nw-accent)",
       flexShrink: 0,
       fontFamily: "var(--font-mono)",
       fontSize: "11px",
@@ -73,7 +73,7 @@ export default function StatusBar({ user = "Usuario", screen = "dashboard" }) {
       {/* Screen indicator */}
       <div style={{
         padding: "0 12px",
-        color: screen === "terminal" ? "#39FF14" : "#00F0FF",
+        color: screen === "terminal" ? "#39FF14" : "var(--nw-accent)",
         letterSpacing: "0.08em",
         height: "100%",
         display: "flex",
@@ -83,9 +83,9 @@ export default function StatusBar({ user = "Usuario", screen = "dashboard" }) {
         <span style={{
           width: 6, height: 6,
           borderRadius: "50%",
-          background: screen === "terminal" ? "#39FF14" : "#00F0FF",
+          background: screen === "terminal" ? "#39FF14" : "var(--nw-accent)",
           display: "inline-block",
-          boxShadow: screen === "terminal" ? "0 0 6px #39FF14" : "0 0 6px #00F0FF",
+          boxShadow: screen === "terminal" ? "0 0 6px #39FF14" : "0 0 6px var(--nw-accent)",
         }}/>
         {screen === "terminal" ? "TERMINAL" : "DASHBOARD"}
       </div>

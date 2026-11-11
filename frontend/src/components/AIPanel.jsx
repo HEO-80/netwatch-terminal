@@ -4,7 +4,7 @@ import { secureGet } from "../utils/secure-store";
 // ── Paleta NETWATCH ───────────────────────────────────────────────────────────
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
-const C   = "#00F0FF";
+const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const DIM = "#546E7A";
 const BG  = "#080700";
@@ -489,7 +489,7 @@ export default function AIPanel({ open, height = 340 }) {
       minHeight:     open ? `${height}px` : "0px",
       overflow:      "hidden",
       background:    BG2,
-      borderBottom:  open ? "1px solid #00F0FF" : "none",
+      borderBottom:  open ? "1px solid var(--nw-accent)" : "none",
       flexShrink:    0,
       transition:    "height 0.2s ease, min-height 0.2s ease",
       display:       "flex",

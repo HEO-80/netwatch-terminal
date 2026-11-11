@@ -11,6 +11,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import InfraPanel from "./components/InfraPanel";
 import AIPanel from "./components/AIPanel";
 import MetricsPanel from "./components/MetricsPanel";
+import { useTheme, THEMES } from "./hooks/useTheme";
 import "./styles/themes.css";
 
 let tabIdCounter = 1;
@@ -110,6 +111,7 @@ export default function App() {
   const [aiOpen,       setAiOpen]       = useState(false);
   const [metricsOpen,  setMetricsOpen]  = useState(false);
   const [systemUser,   setSystemUser]   = useState("Usuario");
+  const { theme, accent, corner, cycle: cycleTheme } = useTheme();
 
   // Leer usuario del sistema al arrancar
   useEffect(() => {
@@ -172,7 +174,7 @@ export default function App() {
     <div style={{
       display: "flex", flexDirection: "column",
       width: "100vw", height: "100vh",
-      background: "#080700", border: "1px solid #00F0FF",
+      background: "#080700", border: `1px solid ${accent}`,
       overflow: "hidden", position: "relative",
     }}>
       <div className="cy-scanlines"/>
@@ -180,10 +182,10 @@ export default function App() {
       {/* Corner marks magenta */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 100 }}>
         {[
-          { top: 6,    left: 6,   borderTop: "2px solid #D9027D",    borderLeft:  "2px solid #D9027D" },
-          { top: 6,    right: 6,  borderTop: "2px solid #D9027D",    borderRight: "2px solid #D9027D" },
-          { bottom: 6, left: 6,   borderBottom: "2px solid #D9027D", borderLeft:  "2px solid #D9027D" },
-          { bottom: 6, right: 6,  borderBottom: "2px solid #D9027D", borderRight: "2px solid #D9027D" },
+          { top: 6,    left: 6,   borderTop: `2px solid ${corner}`,    borderLeft:  `2px solid ${corner}` },
+          { top: 6,    right: 6,  borderTop: `2px solid ${corner}`,    borderRight: `2px solid ${corner}` },
+          { bottom: 6, left: 6,   borderBottom: `2px solid ${corner}`, borderLeft:  `2px solid ${corner}` },
+          { bottom: 6, right: 6,  borderBottom: `2px solid ${corner}`, borderRight: `2px solid ${corner}` },
         ].map((s, i) => <div key={i} style={{ position: "absolute", width: 16, height: 16, ...s }}/>)}
       </div>
 
@@ -257,6 +259,7 @@ export default function App() {
           onToggleInfra={() => setInfraOpen(o => !o)}
           onToggleAi={() => setAiOpen(o => !o)}
           onToggleMetrics={() => setMetricsOpen(o => !o)}
+          accent={accent} theme={theme} onCycleTheme={cycleTheme}
         />
       )}
     </div>
@@ -272,13 +275,13 @@ const RIGHT_PANEL_META = {
   settings: { label: "SETTINGS", color: "#D9027D" },
 };
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics }) {
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme }) {
   const rpMeta = rightPanel ? RIGHT_PANEL_META[rightPanel] : null;
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
 
   return (
-    <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: "1px solid #00F0FF", flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
+    <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: `1px solid ${accent}`, flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
 
       {/* INFRA toggle izquierda */}
       <button onClick={onToggleInfra} title="Alt+I"
@@ -360,6 +363,23 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
           onMouseOver={e => { if (!rpMeta) { e.target.style.borderColor = "#00F0FF"; e.target.style.color = "#00F0FF"; } }}
           onMouseOut={e => { if (!rpMeta) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
         >◈ {rpMeta ? rpMeta.label : "PANEL"}</button>
+
+        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
+
+        {/* Theme cycle button */}
+        <button onClick={onCycleTheme} title="Cambiar tema de color"
+          style={{
+            background: "transparent", border: `1px solid ${accent}`,
+            color: accent, fontFamily: "var(--font-mono)", fontSize: "9px",
+            padding: "1px 7px", cursor: "pointer", display: "flex",
+            alignItems: "center", gap: "4px",
+          }}
+          onMouseOver={e => { e.currentTarget.style.background = accent; e.currentTarget.style.color = "#000"; }}
+          onMouseOut={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = accent; }}
+        >
+          <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: accent, boxShadow: `0 0 4px ${accent}` }}/>
+          {theme.toUpperCase()}
+        </button>
 
         <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
         <span style={{ fontSize: "10px", color: "#FCEE0A", letterSpacing: "0.08em" }}>⏱ {time}</span>

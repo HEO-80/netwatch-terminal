@@ -13,7 +13,7 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
         display: "flex", alignItems: "center", gap: "12px",
         padding: "0 16px",
         background: "#000000",
-        borderBottom: "1px solid #00F0FF",
+        borderBottom: "1px solid var(--nw-accent)",
         flexShrink: 0, height: "40px",
         userSelect: "none",
         WebkitAppRegion: "drag",
@@ -49,7 +49,7 @@ export default function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO
       <div style={{ width: 1, height: 18, background: "#1a1a1a", WebkitAppRegion: "no-drag" }}/>
 
       {/* Icono */}
-      <span style={{ color: "#00F0FF", fontSize: "11px", opacity: 0.6 }}>▣</span>
+      <span style={{ color: "var(--nw-accent)", fontSize: "11px", opacity: 0.6 }}>▣</span>
 
       {/* Título — zona drag */}
       <span

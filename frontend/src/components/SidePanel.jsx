@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const Y  = "#FCEE0A";
 const G  = "#39FF14";
-const C  = "#00F0FF";
+const C  = "var(--nw-accent)";
 const M  = "#D9027D";
 const R  = "#ff5555";
 const DIM = "#444";
@@ -183,7 +183,7 @@ export default function SidePanel({ open }) {
       minWidth:   open ? "220px" : "0px",
       overflow:   "hidden",
       background: "#020200",
-      borderLeft: open ? "1px solid #00F0FF" : "none",
+      borderLeft: open ? "1px solid var(--nw-accent)" : "none",
       flexShrink: 0,
       transition: "width 0.2s ease, min-width 0.2s ease",
       display:    "flex",

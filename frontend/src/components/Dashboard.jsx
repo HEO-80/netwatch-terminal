@@ -12,7 +12,7 @@ const invoke = async (cmd, args) => {
 // ── Helpers de color ──────────────────────────────────────────────────────────
 const Y  = { color: "#FCEE0A" };   // yellow
 const G  = { color: "#39FF14" };   // green fosforito
-const C  = { color: "#00F0FF" };   // cyan
+const C  = { color: "var(--nw-accent)" };   // accent (themed)
 const M  = { color: "#D9027D" };   // magenta
 const DIM = { color: "#555" };
 

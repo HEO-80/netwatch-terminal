@@ -3,7 +3,7 @@ import { secureGet, secureSet, secureDelete, isSecureBackend } from "../utils/se
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
-const C   = "#00F0FF";
+const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const DIM = "#546E7A";
 const BG  = "#080700";

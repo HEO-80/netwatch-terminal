@@ -60,6 +60,7 @@ async function cmdHelp(args, write) {
     [C.green("nw note clear"),      "borrar todas las notas"],
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
     [C.cyan("nw config"),           "abrir panel de Settings / API keys"],
+    [C.cyan("nw theme [nombre]"),   "cambiar tema de color (cyan/red/yellow/green/magenta)"],
   ];
 
   // DSL nativo (Rust)
@@ -508,11 +509,32 @@ async function cmdConfig(args, write) {
   write(nl);
 }
 
+// ── nw theme ────────────────────────────────────────────────────────────────
+const THEME_LIST = ["cyan", "red", "yellow", "green", "magenta"];
+async function cmdTheme(args, write) {
+  const sub = args[0]?.toLowerCase();
+  if (sub && THEME_LIST.includes(sub)) {
+    document.documentElement.dataset.theme = sub;
+    try { localStorage.setItem("nw-theme", sub); } catch {}
+    window.dispatchEvent(new CustomEvent("nw-theme-change", { detail: sub }));
+    write(nl + C.green(`✓ Tema cambiado a ${C.yellow(sub.toUpperCase())}`) + nl + nl);
+    return;
+  }
+  write(nl + C.cyan("◈ TEMAS NETWATCH") + nl + SEP + nl + nl);
+  const current = localStorage.getItem("nw-theme") || "cyan";
+  const colors = { cyan: C.cyan, red: C.red, yellow: C.yellow, green: C.green, magenta: C.magenta };
+  THEME_LIST.forEach(t => {
+    const active = t === current ? C.green(" ● activo") : "";
+    write(`  ${(colors[t] || C.white)(t.toUpperCase().padEnd(10))} ${C.dim("nw theme " + t)}${active}` + nl);
+  });
+  write(nl + C.dim("  nw theme <nombre> para cambiar") + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
-  config: cmdConfig,
+  config: cmdConfig, theme: cmdTheme,
 };
 
 async function tryRustBackend(input) {

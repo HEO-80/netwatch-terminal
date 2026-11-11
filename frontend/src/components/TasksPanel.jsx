@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
-const C   = "#00F0FF";
+const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
 const DIM = "#444";
