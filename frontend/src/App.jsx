@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react"
 import TitleBar from "./components/TitleBar";
 import TerminalPane from "./components/Terminal";
 import { useTheme, THEMES } from "./hooks/useTheme";
+import { ModuleConfigProvider, useModuleConfig } from "./hooks/useModuleConfig.jsx";
 import "./styles/themes.css";
 
 const Dashboard    = lazy(() => import("./components/Dashboard"));
@@ -112,6 +113,14 @@ function loadPanelOrder() {
 }
 
 export default function App() {
+  return (
+    <ModuleConfigProvider>
+      <AppInner />
+    </ModuleConfigProvider>
+  );
+}
+
+function AppInner() {
   const [booting,      setBooting]      = useState(true);
   const [tabs,         setTabs]         = useState(() => [createTab("dashboard"), createTab("powershell")]);
   const [activeTab,    setActiveTab]    = useState(1);
@@ -127,14 +136,17 @@ export default function App() {
   const [panelMini,    setPanelMini]    = useState({});
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
+  const { isEnabled } = useModuleConfig();
 
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
 
+  const activePanelOrder = panelOrder.filter(p => isEnabled(`panels.${p}`));
+
   const cycleRight = useCallback((cur) => {
-    const order = [null, ...panelOrder];
+    const order = [null, ...activePanelOrder];
     const idx = order.indexOf(cur);
     return order[(idx + 1) % order.length];
-  }, [panelOrder]);
+  }, [activePanelOrder]);
 
   const reorderTabs = useCallback((fromIdx, toIdx) => {
     setTabs(prev => {
@@ -378,13 +390,15 @@ export default function App() {
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
 
         {/* Panel INFRA izquierda — altura completa */}
-        <div style={panelOverlay === "infra" ? { position: "relative", zIndex: 60 } : undefined}>
-          <InfraPanel open={infraOpen} focused={focusPanel === "infra" || panelOverlay === "infra"} onFocus={() => setFocusPanel(f => f === "infra" ? null : "infra")} onOverlay={() => setPanelOverlay(p => p === "infra" ? null : "infra")} minimized={!!panelMini.infra} onMinimize={() => setPanelMini(m => ({ ...m, infra: !m.infra }))} />
-        </div>
+        {isEnabled("panels.infra") && (
+          <div style={panelOverlay === "infra" ? { position: "relative", zIndex: 60 } : undefined}>
+            <InfraPanel open={infraOpen} focused={focusPanel === "infra" || panelOverlay === "infra"} onFocus={() => setFocusPanel(f => f === "infra" ? null : "infra")} onOverlay={() => setPanelOverlay(p => p === "infra" ? null : "infra")} minimized={!!panelMini.infra} onMinimize={() => setPanelMini(m => ({ ...m, infra: !m.infra }))} />
+          </div>
+        )}
 
         {/* Zona central — AI arriba + contenido */}
         <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <AIPanel open={aiOpen} height={300} />
+          {isEnabled("panels.ai") && <AIPanel open={aiOpen} height={300} />}
 
           {/* Contenido tabs */}
           <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
@@ -413,7 +427,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Panel derecho — intercambiable con Alt+P */}
+        {/* Panel derecho — intercambiable con Alt+P, solo modulos activos */}
         {[
           { key: "crypto", Comp: SidePanel },
           { key: "tasks", Comp: TasksPanel },
@@ -421,7 +435,7 @@ export default function App() {
           { key: "notes", Comp: NotesPanel },
           { key: "logs", Comp: LogsPanel },
           { key: "settings", Comp: SettingsPanel },
-        ].map(({ key, Comp }) => (
+        ].filter(({ key }) => isEnabled(`panels.${key}`)).map(({ key, Comp }) => (
           <div key={key} style={panelOverlay === key ? { position: "relative", zIndex: 60 } : undefined}>
             <Comp
               open={rightPanel === key}
@@ -438,20 +452,11 @@ export default function App() {
       </Suspense>
 
       {/* Metrics Panel — encima de las pestañas */}
-      <Suspense fallback={null}>
-        <MetricsPanel open={metricsOpen} height={130} />
-      </Suspense>
-
-      {/* Command Palette */}
-      <Suspense fallback={null}>
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          onExecute={(cmd) => {
-            window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
-          }}
-        />
-      </Suspense>
+      {isEnabled("panels.metrics") && (
+        <Suspense fallback={null}>
+          <MetricsPanel open={metricsOpen} height={130} />
+        </Suspense>
+      )}
 
       {/* TabBar */}
       {!booting && (
@@ -465,16 +470,19 @@ export default function App() {
           onToggleMetrics={() => setMetricsOpen(o => !o)}
           accent={accent} theme={theme} onCycleTheme={cycleTheme}
           onReorderTabs={reorderTabs}
-          panelOrder={panelOrder} onReorderPanels={reorderPanels}
+          panelOrder={activePanelOrder} onReorderPanels={reorderPanels}
           onTogglePanel={togglePanel}
           focusPanel={focusPanel}
+          isEnabled={isEnabled}
         />
       )}
 
       {/* Command Palette (Ctrl+Shift+P) */}
-      <Suspense fallback={null}>
-        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onExecute={executePaletteCmd} />
-      </Suspense>
+      {isEnabled("features.palette") && (
+        <Suspense fallback={null}>
+          <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onExecute={executePaletteCmd} />
+        </Suspense>
+      )}
 
       {/* Panel Overlay backdrop */}
       {panelOverlay && (
@@ -576,7 +584,7 @@ const RIGHT_PANEL_META = {
   settings: { label: "SETTINGS", color: "#D9027D",          tip: "API keys, config, tema" },
 };
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel, focusPanel }) {
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel, focusPanel, isEnabled }) {
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
   const dragTab = useRef(null);
@@ -588,11 +596,13 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
     <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: `1px solid ${accent}`, flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
 
       {/* INFRA toggle izquierda */}
-      <button onClick={onToggleInfra} title="INFRA — SSH, puertos, K8s, Terraform, GitHub · Alt+I"
-        style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #333", color: infraOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
-        onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
-        onMouseOut={e => { if (!infraOpen) e.target.style.color = "#888"; }}
-      >◈ INFRA</button>
+      {isEnabled("panels.infra") && (
+        <button onClick={onToggleInfra} title="INFRA — SSH, puertos, K8s, Terraform, GitHub · Alt+I"
+          style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #333", color: infraOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
+          onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
+          onMouseOut={e => { if (!infraOpen) e.target.style.color = "#888"; }}
+        >◈ INFRA</button>
+      )}
 
       {/* Badge NETWATCH powerline */}
       <div style={{ background: "#FCEE0A", color: "#000", padding: "0 10px", display: "flex", alignItems: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>NETWATCH</div>
@@ -641,18 +651,22 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
 
         {/* AI toggle */}
-        <button onClick={onToggleAi} title="AI — Chat con Ollama/Gemini/Claude · Alt+A"
-          style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
-          onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
-          onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
-        >◈ AI</button>
+        {isEnabled("panels.ai") && (
+          <button onClick={onToggleAi} title="AI — Chat con Ollama/Gemini/Claude · Alt+A"
+            style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+            onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
+            onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
+          >◈ AI</button>
+        )}
 
         {/* METRICS toggle */}
-        <button onClick={onToggleMetrics} title="METRICS — CPU, RAM, Disco en tiempo real · Alt+M"
-          style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#333"}`, color: metricsOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
-          onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
-          onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
-        >◈ METRICS</button>
+        {isEnabled("panels.metrics") && (
+          <button onClick={onToggleMetrics} title="METRICS — CPU, RAM, Disco en tiempo real · Alt+M"
+            style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#333"}`, color: metricsOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+            onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
+            onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
+          >◈ METRICS</button>
+        )}
 
         <div style={{ width: 1, height: 14, background: "#333", margin: "0 3px" }}/>
 
