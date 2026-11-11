@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { handleNwCommand } from "../commands/nw-commands";
+import { handleNwCommand, setLastOutput } from "../commands/nw-commands";
 
 // ── Xterm theme — paleta original NETWATCH con filosofía minimalista ──────────
 // UN color = UN significado. Nunca decorativo.
@@ -172,7 +172,10 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === "output") term.write(msg.data);
+        if (msg.type === "output") {
+          term.write(msg.data);
+          setLastOutput(msg.data);
+        }
         if (msg.type === "exit")   term.writeln(`\r\n\x1b[33m[Shell cerrada: ${msg.code}]\x1b[0m`);
       } catch {}
     };

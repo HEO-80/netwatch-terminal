@@ -61,6 +61,12 @@ async function cmdHelp(args, write) {
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
     [C.cyan("nw config"),           "abrir panel de Settings / API keys"],
     [C.cyan("nw theme [nombre]"),   "cambiar tema de color (cyan/red/yellow/green/magenta)"],
+    [C.cyan("nw json <cmd>"),       "ejecutar comando y formatear JSON"],
+    [C.cyan("nw json table <cmd>"), "renderizar JSON array como tabla"],
+    [C.yellow("nw fix"),             "sugerir fix para el último error"],
+    [C.yellow("nw clip"),            "clipboard manager (últimos 20 items)"],
+    [C.yellow("nw clip <n>"),        "copiar item N al portapapeles"],
+    [C.yellow("nw clip search <t>"), "buscar en historial de clipboard"],
   ];
 
   // DSL nativo (Rust)
@@ -530,11 +536,134 @@ async function cmdTheme(args, write) {
   write(nl + C.dim("  nw theme <nombre> para cambiar") + nl + nl);
 }
 
+// ── nw json ────────────────────────────────────────────────────────────────
+async function cmdJson(args, write, sendToShell) {
+  const { tryParseJson, formatJsonAnsi, formatAsTable } = await import("../utils/smart-output.js");
+  if (args.length === 0) {
+    write(nl + C.cyan("◈ NW JSON — Formateador de JSON") + nl + SEP + nl + nl);
+    write(`  ${C.yellow("nw json <comando>")}  ${C.dim("→")} ejecuta comando y formatea JSON` + nl);
+    write(`  ${C.yellow("nw json table <cmd>")} ${C.dim("→")} renderiza JSON array como tabla` + nl + nl);
+    write(C.dim("  Ejemplo: nw json kubectl get pods -o json") + nl);
+    write(C.dim("  Ejemplo: nw json table docker ps --format '{{json .}}'") + nl + nl);
+    return;
+  }
+  const tableMode = args[0] === "table";
+  const cmdArgs = tableMode ? args.slice(1) : args;
+  const command = cmdArgs.join(" ");
+
+  write(nl + C.dim(`  ⏳ Ejecutando: ${command}...`) + nl);
+  const res = await ps(command);
+  const output = res.stdout || "";
+
+  const parsed = tryParseJson(output);
+  if (!parsed) {
+    write(C.yellow("  ⚠ La salida no es JSON válido. Mostrando raw:") + nl + nl);
+    write("  " + output.trim().split("\n").join("\r\n  ") + nl + nl);
+    return;
+  }
+
+  if (tableMode && Array.isArray(parsed)) {
+    const table = formatAsTable(parsed);
+    if (table) {
+      write(nl + C.cyan(`  ◈ TABLA (${parsed.length} items)`) + nl + nl);
+      write(table + nl);
+      return;
+    }
+  }
+
+  write(nl + C.cyan("  ◈ JSON formateado") + nl + nl);
+  write("  " + formatJsonAnsi(parsed) + nl + nl);
+}
+
+// ── nw fix ────────────────────────────────────────────────────────────────
+let lastOutput = "";
+async function cmdFix(args, write) {
+  const { detectErrors } = await import("../utils/smart-output.js");
+  if (!lastOutput) {
+    write(nl + C.dim("  Sin salida anterior para analizar. Ejecuta un comando primero.") + nl + nl);
+    return;
+  }
+  const errors = detectErrors(lastOutput);
+  if (errors.length === 0) {
+    write(nl + C.green("  ✓ No se detectaron errores conocidos en la salida anterior.") + nl + nl);
+    return;
+  }
+  write(nl + C.cyan("◈ NW FIX — Sugerencias") + nl + SEP + nl + nl);
+  errors.forEach((err, i) => {
+    write(`  ${C.yellow(String(i + 1) + ".")} ${C.red(`[${err.tool}]`)} ${C.white(err.match.trim().slice(0, 80))}` + nl);
+    write(`     ${C.green("→ " + err.suggestion)}` + nl + nl);
+  });
+}
+
+export function setLastOutput(text) { lastOutput = text; }
+
+// ── nw clip ────────────────────────────────────────────────────────────────
+const CLIP_KEY = "nw-clipboard";
+function loadClip() { try { return JSON.parse(localStorage.getItem(CLIP_KEY) || "[]"); } catch { return []; } }
+function saveClip(items) { localStorage.setItem(CLIP_KEY, JSON.stringify(items.slice(0, 20))); }
+
+async function cmdClip(args, write) {
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "search" && args[1]) {
+    const q = args.slice(1).join(" ").toLowerCase();
+    const items = loadClip().filter(c => c.text.toLowerCase().includes(q));
+    if (!items.length) { write(nl + C.dim("  Sin resultados.") + nl + nl); return; }
+    write(nl + C.cyan(`◈ CLIPBOARD — búsqueda: "${q}"`) + nl + SEP + nl + nl);
+    items.forEach((c, i) => {
+      write(`  ${C.yellow(String(i + 1).padStart(2))} ${C.white(c.text.slice(0, 60))}` + nl);
+      write(`     ${C.dim(c.time)}` + nl);
+    });
+    write(nl);
+    return;
+  }
+
+  if (sub && !isNaN(parseInt(sub))) {
+    const idx = parseInt(sub) - 1;
+    const items = loadClip();
+    if (idx >= 0 && idx < items.length) {
+      try { await navigator.clipboard.writeText(items[idx].text); } catch {}
+      write(nl + C.green(`✓ Copiado al portapapeles: ${C.white(items[idx].text.slice(0, 60))}`) + nl + nl);
+    } else {
+      write(nl + C.red(`✗ Item #${sub} no encontrado`) + nl + nl);
+    }
+    return;
+  }
+
+  if (sub === "add" && args.length > 1) {
+    const text = args.slice(1).join(" ");
+    const items = loadClip();
+    items.unshift({ text, time: new Date().toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) });
+    saveClip(items);
+    write(nl + C.green(`✓ Guardado en clipboard`) + nl + nl);
+    return;
+  }
+
+  if (sub === "clear") {
+    saveClip([]);
+    write(nl + C.green("✓ Clipboard limpiado") + nl + nl);
+    return;
+  }
+
+  // Default: list
+  const items = loadClip();
+  if (!items.length) {
+    write(nl + C.dim("  Clipboard vacío. Usa nw clip add <texto> para guardar.") + nl + nl);
+    return;
+  }
+  write(nl + C.cyan("◈ CLIPBOARD MANAGER") + nl + SEP + nl + nl);
+  items.forEach((c, i) => {
+    write(`  ${C.yellow(String(i + 1).padStart(2))} ${C.white(c.text.slice(0, 60))}${c.text.length > 60 ? C.dim("...") : ""}` + nl);
+    write(`     ${C.dim(c.time)}` + nl);
+  });
+  write(nl + C.dim("  nw clip <n> · nw clip search <texto> · nw clip add <texto> · nw clip clear") + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
-  config: cmdConfig, theme: cmdTheme,
+  config: cmdConfig, theme: cmdTheme, json: cmdJson, fix: cmdFix, clip: cmdClip,
 };
 
 async function tryRustBackend(input) {
