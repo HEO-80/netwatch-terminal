@@ -124,6 +124,7 @@ export default function App() {
   const [paletteOpen,  setPaletteOpen]  = useState(false);
   const [focusPanel,   setFocusPanel]   = useState(null);
   const [panelOverlay, setPanelOverlay] = useState(null);
+  const [panelMini,    setPanelMini]    = useState({});
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
 
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
@@ -276,7 +277,7 @@ export default function App() {
 
         {/* Panel INFRA izquierda — altura completa */}
         <div style={panelOverlay === "infra" ? { position: "relative", zIndex: 60 } : undefined}>
-          <InfraPanel open={infraOpen} focused={focusPanel === "infra" || panelOverlay === "infra"} onFocus={() => setFocusPanel(f => f === "infra" ? null : "infra")} onOverlay={() => setPanelOverlay(p => p === "infra" ? null : "infra")} />
+          <InfraPanel open={infraOpen} focused={focusPanel === "infra" || panelOverlay === "infra"} onFocus={() => setFocusPanel(f => f === "infra" ? null : "infra")} onOverlay={() => setPanelOverlay(p => p === "infra" ? null : "infra")} minimized={!!panelMini.infra} onMinimize={() => setPanelMini(m => ({ ...m, infra: !m.infra }))} />
         </div>
 
         {/* Zona central — AI arriba + contenido */}
@@ -325,6 +326,8 @@ export default function App() {
               focused={focusPanel === key || panelOverlay === key}
               onFocus={() => setFocusPanel(f => f === key ? null : key)}
               onOverlay={() => setPanelOverlay(p => p === key ? null : key)}
+              minimized={!!panelMini[key]}
+              onMinimize={() => setPanelMini(m => ({ ...m, [key]: !m[key] }))}
             />
           </div>
         ))}
@@ -489,14 +492,15 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
               title={`${meta.label} — ${meta.tip}`}
               style={{
                 background: isActive ? meta.color : "transparent",
-                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#333"}`,
-                color: isActive ? "#000" : "#888",
+                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#444"}`,
+                color: isActive ? "#000" : meta.color,
+                opacity: isActive ? 1 : 0.5,
                 fontFamily: "var(--font-mono)", fontSize: "7px",
                 padding: "1px 4px", cursor: "grab",
-                transition: "border-color 0.1s",
+                transition: "border-color 0.15s, opacity 0.15s",
               }}
-              onMouseOver={e => { if (!isActive) { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; } }}
-              onMouseOut={e => { if (!isActive) { e.currentTarget.style.borderColor = isDragOver ? accent : "#333"; e.currentTarget.style.color = "#888"; } }}
+              onMouseOver={e => { if (!isActive) { e.currentTarget.style.opacity = "1"; e.currentTarget.style.borderColor = meta.color; } }}
+              onMouseOut={e => { if (!isActive) { e.currentTarget.style.opacity = "0.5"; e.currentTarget.style.borderColor = isDragOver ? accent : "#444"; } }}
             >{meta.label.slice(0, 3)}</button>
           );
         })}
