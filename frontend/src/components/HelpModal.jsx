@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 
 const Y = "#FCEE0A";
 const G = "#39FF14";
@@ -84,20 +84,97 @@ const PANELS_INFO = [
   { name: "SETTINGS", color: M, shortcut: "Alt+P", desc: "Gestion de API keys (Gemini, Claude, GitHub). Almacenamiento seguro con Tauri Store" },
 ];
 
+const MAX_BODY = "min(55vh, 500px)";
+
+function TabContent({ tab }) {
+  if (tab === 0) return SHORTCUTS.map(section => (
+    <div key={section.title} style={{ marginBottom: "14px" }}>
+      <div style={{
+        color: section.color, fontSize: "9px", letterSpacing: "0.12em",
+        marginBottom: "6px", borderBottom: `1px solid ${section.color}33`, paddingBottom: "3px",
+      }}>{section.title}</div>
+      {section.keys.map(([key, desc]) => (
+        <div key={key} style={{ display: "flex", gap: "12px", padding: "2px 0", fontSize: "10px" }}>
+          <span style={{ color: Y, minWidth: "130px", flexShrink: 0 }}>{key}</span>
+          <span style={{ color: "#888" }}>{desc}</span>
+        </div>
+      ))}
+    </div>
+  ));
+  if (tab === 1) return (
+    <div>
+      <div style={{ fontSize: "9px", color: DIM, marginBottom: "12px" }}>
+        Escribe estos comandos en cualquier terminal. Todos empiezan por <span style={{ color: Y }}>nw</span>.
+      </div>
+      {NW_COMMANDS.map(({ cmd, desc }) => (
+        <div key={cmd} style={{ display: "flex", gap: "12px", padding: "4px 0", fontSize: "10px", borderBottom: "1px solid #111" }}>
+          <span style={{ color: G, minWidth: "180px", flexShrink: 0 }}>{cmd}</span>
+          <span style={{ color: "#888" }}>{desc}</span>
+        </div>
+      ))}
+    </div>
+  );
+  if (tab === 2) return (
+    <div>
+      <div style={{ fontSize: "9px", color: DIM, marginBottom: "12px" }}>
+        Los paneles laterales se activan con <span style={{ color: Y }}>nw config</span> o desde Settings.
+        Click en uno desactivado lo activa automaticamente.
+      </div>
+      {PANELS_INFO.map(p => (
+        <div key={p.name} style={{ padding: "8px 12px", marginBottom: "6px", background: "#0b0a00", border: "1px solid #1a1a00" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ color: p.color, fontSize: "10px", fontWeight: 700 }}>{p.name}</span>
+            <span style={{ fontSize: "8px", color: Y, background: "#1a1a00", padding: "1px 6px" }}>{p.shortcut}</span>
+          </div>
+          <div style={{ fontSize: "9px", color: DIM, lineHeight: "1.4" }}>{p.desc}</div>
+        </div>
+      ))}
+    </div>
+  );
+  return (
+    <div style={{ textAlign: "center", padding: "24px 0" }}>
+      <div style={{ fontSize: "24px", color: Y, letterSpacing: "0.2em", fontWeight: 700, marginBottom: "8px" }}>NETWATCH TERMINAL</div>
+      <div style={{ fontSize: "10px", color: DIM, marginBottom: "20px" }}>Version 2.0.77 — Cyberpunk workstation</div>
+      <div style={{ fontSize: "9px", color: "#555", lineHeight: "1.6", maxWidth: "400px", margin: "0 auto" }}>
+        Terminal de escritorio con estetica Cyberpunk 2077.
+        Multi-shell (PowerShell, WSL, CMD), paneles de monitorizacion,
+        chat AI multi-provider, metricas en tiempo real, y sistema de comandos propio.
+      </div>
+      <div style={{ marginTop: "20px", fontSize: "9px" }}>
+        <span style={{ color: G }}>Autor:</span>{" "}<span style={{ color: "#ccc" }}>Hector Oviedo Blasco (HEO-80)</span>
+      </div>
+      <div style={{ marginTop: "6px", fontSize: "9px" }}>
+        <span style={{ color: G }}>Stack:</span>{" "}<span style={{ color: "#ccc" }}>Tauri v2 + React + xterm.js</span>
+      </div>
+    </div>
+  );
+}
+
 function HelpModal({ onClose }) {
   const [tab, setTab] = useState(0);
   const [phase, setPhase] = useState("idle");
+  const [bodyH, setBodyH] = useState(null);
+  const measRef = useRef(null);
+  const switching = useRef(false);
+
+  const measure = useCallback(() => {
+    if (measRef.current) setBodyH(measRef.current.scrollHeight);
+  }, []);
+
+  useEffect(() => { measure(); }, [tab, measure]);
 
   const switchTab = (i) => {
-    if (i === tab || phase !== "idle") return;
+    if (i === tab || switching.current) return;
+    switching.current = true;
     setPhase("out");
     setTimeout(() => {
       setTab(i);
-      setPhase("in");
+      setPhase("enter-prep");
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => setPhase("idle"));
+        setPhase("in");
+        setTimeout(() => { setPhase("idle"); switching.current = false; }, 420);
       });
-    }, 180);
+    }, 200);
   };
 
   return (
@@ -110,17 +187,12 @@ function HelpModal({ onClose }) {
       <div onClick={e => e.stopPropagation()} style={{
         background: "#0a0a00", border: `1px solid ${C}`,
         width: "90%", maxWidth: "640px",
-        maxHeight: "80vh",
-        display: "flex", flexDirection: "column",
         fontFamily: "var(--font-mono)",
+        overflow: "hidden",
       }}>
         {/* Header */}
-        <div style={{
-          padding: "14px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
-          <span style={{ fontSize: "13px", color: C, letterSpacing: "0.12em", fontWeight: 700 }}>
-            ? HELP
-          </span>
+        <div style={{ padding: "14px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: C, letterSpacing: "0.12em", fontWeight: 700 }}>? HELP</span>
           <span onClick={onClose} style={{ color: "#555", cursor: "pointer", fontSize: "14px" }}
             onMouseOver={e => e.currentTarget.style.color = R}
             onMouseOut={e => e.currentTarget.style.color = "#555"}
@@ -128,18 +200,15 @@ function HelpModal({ onClose }) {
         </div>
 
         {/* Tabs */}
-        <div style={{
-          display: "flex", gap: "0", padding: "12px 20px 0",
-          borderBottom: "1px solid #1a1a00",
-        }}>
+        <div style={{ display: "flex", padding: "12px 20px 0", borderBottom: "1px solid #1a1a00" }}>
           {TABS.map((t, i) => (
             <button key={t} onClick={() => switchTab(i)} style={{
-              background: "transparent", border: "none", borderBottom: tab === i ? `2px solid ${C}` : "2px solid transparent",
+              background: "transparent", border: "none",
+              borderBottom: tab === i ? `2px solid ${C}` : "2px solid transparent",
               color: tab === i ? C : "#555",
               fontFamily: "var(--font-mono)", fontSize: "9px",
               padding: "6px 14px", cursor: "pointer",
-              letterSpacing: "0.08em",
-              transition: "color 0.15s",
+              letterSpacing: "0.08em", transition: "color 0.15s",
             }}
               onMouseOver={e => { if (tab !== i) e.currentTarget.style.color = "#888"; }}
               onMouseOut={e => { if (tab !== i) e.currentTarget.style.color = "#555"; }}
@@ -147,98 +216,30 @@ function HelpModal({ onClose }) {
           ))}
         </div>
 
-        {/* Content */}
+        {/* Body — height animates the modal border */}
         <div style={{
-          flex: 1, overflowY: "auto", padding: "16px 20px",
-          opacity: phase === "out" ? 0 : phase === "in" ? 0 : 1,
-          transform: phase === "out" ? "translateY(-12px)" : phase === "in" ? "translateY(18px)" : "translateY(0)",
-          transition: phase === "out"
-            ? "opacity 0.18s ease-in, transform 0.18s ease-in"
-            : "opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+          overflow: "hidden",
+          height: bodyH != null ? Math.min(bodyH, parseInt(MAX_BODY) || 500) : "auto",
+          maxHeight: MAX_BODY,
+          transition: phase === "idle" || phase === "out"
+            ? "height 0.45s cubic-bezier(0.16, 1, 0.3, 1)"
+            : "height 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
         }}>
-          {tab === 0 && SHORTCUTS.map(section => (
-            <div key={section.title} style={{ marginBottom: "14px" }}>
-              <div style={{
-                color: section.color, fontSize: "9px", letterSpacing: "0.12em",
-                marginBottom: "6px", borderBottom: `1px solid ${section.color}33`, paddingBottom: "3px",
-              }}>
-                {section.title}
-              </div>
-              {section.keys.map(([key, desc]) => (
-                <div key={key} style={{ display: "flex", gap: "12px", padding: "2px 0", fontSize: "10px" }}>
-                  <span style={{ color: Y, minWidth: "130px", flexShrink: 0 }}>{key}</span>
-                  <span style={{ color: "#888" }}>{desc}</span>
-                </div>
-              ))}
+          <div ref={measRef} style={{ padding: "16px 20px", overflowY: bodyH != null && bodyH > 500 ? "auto" : "visible" }}>
+            <div style={{
+              opacity: phase === "out" ? 0 : phase === "enter-prep" ? 0 : 1,
+              transform: phase === "out" ? "translateY(-10px)" : phase === "enter-prep" ? "translateY(14px)" : "translateY(0)",
+              transition: phase === "out"
+                ? "opacity 0.18s ease-in, transform 0.18s ease-in"
+                : "opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1), transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}>
+              <TabContent tab={tab} />
             </div>
-          ))}
-
-          {tab === 1 && (
-            <div>
-              <div style={{ fontSize: "9px", color: DIM, marginBottom: "12px" }}>
-                Escribe estos comandos en cualquier terminal. Todos empiezan por <span style={{ color: Y }}>nw</span>.
-              </div>
-              {NW_COMMANDS.map(({ cmd, desc }) => (
-                <div key={cmd} style={{ display: "flex", gap: "12px", padding: "4px 0", fontSize: "10px", borderBottom: "1px solid #111" }}>
-                  <span style={{ color: G, minWidth: "180px", flexShrink: 0 }}>{cmd}</span>
-                  <span style={{ color: "#888" }}>{desc}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {tab === 2 && (
-            <div>
-              <div style={{ fontSize: "9px", color: DIM, marginBottom: "12px" }}>
-                Los paneles laterales se activan con <span style={{ color: Y }}>nw config</span> o desde Settings.
-                Click en uno desactivado lo activa automaticamente.
-              </div>
-              {PANELS_INFO.map(p => (
-                <div key={p.name} style={{
-                  padding: "8px 12px", marginBottom: "6px",
-                  background: "#0b0a00", border: "1px solid #1a1a00",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <span style={{ color: p.color, fontSize: "10px", fontWeight: 700 }}>{p.name}</span>
-                    <span style={{ fontSize: "8px", color: Y, background: "#1a1a00", padding: "1px 6px" }}>{p.shortcut}</span>
-                  </div>
-                  <div style={{ fontSize: "9px", color: DIM, lineHeight: "1.4" }}>{p.desc}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {tab === 3 && (
-            <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <div style={{ fontSize: "24px", color: Y, letterSpacing: "0.2em", fontWeight: 700, marginBottom: "8px" }}>
-                NETWATCH TERMINAL
-              </div>
-              <div style={{ fontSize: "10px", color: DIM, marginBottom: "20px" }}>
-                Version 2.0.77 — Cyberpunk workstation
-              </div>
-              <div style={{ fontSize: "9px", color: "#555", lineHeight: "1.6", maxWidth: "400px", margin: "0 auto" }}>
-                Terminal de escritorio con estetica Cyberpunk 2077.
-                Multi-shell (PowerShell, WSL, CMD), paneles de monitorizacion,
-                chat AI multi-provider, metricas en tiempo real, y sistema
-                de comandos propio.
-              </div>
-              <div style={{ marginTop: "20px", fontSize: "9px" }}>
-                <span style={{ color: G }}>Autor:</span>{" "}
-                <span style={{ color: "#ccc" }}>Hector Oviedo Blasco (HEO-80)</span>
-              </div>
-              <div style={{ marginTop: "6px", fontSize: "9px" }}>
-                <span style={{ color: G }}>Stack:</span>{" "}
-                <span style={{ color: "#ccc" }}>Tauri v2 + React + xterm.js</span>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Footer hint */}
-        <div style={{
-          padding: "8px 20px", borderTop: "1px solid #1a1a00",
-          fontSize: "8px", color: "#333", textAlign: "center",
-        }}>
+        {/* Footer */}
+        <div style={{ padding: "8px 20px", borderTop: "1px solid #1a1a00", fontSize: "8px", color: "#333", textAlign: "center" }}>
           <span style={{ color: "#555" }}>Esc</span> o click fuera para cerrar
         </div>
       </div>
