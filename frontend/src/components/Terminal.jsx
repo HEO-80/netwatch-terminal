@@ -43,6 +43,8 @@ const SHELL_CONFIG = {
 
 const WS_BASE = "ws://127.0.0.1:7777";
 
+const WS_STATUS = { connected: "connected", reconnecting: "reconnecting", disconnected: "disconnected" };
+
 export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClose, systemUser = "Usuario" }) {
   const containerRef = useRef(null);
   const termRef      = useRef(null);
@@ -52,6 +54,8 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
   const retries      = useRef(0);
   const initialized  = useRef(false);
   const inputBuffer  = useRef("");
+  const wsStatus     = useRef(WS_STATUS.disconnected);
+  const statusEl     = useRef(null);
 
   const sc = SHELL_CONFIG[shell] || SHELL_CONFIG["pwsh.exe"];
 
@@ -123,15 +127,26 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }, []);
 
+  const updateStatus = useCallback((status) => {
+    wsStatus.current = status;
+    if (statusEl.current) {
+      const colors = { connected: "#39FF14", reconnecting: "#FCEE0A", disconnected: "#ff5555" };
+      statusEl.current.style.color = colors[status];
+      statusEl.current.textContent = status === "connected" ? "●" : status === "reconnecting" ? "◌" : "○";
+    }
+  }, []);
+
   const connect = useCallback((term, fitAddon) => {
     if (retries.current === 0) {
       term.writeln(`\x1b[36m[NETWATCH]\x1b[0m Conectando a ${sc.ansi}${sc.name}\x1b[0m...`);
     }
+    updateStatus(WS_STATUS.reconnecting);
     const ws = new WebSocket(`${WS_BASE}?shell=${encodeURIComponent(shell)}&id=${tabId}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
       retries.current = 0;
+      updateStatus(WS_STATUS.connected);
       term.writeln(`${sc.ansi}✓ Conectado — ${sc.name}\x1b[0m`);
       term.writeln(`\x1b[38;5;66m  Escribe 'nw help' para ver comandos propios.\x1b[0m`);
       sendToShell({ type: "resize", cols: termRef.current.cols, rows: termRef.current.rows });
@@ -144,16 +159,34 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
       } catch {}
     };
     ws.onclose = (e) => {
-      if (e.code === 1000) return;
+      if (e.code === 1000) { updateStatus(WS_STATUS.disconnected); return; }
       retries.current++;
-      if (retries.current <= 5) {
-        term.writeln(`\r\n\x1b[33m[Reconectando ${retries.current}/5...]\x1b[0m`);
-        reconnTimer.current = setTimeout(() => connect(term, fitAddon), 2000);
+      if (retries.current <= 8) {
+        const delay = Math.min(1000 * Math.pow(2, retries.current - 1), 30000);
+        updateStatus(WS_STATUS.reconnecting);
+        term.writeln(`\r\n\x1b[33m[Reconectando ${retries.current}/8 — ${(delay/1000).toFixed(0)}s...]\x1b[0m`);
+        reconnTimer.current = setTimeout(() => connect(term, fitAddon), delay);
       } else {
+        updateStatus(WS_STATUS.disconnected);
         term.writeln("\r\n\x1b[31m✗ Sin conexión al PTY server.\x1b[0m");
       }
     };
-  }, [shell, tabId, sc, sendToShell]);
+  }, [shell, tabId, sc, sendToShell, updateStatus]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const ws = wsRef.current;
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        if (termRef.current && fitRef.current) {
+          retries.current = 0;
+          connect(termRef.current, fitRef.current);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [connect]);
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#080700", overflow:"hidden" }}>
@@ -165,7 +198,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
         borderBottom:"1px solid #1a1a00", flexShrink:0,
         fontFamily:"var(--font-mono)", fontSize:"10px", userSelect:"none",
       }}>
-        <span style={{ color: sc.color, fontSize:"8px" }}>●</span>
+        <span ref={statusEl} style={{ color: "#FCEE0A", fontSize:"8px" }}>◌</span>
         <span style={{ color: sc.color }}>{sc.name}</span>
         <span style={{ color:"#2a3a3a" }}>·</span>
         <span style={{ color:"#546E7A" }}>netwatch@{systemUser}</span>

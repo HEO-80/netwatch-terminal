@@ -59,6 +59,7 @@ async function cmdHelp(args, write) {
     [C.green("nw note rm <n>"),     "eliminar nota N"],
     [C.green("nw note clear"),      "borrar todas las notas"],
     [C.yellow("nw ai <pregunta>"),   "preguntar a Claude AI"],
+    [C.cyan("nw config"),           "abrir panel de Settings / API keys"],
   ];
 
   cmds.forEach(([cmd, desc]) => {
@@ -473,20 +474,33 @@ async function cmdNote(args, write) {
   write(nl + C.dim("  nw note <texto> · nw note rm <n> · nw note clear") + nl + nl);
 }
 
+// ── nw config ────────────────────────────────────────────────────────────────
+async function cmdConfig(args, write) {
+  window.dispatchEvent(new CustomEvent("nw-open-settings"));
+  write(nl + C.green("✓ Panel SETTINGS abierto") + nl + nl);
+  write(C.yellow("  Keys configurables:") + nl);
+  write(`  ${C.cyan("gemini-key")}     ${C.dim("→")} ${C.gray("Google Gemini API key")}` + nl);
+  write(`  ${C.magenta("claude-key")}     ${C.dim("→")} ${C.gray("Anthropic Claude API key")}` + nl);
+  write(`  ${C.green("github-token")}   ${C.dim("→")} ${C.gray("GitHub personal access token")}` + nl);
+  write(`  ${C.green("github-user")}    ${C.dim("→")} ${C.gray("GitHub username")}` + nl);
+  write(nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
+  config: cmdConfig,
 };
 
-export async function handleNwCommand(input, write, sendToShell) {
+export async function handleNwCommand(input, write, sendToShell, context = {}) {
   const trimmed = input.trim();
   if (!trimmed.startsWith("nw ") && trimmed !== "nw") return { handled: false };
   const parts   = trimmed.split(/\s+/);
   const sub     = parts[1]?.toLowerCase();
   const args    = parts.slice(2);
   const handler = NW_COMMANDS[sub] || NW_COMMANDS["help"];
-  try { await handler(sub ? args : [], write, sendToShell); }
+  try { await handler(sub ? args : [], write, sendToShell, context); }
   catch (e) { write(`\r\n${C.red(`✗ Error: ${e.message}`)}\r\n`); }
   return { handled: true };
 }

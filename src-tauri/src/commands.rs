@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+use sysinfo::{System, Disks, Networks};
 use tauri::{AppHandle, Manager};
 
 // ── System Info ───────────────────────────────────────────────────────────────
@@ -200,5 +201,84 @@ pub fn toggle_fullscreen(app: AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
         let is_fs = win.is_fullscreen().unwrap_or(false);
         win.set_fullscreen(!is_fs).ok();
+    }
+}
+
+// ── Native System Metrics ────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize)]
+pub struct DiskInfo {
+    pub name: String,
+    pub mount: String,
+    pub total_gb: f64,
+    pub used_gb: f64,
+    pub percent: f64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NetInfo {
+    pub name: String,
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SystemMetrics {
+    pub cpu_usage: f64,
+    pub cpu_count: usize,
+    pub ram_total_gb: f64,
+    pub ram_used_gb: f64,
+    pub ram_percent: f64,
+    pub disks: Vec<DiskInfo>,
+    pub net: Vec<NetInfo>,
+    pub uptime_secs: u64,
+}
+
+#[tauri::command]
+pub fn get_system_metrics() -> SystemMetrics {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    sys.refresh_cpu_all();
+
+    let cpu_usage = sys.cpus().iter().map(|c| c.cpu_usage() as f64).sum::<f64>()
+        / sys.cpus().len().max(1) as f64;
+
+    let ram_total = sys.total_memory() as f64 / 1_073_741_824.0;
+    let ram_used  = sys.used_memory() as f64 / 1_073_741_824.0;
+    let ram_pct   = if ram_total > 0.0 { (ram_used / ram_total) * 100.0 } else { 0.0 };
+
+    let disks_info = Disks::new_with_refreshed_list();
+    let disks: Vec<DiskInfo> = disks_info.iter().map(|d| {
+        let total = d.total_space() as f64 / 1_073_741_824.0;
+        let avail = d.available_space() as f64 / 1_073_741_824.0;
+        let used  = total - avail;
+        DiskInfo {
+            name: d.name().to_string_lossy().to_string(),
+            mount: d.mount_point().to_string_lossy().to_string(),
+            total_gb: (total * 100.0).round() / 100.0,
+            used_gb: (used * 100.0).round() / 100.0,
+            percent: if total > 0.0 { ((used / total) * 100.0).round() } else { 0.0 },
+        }
+    }).collect();
+
+    let nets = Networks::new_with_refreshed_list();
+    let net: Vec<NetInfo> = nets.iter().map(|(name, data)| {
+        NetInfo {
+            name: name.clone(),
+            rx_bytes: data.total_received(),
+            tx_bytes: data.total_transmitted(),
+        }
+    }).collect();
+
+    SystemMetrics {
+        cpu_usage: (cpu_usage * 10.0).round() / 10.0,
+        cpu_count: sys.cpus().len(),
+        ram_total_gb: (ram_total * 100.0).round() / 100.0,
+        ram_used_gb: (ram_used * 100.0).round() / 100.0,
+        ram_percent: (ram_pct * 10.0).round() / 10.0,
+        disks,
+        net,
+        uptime_secs: System::uptime(),
     }
 }

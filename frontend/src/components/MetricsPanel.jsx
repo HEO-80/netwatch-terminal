@@ -72,35 +72,28 @@ function useMetrics(active) {
     fetchingRef.current = true;
     try {
       const { invoke } = await import("@tauri-apps/api/core");
-      const res = await invoke("run_powershell", {
-        command: [
-          "$cpu=(Get-WmiObject -Query 'SELECT LoadPercentage FROM Win32_Processor' | Measure-Object LoadPercentage -Average).Average",
-          "$os=Get-WmiObject Win32_OperatingSystem",
-          "$ru=[math]::Round(($os.TotalVisibleMemorySize-$os.FreePhysicalMemory)/1MB,1)",
-          "$rt=[math]::Round($os.TotalVisibleMemorySize/1MB,1)",
-          "$rp=[math]::Round($ru/$rt*100)",
-          "$disks=(Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Used -gt 0} | ForEach-Object { \"$($_.Name),$([math]::Round($_.Used/1GB,1)),$([math]::Round(($_.Used+$_.Free)/1GB,1)),$([math]::Round($_.Used/($_.Used+$_.Free)*100))\" }) -join '|'",
-          "$u=$env:USERNAME",
-          "$h=$env:COMPUTERNAME",
-          "Write-Output \"$cpu|$ru|$rt|$rp|$disks|$u|$h\""
-        ].join(";")
-      });
-      const raw = res?.stdout?.trim();
-      if (!raw) return null;
-      const parts = raw.split("|");
-      if (parts.length < 5) return null;
-      const cpu      = parseFloat(parts[0]) || 0;
-      const ramUsed  = parseFloat(parts[1]) || 0;
-      const ramTotal = parseFloat(parts[2]) || 0;
-      const ramPct   = parseFloat(parts[3]) || 0;
-      const user     = parts[parts.length - 2] || "user";
-      const host     = parts[parts.length - 1] || "PC";
-      const diskRaw  = parts.slice(4, parts.length - 2).join("|");
-      const disks = diskRaw.split("|").filter(Boolean).map(d => {
-        const [name, used, total, pct] = d.split(",");
-        return { name, used: parseFloat(used), total: parseFloat(total), pct: parseFloat(pct) };
-      }).filter(d => d.name && !isNaN(d.pct));
-      return { cpu, ramUsed, ramTotal, ramPct, disks, user, host, source: "tauri" };
+      const res = await invoke("get_system_metrics");
+      if (!res) return null;
+      const netRx = res.net?.reduce((s, n) => s + n.rx_bytes, 0) || 0;
+      const netTx = res.net?.reduce((s, n) => s + n.tx_bytes, 0) || 0;
+      const disks = (res.disks || []).map(d => ({
+        name: d.mount.replace(":\\", "").replace("/", "") || d.name,
+        used: d.used_gb,
+        total: d.total_gb,
+        pct: d.percent,
+      })).filter(d => d.total > 0.5);
+      return {
+        cpu: res.cpu_usage,
+        ramUsed: res.ram_used_gb,
+        ramTotal: res.ram_total_gb,
+        ramPct: res.ram_percent,
+        disks,
+        netRx: Math.round(netRx / 1024),
+        netTx: Math.round(netTx / 1024),
+        user: "Usuario",
+        host: "HEO",
+        source: "native",
+      };
     } catch { return null; }
     finally { fetchingRef.current = false; }
   }, []);
@@ -192,8 +185,9 @@ export default function MetricsPanel({ open, height = 130 }) {
             <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#1a3a1a" }}>·</span>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#2a5a2a" }}>AMD Ryzen 7 7800X3D · {m.ramTotal} GB RAM</span>
             <div style={{ flex: 1 }}/>
-            {m.source === "mock"  && <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: "#3a3a00" }}>◌ simulado</span>}
-            {m.source === "tauri" && <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: G }}>● live · 3s</span>}
+            {m.source === "mock"   && <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: "#3a3a00" }}>◌ simulado</span>}
+            {m.source === "native" && <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: G }}>● native · 3s</span>}
+            {m.source === "tauri"  && <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: G }}>● live · 3s</span>}
           </div>
 
           {/* ── Body: 4 secciones con flex proporcional ── */}

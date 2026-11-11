@@ -26,6 +26,8 @@ const SHELL_LABELS = {
   "cmd.exe":  { name: "CMD",        color: "#FCEE0A" },
 };
 
+const WS_STATUS = { connected: "connected", reconnecting: "reconnecting", disconnected: "disconnected" };
+
 export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
   const containerRef  = useRef(null);
   const termRef       = useRef(null);
@@ -34,9 +36,10 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
   const reconnTimer   = useRef(null);
   const retries       = useRef(0);
   const initialized   = useRef(false);
-  // Buffer para interceptar comandos nw
   const inputBuffer   = useRef("");
   const isNwMode      = useRef(false);
+  const wsStatusRef   = useRef(WS_STATUS.disconnected);
+  const statusElRef   = useRef(null);
 
   const shellInfo = SHELL_LABELS[shell] || SHELL_LABELS["pwsh.exe"];
 
@@ -149,17 +152,28 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }, []);
 
+  const updateStatus = useCallback((status) => {
+    wsStatusRef.current = status;
+    if (statusElRef.current) {
+      const colors = { connected: "#39FF14", reconnecting: "#FCEE0A", disconnected: "#ff5555" };
+      statusElRef.current.style.color = colors[status];
+      statusElRef.current.textContent = status === "connected" ? "●" : status === "reconnecting" ? "◌" : "○";
+    }
+  }, []);
+
   const connect = useCallback((term, fitAddon) => {
     const wsUrl = `${WS_BASE}?shell=${encodeURIComponent(shell)}&id=${tabId}`;
     if (retries.current === 0) {
       term.writeln(`\x1b[38;2;0;240;255m[NETWATCH]\x1b[0m Conectando a ${shellInfo.name}...`);
     }
+    updateStatus(WS_STATUS.reconnecting);
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
       retries.current = 0;
+      updateStatus(WS_STATUS.connected);
       term.writeln(`\x1b[32m✓ Conectado — ${shellInfo.name}\x1b[0m`);
       term.writeln(`\x1b[38;2;68;68;68m  Escribe 'nw help' para ver comandos propios.\x1b[0m`);
       sendToShell({ type: "resize", cols: termRef.current.cols, rows: termRef.current.rows });
@@ -174,16 +188,34 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
     };
 
     ws.onclose = (e) => {
-      if (e.code === 1000) return;
+      if (e.code === 1000) { updateStatus(WS_STATUS.disconnected); return; }
       retries.current++;
-      if (retries.current <= 5) {
-        term.writeln(`\r\n\x1b[33m[Reconectando ${retries.current}/5...]\x1b[0m`);
-        reconnTimer.current = setTimeout(() => connect(term, fitAddon), 2000);
+      if (retries.current <= 8) {
+        const delay = Math.min(1000 * Math.pow(2, retries.current - 1), 30000);
+        updateStatus(WS_STATUS.reconnecting);
+        term.writeln(`\r\n\x1b[33m[Reconectando ${retries.current}/8 — ${(delay/1000).toFixed(0)}s...]\x1b[0m`);
+        reconnTimer.current = setTimeout(() => connect(term, fitAddon), delay);
       } else {
+        updateStatus(WS_STATUS.disconnected);
         term.writeln("\r\n\x1b[31m✗ Sin conexión al PTY server.\x1b[0m");
       }
     };
-  }, [shell, tabId, shellInfo, sendToShell]);
+  }, [shell, tabId, shellInfo, sendToShell, updateStatus]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const ws = wsRef.current;
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        if (termRef.current && fitRef.current) {
+          retries.current = 0;
+          connect(termRef.current, fitRef.current);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [connect]);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#050500", overflow: "hidden" }}>
@@ -194,7 +226,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active }) {
         borderBottom: "1px solid #111", flexShrink: 0,
         fontFamily: "var(--font-mono)", fontSize: "10px", color: "#444", userSelect: "none",
       }}>
-        <span style={{ color: shellInfo.color, fontSize: "8px" }}>●</span>
+        <span ref={statusElRef} style={{ color: "#FCEE0A", fontSize: "8px" }}>◌</span>
         <span style={{ color: shellInfo.color }}>{shellInfo.name}</span>
         <span>·</span>
         <span>netwatch@HEO-80</span>

@@ -7,6 +7,7 @@ import TasksPanel from "./components/TasksPanel";
 import GitPanel from "./components/GitPanel";
 import NotesPanel from "./components/NotesPanel";
 import LogsPanel from "./components/LogsPanel";
+import SettingsPanel from "./components/SettingsPanel";
 import InfraPanel from "./components/InfraPanel";
 import AIPanel from "./components/AIPanel";
 import MetricsPanel from "./components/MetricsPanel";
@@ -93,7 +94,7 @@ function BootScreen({ onDone }) {
   );
 }
 
-const RIGHT_PANELS = [null, "crypto", "tasks", "git", "notes", "logs"];
+const RIGHT_PANELS = [null, "crypto", "tasks", "git", "notes", "logs", "settings"];
 
 function cycleRight(cur) {
   const idx = RIGHT_PANELS.indexOf(cur);
@@ -141,8 +142,13 @@ export default function App() {
       else if (key === "d") { const dash = tabs.find(t => t.type === "dashboard"); if (dash) setActiveTab(dash.id); }
       else if (e.key >= "1" && e.key <= "9") { const idx = parseInt(e.key) - 1; if (tabs[idx]) setActiveTab(tabs[idx].id); }
     };
+    const openSettings = () => setRightPanel("settings");
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("nw-open-settings", openSettings);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("nw-open-settings", openSettings);
+    };
   }, [booting, tabs, activeTab]);
 
   const addTab = useCallback((type) => {
@@ -234,6 +240,7 @@ export default function App() {
         <GitPanel open={rightPanel === "git"} />
         <NotesPanel open={rightPanel === "notes"} />
         <LogsPanel open={rightPanel === "logs"} />
+        <SettingsPanel open={rightPanel === "settings"} />
 
       </div>
 
@@ -257,11 +264,12 @@ export default function App() {
 }
 
 const RIGHT_PANEL_META = {
-  crypto: { label: "CRYPTO", color: "#00F0FF" },
-  tasks:  { label: "TASKS",  color: "#FCEE0A" },
-  git:    { label: "GIT",    color: "#D9027D" },
-  notes:  { label: "NOTES", color: "#39FF14" },
-  logs:   { label: "LOGS",  color: "#ff5555" },
+  crypto:   { label: "CRYPTO",   color: "#00F0FF" },
+  tasks:    { label: "TASKS",    color: "#FCEE0A" },
+  git:      { label: "GIT",      color: "#D9027D" },
+  notes:    { label: "NOTES",    color: "#39FF14" },
+  logs:     { label: "LOGS",     color: "#ff5555" },
+  settings: { label: "SETTINGS", color: "#D9027D" },
 };
 
 function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics }) {

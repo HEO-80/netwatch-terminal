@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { secureGet } from "../utils/secure-store";
 
 // ── Paleta NETWATCH ───────────────────────────────────────────────────────────
 const Y   = "#FCEE0A";
@@ -130,14 +131,14 @@ const PROVIDERS = {
     models: ["gemini-2.0-flash", "gemini-1.5-pro"],
     defaultModel: "gemini-2.0-flash",
     check: async () => {
-      const key = localStorage.getItem("nw-gemini-key") || "";
+      const key = await secureGet("gemini-key");
       return { available: key !== "", models: ["gemini-2.0-flash", "gemini-1.5-pro"] };
     },
-    warmup: async () => { /* API cloud, no necesita warmup */ },
+    warmup: async () => {},
     chat: async function* (model, messages, signal) {
-      const apiKey = localStorage.getItem("nw-gemini-key") || "";
+      const apiKey = await secureGet("gemini-key");
       if (!apiKey) {
-        yield "[Error: GEMINI_API_KEY no configurada]\n→ Ejecuta en consola del navegador:\n  localStorage.setItem('nw-gemini-key', 'TU_KEY')";
+        yield "[Error: GEMINI_API_KEY no configurada]\n→ Usa el panel SETTINGS (Alt+P) o ejecuta: nw config";
         return;
       }
       const prompt = messages.map(m => `${m.role === "user" ? "User" : "AI"}: ${m.content}`).join("\n");
@@ -160,14 +161,14 @@ const PROVIDERS = {
     models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"],
     defaultModel: "claude-sonnet-4-20250514",
     check: async () => {
-      const key = localStorage.getItem("nw-claude-key") || "";
+      const key = await secureGet("claude-key");
       return { available: key !== "", models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"] };
     },
-    warmup: async () => { /* API cloud, no necesita warmup */ },
+    warmup: async () => {},
     chat: async function* (model, messages, signal) {
-      const apiKey = localStorage.getItem("nw-claude-key") || "";
+      const apiKey = await secureGet("claude-key");
       if (!apiKey) {
-        yield "[Error: Claude API key no configurada]\n→ Ejecuta en consola del navegador:\n  localStorage.setItem('nw-claude-key', 'TU_KEY')";
+        yield "[Error: Claude API key no configurada]\n→ Usa el panel SETTINGS (Alt+P) o ejecuta: nw config";
         return;
       }
       const r = await fetch("https://api.anthropic.com/v1/messages", {

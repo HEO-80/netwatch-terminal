@@ -231,21 +231,23 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] `AIPanel` — diferir deteccion de providers y warmup de Ollama hasta que se abra el panel
 
 #### Store seguro para claves API
-- [ ] Instalar `tauri-plugin-store`
-- [ ] Migrar API keys de `localStorage` a store de Tauri (Ollama, Gemini, Claude, CoinGecko, Etherscan, GitHub)
-- [ ] Crear mini panel de Settings (`nw config` o icono) para gestionar keys desde la UI
+- [x] Instalar `tauri-plugin-store` (Rust crate + `@tauri-apps/plugin-store` npm)
+- [x] Migrar API keys de `localStorage` a store de Tauri (Gemini, Claude, GitHub token/user) con auto-migración desde localStorage
+- [x] Crear mini panel de Settings (`nw config` o `Alt+P → SETTINGS`) para gestionar keys desde la UI
+- [x] Utility `secure-store.js` con fallback a localStorage en modo dev (browser sin Tauri)
+- [x] Capabilities Tauri v2 configuradas (`store:default`)
 
 #### Metricas nativas en Rust
-- [ ] Agregar crate `sysinfo` a `Cargo.toml`
-- [ ] Crear comando Tauri `get_system_metrics` que devuelva CPU, RAM, discos, red
-- [ ] Reemplazar el polling via `run_powershell` en `MetricsPanel` por el nuevo comando nativo
+- [x] Agregar crate `sysinfo` (v0.33) a `Cargo.toml`
+- [x] Crear comando Tauri `get_system_metrics` que devuelva CPU, RAM, discos, red, uptime
+- [x] Reemplazar el polling via `run_powershell` en `MetricsPanel` por el nuevo comando nativo
 - [ ] Evaluar worker Rust persistente con eventos Tauri (`emit`) en vez de request-response
-- [ ] Mantener fallback a mock si no hay Tauri (modo dev en browser)
+- [x] Mantener fallback a mock si no hay Tauri (modo dev en browser)
 
 #### WebSocket mejorado
-- [ ] Implementar exponential backoff en la reconexion (actualmente 5 reintentos lineales cada 2s)
-- [ ] Agregar indicador visual en TabBar: dot verde = conectado, amarillo = reconectando, rojo = desconectado
-- [ ] Auto-reconnect silencioso cuando la ventana recupera el foco (`visibilitychange`)
+- [x] Implementar exponential backoff en la reconexion (1s→2s→4s→8s→16s→30s, 8 reintentos)
+- [x] Agregar indicador visual en info bar: ● verde = conectado, ◌ amarillo = reconectando, ○ rojo = desconectado
+- [x] Auto-reconnect silencioso cuando la ventana recupera el foco (`visibilitychange`)
 
 #### PTY nativo (opcional)
 - [ ] Evaluar crate `portable-pty` vs sidecar Node.js actual

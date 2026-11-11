@@ -13,6 +13,7 @@ struct PtyServer(Mutex<Option<Child>>);
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .manage(PtyServer(Mutex::new(None)))
         .setup(|app| {
             // Lanzar el servidor PTY como proceso hijo
@@ -81,6 +82,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_system_info,
+            commands::get_system_metrics,
             commands::get_docker_status,
             commands::run_powershell,
             commands::open_url,

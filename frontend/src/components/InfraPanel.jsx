@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { secureGet } from "../utils/secure-store";
 
 // ── Colores ───────────────────────────────────────────────────────────────────
 const Y   = "#FCEE0A";
@@ -161,9 +162,8 @@ async function fetchPorts() {
 
 // GitHub — últimos commits y PRs via API
 async function fetchGitHub() {
-  // Token opcional — sin él solo repos públicos
-  const token = localStorage.getItem("nw-github-token") || "";
-  const user  = localStorage.getItem("nw-github-user")  || "HEO-80";
+  const token = await secureGet("github-token");
+  const user  = (await secureGet("github-user")) || "HEO-80";
   const headers = token ? { Authorization: `token ${token}` } : {};
 
   try {
