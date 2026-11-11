@@ -123,10 +123,34 @@ async function fetchGitData() {
   return { repoName, branch, ahead, behind, stash, lastMsg, lastWhen, files };
 }
 
+async function runGitCmd(command) {
+  const res = await invoke("run_powershell", { command });
+  return res?.stdout?.trim() || res?.stderr?.trim() || "";
+}
+
+function GitButton({ label, color, onClick, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: "transparent", border: `1px solid ${disabled ? "#222" : color}`,
+        color: disabled ? "#333" : color, fontFamily: "var(--font-mono)", fontSize: "8px",
+        padding: "3px 8px", cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.5 : 1, transition: "border-color 0.15s",
+      }}
+    >{label}</button>
+  );
+}
+
 function GitPanel({ open }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpd, setLastUpd] = useState(null);
+  const [actionMsg, setActionMsg] = useState("");
+  const [commitMode, setCommitMode] = useState(false);
+  const [commitMsg, setCommitMsg]   = useState("");
+  const commitRef = useRef(null);
   const timerRef = useRef(null);
 
   const refresh = useCallback(async () => {
@@ -150,6 +174,30 @@ function GitPanel({ open }) {
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
   }, [open, refresh]);
+
+  const doAction = useCallback(async (label, cmd) => {
+    setActionMsg(`${label}...`);
+    await runGitCmd(cmd);
+    await refresh();
+    setActionMsg(`✓ ${label}`);
+    setTimeout(() => setActionMsg(""), 2000);
+  }, [refresh]);
+
+  const gitPush  = useCallback(() => doAction("Push", "git push origin HEAD"), [doAction]);
+  const gitPull  = useCallback(() => doAction("Pull", "git pull --ff-only"), [doAction]);
+  const gitStash = useCallback(() => doAction("Stash", "git stash -u"), [doAction]);
+  const gitStashPop = useCallback(() => doAction("Stash pop", "git stash pop"), [doAction]);
+  const gitCommit = useCallback(() => {
+    setCommitMode(true);
+    setCommitMsg("");
+    setTimeout(() => commitRef.current?.focus(), 50);
+  }, []);
+  const doCommit = useCallback(() => {
+    if (!commitMsg.trim()) return;
+    doAction("Commit", `git add -A; git commit -m '${commitMsg.trim().replace(/'/g, "''")}'`);
+    setCommitMode(false);
+    setCommitMsg("");
+  }, [commitMsg, doAction]);
 
   const staged   = data?.files?.filter(f => f.staged) || [];
   const unstaged = data?.files?.filter(f => !f.staged) || [];
@@ -277,6 +325,35 @@ function GitPanel({ open }) {
               </>
             )}
           </div>
+
+          {/* Git actions */}
+          {data && (
+            <div style={{ padding: "6px 14px", borderTop: "1px solid #1a1a00" }}>
+              {commitMode ? (
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <input ref={commitRef} value={commitMsg} onChange={e => setCommitMsg(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") doCommit(); if (e.key === "Escape") setCommitMode(false); }}
+                    placeholder="commit msg..."
+                    style={{ flex: 1, background: "#0a0a00", border: `1px solid ${G}`, color: "#E8E8E8",
+                      fontFamily: "var(--font-mono)", fontSize: "9px", padding: "3px 6px", outline: "none" }} />
+                  <GitButton label="OK" color={G} onClick={doCommit} />
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: "3px", flexWrap: "wrap" }}>
+                  <GitButton label="COMMIT" color={G} onClick={gitCommit} disabled={isClean} />
+                  <GitButton label="PUSH" color={C} onClick={gitPush} />
+                  <GitButton label="PULL" color={C} onClick={gitPull} />
+                  <GitButton label="STASH" color={Y} onClick={gitStash} disabled={isClean} />
+                  {data.stash > 0 && <GitButton label="POP" color={Y} onClick={gitStashPop} />}
+                </div>
+              )}
+              {actionMsg && (
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: G, marginTop: "4px" }}>
+                  {actionMsg}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Footer */}
           <div style={{

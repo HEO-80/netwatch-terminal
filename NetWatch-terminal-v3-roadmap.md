@@ -87,7 +87,7 @@ Clipboard manager:
 - [x] nw clip — muestra últimos 20 items copiados dentro de NETWATCH
 - [x] nw clip <n> — pega el item número n
 - [x] nw clip search <texto> — busca en el historial de clipboard
-- [ ] Shortcut Alt+V para abrir el clipboard en overlay
+- [x] Shortcut Alt+V para abrir el clipboard en overlay
 - [x] Persistir entre sesiones (localStorage, migrar a store de Tauri después)
 
 Contexto de proyecto automático:
@@ -200,7 +200,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Nombre del repo, ultimo commit con timestamp
 - [x] Archivos separados por staged / cambios con status (mod/add/del/new/ren)
 - [x] Dot animado si hay cambios, verde si clean
-- [ ] Botones rapidos: commit, push, pull, stash (futuro)
+- [x] Botones rápidos: commit (con input inline), push, pull, stash, stash pop
 - [ ] Diff visual inline (futuro)
 
 #### Panel LOGS (C)
