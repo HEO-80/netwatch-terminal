@@ -292,13 +292,16 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [ ] Persistir orden personalizado en store entre sesiones
 
 #### Selector de tema de color (botón top-bar)
-- [ ] Botón en la barra superior para cambiar esquema de colores
-- [ ] Tema default: Cyan/Azul (actual cyberpunk-2077)
-- [ ] Tema Rojo: bordes y acentos en rojo (#ff5555 / #ff0033)
-- [ ] Tema Amarillo: bordes y acentos en amarillo (#FCEE0A / #FFD700)
-- [ ] Tema Verde: bordes y acentos en verde (#39FF14 / #00FF41)
-- [ ] Cada tema mantiene esencia cyberpunk (fondo oscuro, glow, tipografía)
-- [ ] Hot-switch sin recargar — CSS custom properties
+- [x] Botón en la barra superior para cambiar esquema de colores
+- [x] Tema default: Cyan/Azul (actual cyberpunk-2077)
+- [x] Tema Rojo: bordes y acentos en rojo (#ff0033)
+- [x] Tema Amarillo: bordes y acentos en amarillo (#FCEE0A)
+- [x] Tema Verde: bordes y acentos en verde (#39FF14)
+- [x] Tema Magenta: bordes y acentos en magenta (#D9027D)
+- [x] Cada tema mantiene esencia cyberpunk (fondo oscuro, glow, tipografía)
+- [x] Hot-switch sin recargar — CSS custom properties (`var(--nw-accent)`)
+- [x] Hook `useTheme()` con localStorage persistence + cycle + event listener
+- [x] Todos los paneles migrados de `#00F0FF` hardcoded a `var(--nw-accent)`
 
 #### Optimización general
 - [ ] Reducir re-renders innecesarios en paneles (React.memo, useMemo)

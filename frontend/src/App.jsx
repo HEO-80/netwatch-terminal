@@ -1,18 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import TitleBar from "./components/TitleBar";
-import Dashboard from "./components/Dashboard";
 import TerminalPane from "./components/Terminal";
-import SidePanel from "./components/SidePanel";
-import TasksPanel from "./components/TasksPanel";
-import GitPanel from "./components/GitPanel";
-import NotesPanel from "./components/NotesPanel";
-import LogsPanel from "./components/LogsPanel";
-import SettingsPanel from "./components/SettingsPanel";
-import InfraPanel from "./components/InfraPanel";
-import AIPanel from "./components/AIPanel";
-import MetricsPanel from "./components/MetricsPanel";
 import { useTheme, THEMES } from "./hooks/useTheme";
 import "./styles/themes.css";
+
+const Dashboard    = lazy(() => import("./components/Dashboard"));
+const SidePanel    = lazy(() => import("./components/SidePanel"));
+const TasksPanel   = lazy(() => import("./components/TasksPanel"));
+const GitPanel     = lazy(() => import("./components/GitPanel"));
+const NotesPanel   = lazy(() => import("./components/NotesPanel"));
+const LogsPanel    = lazy(() => import("./components/LogsPanel"));
+const SettingsPanel= lazy(() => import("./components/SettingsPanel"));
+const InfraPanel   = lazy(() => import("./components/InfraPanel"));
+const AIPanel      = lazy(() => import("./components/AIPanel"));
+const MetricsPanel = lazy(() => import("./components/MetricsPanel"));
 
 let tabIdCounter = 1;
 function createTab(type = "powershell") {
@@ -32,7 +33,7 @@ const BOOT_LINES = [
   { text: "► Connecting to hardware interface...",      color: "#39FF14" },
   { text: "► Reading CPU / RAM / OS data...",           color: "#39FF14" },
   { text: "► Mounting shortcuts registry...",           color: "#39FF14" },
-  { text: "► PTY server online [ws://127.0.0.1:7777]", color: "#00F0FF" },
+  { text: "► PTY server online [ws://127.0.0.1:7777]", color: "var(--nw-accent)" },
   { text: "────────────────────────────────────────────", color: "#1a1a1a" },
   { text: "SYSTEM STATUS: ONLINE  ●",                  color: "#39FF14" },
   { text: "ACCESS GRANTED — Welcome, HEO-80",          color: "#FCEE0A" },
@@ -204,6 +205,7 @@ export default function App() {
       />
 
       {/* ══ ZONA PRINCIPAL ══ */}
+      <Suspense fallback={null}>
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
 
         {/* Panel INFRA izquierda — altura completa */}
@@ -245,9 +247,12 @@ export default function App() {
         <SettingsPanel open={rightPanel === "settings"} />
 
       </div>
+      </Suspense>
 
       {/* Metrics Panel — encima de las pestañas */}
-      <MetricsPanel open={metricsOpen} height={130} />
+      <Suspense fallback={null}>
+        <MetricsPanel open={metricsOpen} height={130} />
+      </Suspense>
 
       {/* TabBar */}
       {!booting && (
@@ -267,7 +272,7 @@ export default function App() {
 }
 
 const RIGHT_PANEL_META = {
-  crypto:   { label: "CRYPTO",   color: "#00F0FF" },
+  crypto:   { label: "CRYPTO",   color: "var(--nw-accent)" },
   tasks:    { label: "TASKS",    color: "#FCEE0A" },
   git:      { label: "GIT",      color: "#D9027D" },
   notes:    { label: "NOTES",    color: "#39FF14" },
@@ -325,7 +330,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
       {/* Controles derecha */}
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
         {[
-          { type: "powershell", label: "+ PS",  color: "#00F0FF" },
+          { type: "powershell", label: "+ PS",  color: "var(--nw-accent)" },
           { type: "wsl",        label: "+ WSL", color: "#39FF14" },
           { type: "cmd",        label: "+ CMD", color: "#FCEE0A" },
         ].map(btn => (
@@ -360,7 +365,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
             color: rpMeta ? "#000" : "#333",
             fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer",
           }}
-          onMouseOver={e => { if (!rpMeta) { e.target.style.borderColor = "#00F0FF"; e.target.style.color = "#00F0FF"; } }}
+          onMouseOver={e => { if (!rpMeta) { e.target.style.borderColor = accent; e.target.style.color = accent; } }}
           onMouseOut={e => { if (!rpMeta) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
         >◈ {rpMeta ? rpMeta.label : "PANEL"}</button>
 
