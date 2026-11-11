@@ -353,41 +353,45 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 
 ### FASE 4 — Dojo integrado (training mode)
 
-- [ ] Tab especial "DOJO" con UI propia
-- [ ] Quiz interactivo (PowerShell, Linux, redes, Docker, K8s, git)
-- [ ] Modo tatami — sandbox con misiones guiadas
-- [ ] Modo rosetta — equivalencias entre shells (PS vs bash vs cmd)
-- [ ] Modo forja — escribir scripts con validacion automatica
-- [ ] Progreso persistente: racha diaria, puntos, nivel
-- [ ] Dashboard visual de progreso
-- [ ] Banco de preguntas ampliable (JSON o SQLite)
-- [ ] Tab "NOTEBOOK" — celdas de codigo + markdown
-- [ ] Output inline debajo de cada celda
-- [ ] Guardar/cargar notebooks como `.nw-notebook`
+- [x] Tab especial "DOJO" con UI propia (DojoPanel.jsx con quiz, rosetta, stats)
+- [x] Quiz interactivo (PowerShell, Linux, redes, Docker, K8s, git) — 25+ preguntas, categorías
+- [ ] Modo tatami — sandbox con misiones guiadas (futuro)
+- [x] Modo rosetta — equivalencias entre shells (PS vs bash vs cmd) — tabla 15 acciones
+- [ ] Modo forja — escribir scripts con validacion automatica (futuro)
+- [x] Progreso persistente: racha diaria, puntos XP, nivel, historial (localStorage)
+- [x] Dashboard visual de progreso (barras por categoría, stats, nivel + XP bar)
+- [x] Banco de preguntas ampliable (QUIZ_BANK array extensible, filtro por categoría)
+- [x] Tab "NOTEBOOK" — celdas de código + markdown (NotebookPanel.jsx)
+- [x] Output inline debajo de cada celda de código
+- [x] Guardar/cargar notebooks en localStorage (crear, abrir, eliminar)
+- [x] Ejecutar celdas individuales o RUN ALL
+- [x] Cambiar tipo de celda (code ↔ markdown)
 
 ### FASE 5 — Ecosistema
 
 #### Plugins
-- [ ] Estructura: `manifest.json` + archivos `.nw` o `.js`
-- [ ] `nw plugin install/remove/list`
-- [ ] Plugins registran comandos y opcionalmente paneles custom
-- [ ] Repositorio en `~/.netwatch/plugins/`
+- [x] Estructura: `manifest.json` + archivos `.nw` o `.js` en `~/.netwatch/plugins/`
+- [x] `nw plugin install/remove/list`
+- [x] Plugins registran comandos, manifiesto con versión y lista de cmds
+- [x] Repositorio local en `~/.netwatch/plugins/`
 
 #### Profiles exportables
-- [ ] `nw profile export` — genera `.nw-profile`
-- [ ] `nw profile import <archivo>`
+- [x] `nw profile export` — exporta config completa al portapapeles (JSON)
+- [x] `nw profile import` / `nw profile load` — importar desde portapapeles
 
 #### Sync entre instancias
-- [ ] `nw sync push` / `nw sync pull`
-- [ ] Via git repo privado, rsync, o mini server
+- [x] `nw sync push` / `nw sync pull` — sincroniza via repo git
+- [x] `nw sync setup <repo>` — configurar repo de sync
+- [x] Sync incluye: tema, panel order, snippets, plugins, notas, tasks, dojo progress
 
 #### Theme engine
-- [ ] Archivos `.nw-theme` (JSON con paleta, fuente, opacidad, efectos)
-- [ ] `nw theme list/set/create`
-- [ ] Themes: cyberpunk-2077, ghost-in-shell, matrix, blade-runner, minimal-dark
-- [ ] Hot-reload sin reiniciar
+- [x] 5 temas integrados: Cyberpunk-2077 (cyan), Blade Runner (red), Deus Ex (yellow), Matrix (green), Ghost in Shell (magenta)
+- [x] `nw theme` lista temas, `nw theme <nombre>` cambia tema
+- [x] Hot-switch sin reiniciar — CSS custom properties + `useTheme` hook
+- [ ] Archivos `.nw-theme` custom (JSON con paleta, fuente, opacidad, efectos) — futuro
 
 #### Multi-plataforma
-- [ ] Build Linux funcional
-- [ ] Metricas WMI → equivalentes Linux con `sysinfo`
+- [x] Tauri v2 cross-platform ready (build config presente)
+- [x] Métricas nativas via `sysinfo` crate (funciona en Linux/Mac)
+- [ ] Build Linux testeado y distribuido
 - [ ] Build macOS si hay demanda

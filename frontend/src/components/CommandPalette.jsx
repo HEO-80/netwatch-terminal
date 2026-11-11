@@ -89,6 +89,20 @@ const CATEGORIES = [
       { cmd: "nw snip edit",         desc: "Ver snippet y variables" },
     ],
   },
+  {
+    label: "ECOSYSTEM",
+    color: "#00F0FF",
+    items: [
+      { cmd: "nw plugin",            desc: "Listar plugins instalados" },
+      { cmd: "nw plugin install",    desc: "Instalar plugin" },
+      { cmd: "nw plugin remove",     desc: "Eliminar plugin" },
+      { cmd: "nw profile export",    desc: "Exportar config al portapapeles" },
+      { cmd: "nw profile import",    desc: "Importar profile" },
+      { cmd: "nw sync",              desc: "Estado de sincronización" },
+      { cmd: "nw sync push",         desc: "Subir config al repo de sync" },
+      { cmd: "nw sync pull",         desc: "Descargar config del repo" },
+    ],
+  },
 ];
 
 function fuzzyMatch(text, query) {

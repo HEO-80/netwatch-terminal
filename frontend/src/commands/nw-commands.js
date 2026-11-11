@@ -71,6 +71,12 @@ async function cmdHelp(args, write) {
     [C.magenta("nw ctx"),             "contexto del proyecto actual"],
     [C.magenta("nw rec start/stop"),  "grabar sesión de terminal"],
     [C.magenta("nw rec list/play"),   "listar/reproducir grabaciones"],
+    [C.cyan("nw plugin"),             "gestionar plugins instalados"],
+    [C.cyan("nw profile export"),     "exportar config/profile completo"],
+    [C.cyan("nw profile import"),     "importar profile"],
+    [C.cyan("nw sync push/pull"),     "sincronizar config via git"],
+    [C.magenta("nw dojo"),             "abrir tab de entrenamiento"],
+    [C.green("nw notebook"),           "abrir tab notebook interactivo"],
   ];
 
   // DSL nativo (Rust)
@@ -561,23 +567,81 @@ async function cmdConfig(args, write) {
 
 // ── nw theme ────────────────────────────────────────────────────────────────
 const THEME_LIST = ["cyan", "red", "yellow", "green", "magenta"];
+const CUSTOM_THEMES_KEY = "nw-custom-themes";
+function loadCustomThemes() { try { return JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY) || "{}"); } catch { return {}; } }
+function saveCustomThemes(t) { localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(t)); }
+
+function applyCustomTheme(name, colors) {
+  const root = document.documentElement;
+  root.dataset.theme = name;
+  if (colors.accent) root.style.setProperty("--nw-accent", colors.accent);
+  if (colors.glow)   root.style.setProperty("--nw-accent-glow", colors.glow);
+  if (colors.corner) root.style.setProperty("--nw-corner", colors.corner);
+  if (colors.border) root.style.setProperty("--nw-border", colors.border);
+  localStorage.setItem("nw-theme", name);
+}
+
 async function cmdTheme(args, write) {
   const sub = args[0]?.toLowerCase();
+  const customThemes = loadCustomThemes();
+
   if (sub && THEME_LIST.includes(sub)) {
+    document.documentElement.style.removeProperty("--nw-accent");
+    document.documentElement.style.removeProperty("--nw-accent-glow");
+    document.documentElement.style.removeProperty("--nw-corner");
+    document.documentElement.style.removeProperty("--nw-border");
     document.documentElement.dataset.theme = sub;
     try { localStorage.setItem("nw-theme", sub); } catch {}
     window.dispatchEvent(new CustomEvent("nw-theme-change", { detail: sub }));
     write(nl + C.green(`✓ Tema cambiado a ${C.yellow(sub.toUpperCase())}`) + nl + nl);
     return;
   }
+
+  if (sub && customThemes[sub]) {
+    applyCustomTheme(sub, customThemes[sub]);
+    window.dispatchEvent(new CustomEvent("nw-theme-change", { detail: sub }));
+    write(nl + C.green(`✓ Tema custom "${sub}" aplicado`) + nl + nl);
+    return;
+  }
+
+  if (sub === "create" && args[1]) {
+    const name = args[1];
+    const accent = args[2] || "#00F0FF";
+    const corner = args[3] || "#D9027D";
+    customThemes[name] = { accent, glow: accent + "33", corner, border: accent + "44" };
+    saveCustomThemes(customThemes);
+    write(nl + C.green(`✓ Tema "${name}" creado`) + nl);
+    write(C.dim(`  Accent: ${accent} · Corner: ${corner}`) + nl);
+    write(C.dim(`  Uso: nw theme ${name}`) + nl + nl);
+    return;
+  }
+
+  if (sub === "delete" && args[1] && customThemes[args[1]]) {
+    delete customThemes[args[1]];
+    saveCustomThemes(customThemes);
+    write(nl + C.green(`✓ Tema "${args[1]}" eliminado`) + nl + nl);
+    return;
+  }
+
   write(nl + C.cyan("◈ TEMAS NETWATCH") + nl + SEP + nl + nl);
   const current = localStorage.getItem("nw-theme") || "cyan";
   const colors = { cyan: C.cyan, red: C.red, yellow: C.yellow, green: C.green, magenta: C.magenta };
+  const themeNames = { cyan: "Cyberpunk 2077", red: "Blade Runner", yellow: "Deus Ex", green: "Matrix", magenta: "Ghost in Shell" };
+  write(`  ${C.yellow("BUILT-IN")}` + nl);
   THEME_LIST.forEach(t => {
     const active = t === current ? C.green(" ● activo") : "";
-    write(`  ${(colors[t] || C.white)(t.toUpperCase().padEnd(10))} ${C.dim("nw theme " + t)}${active}` + nl);
+    write(`  ${(colors[t] || C.white)(t.toUpperCase().padEnd(10))} ${C.gray((themeNames[t] || "").padEnd(16))} ${C.dim("nw theme " + t)}${active}` + nl);
   });
-  write(nl + C.dim("  nw theme <nombre> para cambiar") + nl + nl);
+  const customNames = Object.keys(customThemes);
+  if (customNames.length) {
+    write(nl + `  ${C.yellow("CUSTOM")}` + nl);
+    customNames.forEach(name => {
+      const active = name === current ? C.green(" ● activo") : "";
+      write(`  ${C.white(name.toUpperCase().padEnd(10))} ${C.dim("nw theme " + name)} ${C.gray(customThemes[name].accent)}${active}` + nl);
+    });
+  }
+  write(nl + C.dim("  nw theme <nombre> para cambiar") + nl);
+  write(C.dim("  nw theme create <nombre> <accent-hex> [corner-hex]") + nl + nl);
 }
 
 // ── nw json ────────────────────────────────────────────────────────────────
@@ -893,12 +957,206 @@ async function cmdNotebook(args, write) {
   write(nl + C.green("📓 Abriendo NOTEBOOK") + nl + nl);
 }
 
+// ── nw plugin ─────────────────────────────────────────────────────────────────
+const PLUGINS_KEY = "nw-plugins";
+function loadPlugins() { try { return JSON.parse(localStorage.getItem(PLUGINS_KEY) || "{}"); } catch { return {}; } }
+function savePlugins(p) { localStorage.setItem(PLUGINS_KEY, JSON.stringify(p)); }
+
+async function cmdPlugin(args, write) {
+  const sub = args[0]?.toLowerCase();
+  const plugins = loadPlugins();
+
+  if (sub === "install" && args[1]) {
+    const name = args[1];
+    if (plugins[name]) { write(nl + C.yellow(`  ⚠ Plugin '${name}' ya instalado`) + nl + nl); return; }
+
+    write(nl + C.dim(`  Buscando plugin '${name}'...`) + nl);
+    const pluginPath = `${process.env?.USERPROFILE || "~"}/.netwatch/plugins/${name}`;
+    const res = await ps(`if (Test-Path "${pluginPath}/manifest.json") { Get-Content "${pluginPath}/manifest.json" -Raw } else { Write-Output "__NOTFOUND__" }`);
+    const raw = res?.stdout?.trim();
+
+    if (raw === "__NOTFOUND__" || !raw) {
+      plugins[name] = { name, version: "1.0.0", commands: [], installed: new Date().toISOString(), local: false };
+      savePlugins(plugins);
+      write(C.green(`  ✓ Plugin '${name}' registrado (placeholder)`) + nl);
+      write(C.dim(`  Crea: ~/.netwatch/plugins/${name}/manifest.json para comandos`) + nl + nl);
+    } else {
+      try {
+        const manifest = JSON.parse(raw);
+        plugins[name] = { ...manifest, installed: new Date().toISOString(), local: true };
+        savePlugins(plugins);
+        write(C.green(`  ✓ Plugin '${name}' v${manifest.version || "1.0"} instalado`) + nl);
+        if (manifest.commands) write(C.dim(`  Comandos: ${manifest.commands.join(", ")}`) + nl);
+        write(nl);
+      } catch {
+        write(C.red(`  ✗ manifest.json inválido para '${name}'`) + nl + nl);
+      }
+    }
+    return;
+  }
+
+  if (sub === "remove" && args[1]) {
+    if (plugins[args[1]]) {
+      delete plugins[args[1]];
+      savePlugins(plugins);
+      write(nl + C.green(`  ✓ Plugin '${args[1]}' eliminado`) + nl + nl);
+    } else {
+      write(nl + C.red(`  ✗ Plugin '${args[1]}' no encontrado`) + nl + nl);
+    }
+    return;
+  }
+
+  // Default: list
+  const names = Object.keys(plugins);
+  write(nl + C.cyan("◈ PLUGINS") + nl + SEP + nl + nl);
+  if (!names.length) {
+    write(C.dim("  Sin plugins. nw plugin install <nombre>") + nl + nl);
+    return;
+  }
+  names.forEach(name => {
+    const p = plugins[name];
+    write(`  ${C.yellow(name.padEnd(20))} ${C.dim("v" + (p.version || "?"))} ${C.gray(p.local ? "local" : "registered")}` + nl);
+    if (p.commands?.length) write(`  ${C.dim("  cmds:")} ${C.green(p.commands.join(", "))}` + nl);
+  });
+  write(nl + C.dim("  nw plugin install/remove <nombre>") + nl + nl);
+}
+
+// ── nw profile ────────────────────────────────────────────────────────────────
+async function cmdProfile(args, write) {
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "export") {
+    const profile = {
+      version: "1.0",
+      theme: localStorage.getItem("nw-theme") || "cyan",
+      panelOrder: JSON.parse(localStorage.getItem("nw-panel-order") || "null"),
+      snippets: JSON.parse(localStorage.getItem("nw-snippets") || "{}"),
+      plugins: loadPlugins(),
+      notes: JSON.parse(localStorage.getItem("nw-notes") || "[]"),
+      tasks: JSON.parse(localStorage.getItem("nw-tasks") || "[]"),
+      clipboard: JSON.parse(localStorage.getItem("nw-clipboard") || "[]"),
+      dojo: JSON.parse(localStorage.getItem("nw-dojo-progress") || "null"),
+      exported: new Date().toISOString(),
+    };
+    const json = JSON.stringify(profile, null, 2);
+    try { await navigator.clipboard.writeText(json); } catch {}
+    write(nl + C.green("  ✓ Profile exportado al portapapeles") + nl);
+    write(C.dim(`  ${json.length} bytes — pégalo en un archivo .nw-profile`) + nl + nl);
+    return;
+  }
+
+  if (sub === "import") {
+    write(nl + C.cyan("◈ IMPORT PROFILE") + nl + SEP + nl + nl);
+    write(C.dim("  Para importar, copia el contenido del .nw-profile y ejecuta:") + nl);
+    write(C.yellow("  nw profile load <json-en-una-línea>") + nl + nl);
+    return;
+  }
+
+  if (sub === "load" && args[1]) {
+    try {
+      const json = args.slice(1).join(" ");
+      const profile = JSON.parse(json);
+      if (profile.theme) { localStorage.setItem("nw-theme", profile.theme); document.documentElement.dataset.theme = profile.theme; }
+      if (profile.panelOrder) localStorage.setItem("nw-panel-order", JSON.stringify(profile.panelOrder));
+      if (profile.snippets) localStorage.setItem("nw-snippets", JSON.stringify(profile.snippets));
+      if (profile.plugins) savePlugins(profile.plugins);
+      write(nl + C.green("  ✓ Profile importado correctamente") + nl);
+      write(C.dim("  Recarga la app para aplicar todos los cambios.") + nl + nl);
+    } catch (e) {
+      write(nl + C.red(`  ✗ Error parseando profile: ${e.message}`) + nl + nl);
+    }
+    return;
+  }
+
+  write(nl + C.cyan("◈ PROFILES") + nl + SEP + nl + nl);
+  write(`  ${C.yellow("nw profile export")}  ${C.dim("→")} exportar config al portapapeles` + nl);
+  write(`  ${C.yellow("nw profile import")}  ${C.dim("→")} instrucciones para importar` + nl + nl);
+  write(C.dim("  Incluye: tema, panel order, snippets, plugins, notas, tasks, dojo progress") + nl + nl);
+}
+
+// ── nw sync ──────────────────────────────────────────────────────────────────
+const SYNC_REPO_KEY = "nw-sync-repo";
+
+async function cmdSync(args, write, sendToShell) {
+  const sub = args[0]?.toLowerCase();
+  const syncRepo = localStorage.getItem(SYNC_REPO_KEY);
+
+  if (sub === "setup" && args[1]) {
+    localStorage.setItem(SYNC_REPO_KEY, args[1]);
+    write(nl + C.green(`  ✓ Sync repo configurado: ${C.cyan(args[1])}`) + nl + nl);
+    return;
+  }
+
+  if (!syncRepo) {
+    write(nl + C.cyan("◈ SYNC") + nl + SEP + nl + nl);
+    write(C.dim("  No hay repo de sync configurado.") + nl);
+    write(`  ${C.yellow("nw sync setup <ruta-o-url>")} ${C.dim("→")} configurar repo git para sync` + nl + nl);
+    write(C.dim("  Ejemplo: nw sync setup ~/netwatch-sync") + nl);
+    write(C.dim("  Ejemplo: nw sync setup git@github.com:user/nw-config.git") + nl + nl);
+    return;
+  }
+
+  if (sub === "push") {
+    write(nl + C.cyan("◈ SYNC PUSH") + nl + SEP + nl + nl);
+    const profile = {
+      version: "1.0",
+      theme: localStorage.getItem("nw-theme") || "cyan",
+      panelOrder: JSON.parse(localStorage.getItem("nw-panel-order") || "null"),
+      snippets: JSON.parse(localStorage.getItem("nw-snippets") || "{}"),
+      plugins: loadPlugins(),
+      synced: new Date().toISOString(),
+    };
+    const json = JSON.stringify(profile, null, 2);
+    const cmds = [
+      `cd "${syncRepo}"`,
+      `if (-not (Test-Path .git)) { git init }`,
+      `Set-Content -Path "nw-profile.json" -Value '${json.replace(/'/g, "''")}'`,
+      `git add nw-profile.json`,
+      `git commit -m "sync: $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null`,
+    ].join("; ");
+    const res = await ps(cmds);
+    write(C.green("  ✓ Config guardada en repo de sync") + nl);
+    write(C.dim(`  ${syncRepo}`) + nl + nl);
+    if (res.stdout?.trim()) write(C.gray("  " + res.stdout.trim().split("\n").slice(-2).join("\r\n  ")) + nl + nl);
+    return;
+  }
+
+  if (sub === "pull") {
+    write(nl + C.cyan("◈ SYNC PULL") + nl + SEP + nl + nl);
+    const res = await ps(`cd "${syncRepo}"; if (Test-Path "nw-profile.json") { Get-Content "nw-profile.json" -Raw } else { Write-Output "__NOTFOUND__" }`);
+    const raw = res?.stdout?.trim();
+    if (!raw || raw === "__NOTFOUND__") {
+      write(C.red("  ✗ No se encontró nw-profile.json en el repo de sync") + nl + nl);
+      return;
+    }
+    try {
+      const profile = JSON.parse(raw);
+      if (profile.theme) { localStorage.setItem("nw-theme", profile.theme); document.documentElement.dataset.theme = profile.theme; }
+      if (profile.panelOrder) localStorage.setItem("nw-panel-order", JSON.stringify(profile.panelOrder));
+      if (profile.snippets) localStorage.setItem("nw-snippets", JSON.stringify(profile.snippets));
+      if (profile.plugins) savePlugins(profile.plugins);
+      write(C.green("  ✓ Config importada desde repo de sync") + nl);
+      write(C.dim(`  Fecha del sync: ${profile.synced || "?"}`) + nl + nl);
+    } catch (e) {
+      write(C.red(`  ✗ Error parseando profile: ${e.message}`) + nl + nl);
+    }
+    return;
+  }
+
+  write(nl + C.cyan("◈ SYNC") + nl + SEP + nl + nl);
+  write(`  ${C.dim("Repo:")} ${C.cyan(syncRepo)}` + nl + nl);
+  write(`  ${C.yellow("nw sync push")}          ${C.dim("→")} guardar config en repo` + nl);
+  write(`  ${C.yellow("nw sync pull")}          ${C.dim("→")} cargar config desde repo` + nl);
+  write(`  ${C.yellow("nw sync setup <repo>")}  ${C.dim("→")} cambiar repo` + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
   config: cmdConfig, theme: cmdTheme, json: cmdJson, fix: cmdFix, clip: cmdClip,
   ctx: cmdCtx, rec: cmdRec, dojo: cmdDojo, notebook: cmdNotebook,
+  plugin: cmdPlugin, profile: cmdProfile, sync: cmdSync,
 };
 
 async function tryRustBackend(input) {
