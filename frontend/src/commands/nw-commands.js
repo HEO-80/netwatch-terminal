@@ -67,6 +67,9 @@ async function cmdHelp(args, write) {
     [C.yellow("nw clip"),            "clipboard manager (últimos 20 items)"],
     [C.yellow("nw clip <n>"),        "copiar item N al portapapeles"],
     [C.yellow("nw clip search <t>"), "buscar en historial de clipboard"],
+    [C.magenta("nw ctx"),             "contexto del proyecto actual"],
+    [C.magenta("nw rec start/stop"),  "grabar sesión de terminal"],
+    [C.magenta("nw rec list/play"),   "listar/reproducir grabaciones"],
   ];
 
   // DSL nativo (Rust)
@@ -261,10 +264,29 @@ async function cmdSnip(args, write, sendToShell) {
     return;
   }
   if (sub === "run" && args[1]) {
-    const cmd = snippets[args[1]];
-    if (!cmd) { write(nl + C.red(`✗ Snippet '${args[1]}' no encontrado`) + nl + nl); return; }
+    const raw = snippets[args[1]];
+    if (!raw) { write(nl + C.red(`✗ Snippet '${args[1]}' no encontrado`) + nl + nl); return; }
+    const params = {};
+    args.slice(2).forEach(a => { const [k, ...v] = a.split("="); if (k.startsWith("--")) params[k.slice(2)] = v.join("="); });
+    let cmd = raw.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+      if (key === "date") return new Date().toISOString().slice(0, 10);
+      if (key === "time") return new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+      if (key === "user") return "HEO-80";
+      return params[key] || `{{${key}}}`;
+    });
     write(nl + C.yellow(`▸ ${cmd}`) + nl + nl);
     sendToShell(cmd + "\r");
+    return;
+  }
+  if (sub === "edit" && args[1]) {
+    const id = args[1];
+    if (!snippets[id]) { write(nl + C.red(`✗ Snippet '${id}' no encontrado`) + nl + nl); return; }
+    write(nl + C.cyan(`◈ SNIPPET: ${id}`) + nl + SEP + nl);
+    write(`  ${C.white(snippets[id])}` + nl + nl);
+    write(C.dim("  Para editar: nw snip add " + id + " <nuevo comando>") + nl);
+    const vars = snippets[id].match(/\{\{(\w+)\}\}/g);
+    if (vars) write(C.dim(`  Variables: ${vars.join(", ")}`) + nl);
+    write(nl);
     return;
   }
   if (sub === "del" && args[1]) {
@@ -659,11 +681,191 @@ async function cmdClip(args, write) {
   write(nl + C.dim("  nw clip <n> · nw clip search <texto> · nw clip add <texto> · nw clip clear") + nl + nl);
 }
 
+// ── nw ctx — Contexto de proyecto automático ─────────────────────────────────
+async function cmdCtx(args, write) {
+  write(nl + C.cyan("◈ PROJECT CONTEXT") + nl + SEP + nl + nl);
+  const res = await ps(`
+    $cwd = (Get-Location).Path
+    $branch = git branch --show-current 2>$null
+    $dirty = if (git status --porcelain 2>$null) {"dirty"} else {"clean"}
+    $files = @()
+    @("package.json","Cargo.toml","docker-compose.yml","docker-compose.yaml","Dockerfile","hardhat.config.js","hardhat.config.ts","next.config.js","next.config.mjs","astro.config.mjs","vite.config.js","vite.config.ts","pyproject.toml","requirements.txt","go.mod","Makefile","src-tauri") | ForEach-Object {
+      if (Test-Path $_) { $files += $_ }
+    }
+    Write-Output "CWD:$cwd"
+    Write-Output "BRANCH:$branch"
+    Write-Output "DIRTY:$dirty"
+    Write-Output "FILES:$($files -join ',')"
+    if (Test-Path "package.json") {
+      $pkg = Get-Content "package.json" -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+      Write-Output "PKG_NAME:$($pkg.name)"
+      Write-Output "PKG_VER:$($pkg.version)"
+      $scripts = ($pkg.scripts | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ','
+      Write-Output "SCRIPTS:$scripts"
+      $node = node --version 2>$null
+      Write-Output "NODE:$node"
+    }
+    if (Test-Path "Cargo.toml") {
+      $rustc = rustc --version 2>$null
+      Write-Output "RUSTC:$rustc"
+    }
+  `);
+  const info = {};
+  (res.stdout || "").trim().split("\n").forEach(line => {
+    const [k, ...v] = line.split(":");
+    if (k) info[k.trim()] = v.join(":").trim();
+  });
+
+  write(`  ${C.dim("Dir:")}    ${C.cyan(info.CWD || "?")}` + nl);
+  if (info.BRANCH) write(`  ${C.dim("Git:")}    ${C.magenta(info.BRANCH)} ${info.DIRTY === "dirty" ? C.red("● dirty") : C.green("✓ clean")}` + nl);
+
+  const types = [];
+  const files = (info.FILES || "").split(",").filter(Boolean);
+  if (files.includes("src-tauri")) types.push({ name: "Tauri", color: C.yellow, icon: "⚡" });
+  if (files.includes("next.config.js") || files.includes("next.config.mjs")) types.push({ name: "Next.js", color: C.cyan, icon: "▲" });
+  if (files.includes("astro.config.mjs")) types.push({ name: "Astro", color: C.magenta, icon: "🚀" });
+  if (files.includes("vite.config.js") || files.includes("vite.config.ts")) types.push({ name: "Vite", color: C.yellow, icon: "⚡" });
+  if (files.includes("hardhat.config.js") || files.includes("hardhat.config.ts")) types.push({ name: "Hardhat", color: C.yellow, icon: "⛑" });
+  if (files.includes("Cargo.toml")) types.push({ name: "Rust", color: C.red, icon: "🦀" });
+  if (files.includes("package.json")) types.push({ name: "Node.js", color: C.green, icon: "◆" });
+  if (files.includes("Dockerfile") || files.includes("docker-compose.yml") || files.includes("docker-compose.yaml")) types.push({ name: "Docker", color: C.cyan, icon: "🐳" });
+  if (files.includes("pyproject.toml") || files.includes("requirements.txt")) types.push({ name: "Python", color: C.yellow, icon: "🐍" });
+  if (files.includes("go.mod")) types.push({ name: "Go", color: C.cyan, icon: "◇" });
+
+  if (types.length) {
+    write(`  ${C.dim("Stack:")}  ${types.map(t => t.color(`${t.icon} ${t.name}`)).join(C.dim(" · "))}` + nl);
+  }
+  if (info.PKG_NAME) write(`  ${C.dim("Pkg:")}    ${C.white(info.PKG_NAME)}${info.PKG_VER ? C.dim("@" + info.PKG_VER) : ""}` + nl);
+  if (info.NODE) write(`  ${C.dim("Node:")}   ${C.green(info.NODE)}` + nl);
+  if (info.RUSTC) write(`  ${C.dim("Rust:")}   ${C.green(info.RUSTC)}` + nl);
+  if (info.SCRIPTS) {
+    write(nl + `  ${C.yellow("Scripts disponibles:")}` + nl);
+    info.SCRIPTS.split(",").forEach(s => {
+      write(`    ${C.green("npm run " + s)}` + nl);
+    });
+  }
+  write(nl);
+}
+
+// ── nw rec — Grabación de sesiones ───────────────────────────────────────────
+const REC_KEY = "nw-recordings";
+let activeRecording = null;
+
+function loadRecordings() { try { return JSON.parse(localStorage.getItem(REC_KEY) || "{}"); } catch { return {}; } }
+function saveRecordings(r) { localStorage.setItem(REC_KEY, JSON.stringify(r)); }
+
+async function cmdRec(args, write) {
+  const sub = args[0]?.toLowerCase();
+
+  if (sub === "start") {
+    const name = args[1] || `session-${Date.now()}`;
+    if (activeRecording) {
+      write(nl + C.red(`  ✗ Ya hay una grabación activa: ${activeRecording.name}`) + nl);
+      write(C.dim("  Usa nw rec stop primero.") + nl + nl);
+      return;
+    }
+    activeRecording = { name, started: new Date().toISOString(), entries: [] };
+    write(nl + C.green(`  ● REC — Grabando sesión: ${C.yellow(name)}`) + nl);
+    write(C.dim("  Usa nw rec stop para finalizar.") + nl + nl);
+    return;
+  }
+
+  if (sub === "stop") {
+    if (!activeRecording) {
+      write(nl + C.dim("  No hay grabación activa.") + nl + nl);
+      return;
+    }
+    const recs = loadRecordings();
+    activeRecording.stopped = new Date().toISOString();
+    recs[activeRecording.name] = activeRecording;
+    saveRecordings(recs);
+    write(nl + C.green(`  ■ Grabación "${activeRecording.name}" guardada (${activeRecording.entries.length} entradas)`) + nl + nl);
+    activeRecording = null;
+    return;
+  }
+
+  if (sub === "list") {
+    const recs = loadRecordings();
+    const names = Object.keys(recs);
+    if (!names.length) { write(nl + C.dim("  Sin grabaciones. nw rec start [nombre]") + nl + nl); return; }
+    write(nl + C.cyan("◈ RECORDINGS") + nl + SEP + nl + nl);
+    names.forEach((name, i) => {
+      const rec = recs[name];
+      const date = new Date(rec.started).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      write(`  ${C.yellow(String(i + 1).padStart(2))} ${C.white(name.padEnd(24))} ${C.dim(date)} ${C.gray(`(${rec.entries.length} cmds)`)}` + nl);
+    });
+    write(nl + C.dim("  nw rec play <nombre> · nw rec export <nombre>") + nl + nl);
+    return;
+  }
+
+  if (sub === "play" && args[1]) {
+    const recs = loadRecordings();
+    const rec = recs[args[1]];
+    if (!rec) { write(nl + C.red(`  ✗ Grabación "${args[1]}" no encontrada`) + nl + nl); return; }
+    write(nl + C.cyan(`◈ REPLAY: ${rec.name}`) + nl + SEP + nl + nl);
+    rec.entries.forEach((entry, i) => {
+      const ts = entry.time ? C.dim(`[${entry.time}] `) : "";
+      write(`  ${ts}${C.yellow("▸")} ${C.white(entry.input)}` + nl);
+      if (entry.output) {
+        entry.output.split("\n").slice(0, 5).forEach(l => write(`    ${C.gray(l)}` + nl));
+        if (entry.output.split("\n").length > 5) write(C.dim(`    ... (${entry.output.split("\n").length} líneas)`) + nl);
+      }
+    });
+    write(nl);
+    return;
+  }
+
+  if (sub === "export" && args[1]) {
+    const recs = loadRecordings();
+    const rec = recs[args[1]];
+    if (!rec) { write(nl + C.red(`  ✗ Grabación "${args[1]}" no encontrada`) + nl + nl); return; }
+    let md = `# NETWATCH Session: ${rec.name}\n`;
+    md += `Started: ${rec.started}\n\n`;
+    rec.entries.forEach(entry => {
+      md += `\`\`\`\n$ ${entry.input}\n`;
+      if (entry.output) md += `${entry.output}\n`;
+      md += `\`\`\`\n\n`;
+    });
+    try { await navigator.clipboard.writeText(md); } catch {}
+    write(nl + C.green(`  ✓ Exportado como markdown al portapapeles (${md.length} chars)`) + nl + nl);
+    return;
+  }
+
+  if (sub === "del" && args[1]) {
+    const recs = loadRecordings();
+    if (recs[args[1]]) {
+      delete recs[args[1]];
+      saveRecordings(recs);
+      write(nl + C.green(`  ✓ Grabación "${args[1]}" eliminada`) + nl + nl);
+    } else {
+      write(nl + C.red(`  ✗ Grabación "${args[1]}" no encontrada`) + nl + nl);
+    }
+    return;
+  }
+
+  write(nl + C.cyan("◈ SESSION RECORDING") + nl + SEP + nl + nl);
+  write(`  ${C.yellow("nw rec start [nombre]")} ${C.dim("→")} iniciar grabación` + nl);
+  write(`  ${C.yellow("nw rec stop")}           ${C.dim("→")} parar y guardar` + nl);
+  write(`  ${C.yellow("nw rec list")}           ${C.dim("→")} listar grabaciones` + nl);
+  write(`  ${C.yellow("nw rec play <nombre>")}  ${C.dim("→")} reproducir` + nl);
+  write(`  ${C.yellow("nw rec export <nombre>")}${C.dim("→")} exportar a markdown` + nl);
+  write(`  ${C.yellow("nw rec del <nombre>")}   ${C.dim("→")} eliminar` + nl + nl);
+  if (activeRecording) write(`  ${C.red("● REC")} ${C.white(activeRecording.name)} ${C.dim(`(${activeRecording.entries.length} cmds)`)}` + nl + nl);
+}
+
+export function recordCommand(input, output) {
+  if (activeRecording) {
+    const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    activeRecording.entries.push({ input, output: output?.slice(0, 2000), time });
+  }
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
   config: cmdConfig, theme: cmdTheme, json: cmdJson, fix: cmdFix, clip: cmdClip,
+  ctx: cmdCtx, rec: cmdRec,
 };
 
 async function tryRustBackend(input) {

@@ -193,6 +193,7 @@ export default function App() {
       else if (key === "p") setRightPanel(cycleRight);
       else if (key === "i") setInfraOpen(o => !o);
       else if (key === "t") addTab("powershell");
+      else if (key === "v") window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: "nw clip" }));
       else if (key === "w") closeTab(activeTab);
       else if (key === "d") { const dash = tabs.find(t => t.type === "dashboard"); if (dash) setActiveTab(dash.id); }
       else if (e.key >= "1" && e.key <= "9") { const idx = parseInt(e.key) - 1; if (tabs[idx]) setActiveTab(tabs[idx].id); }

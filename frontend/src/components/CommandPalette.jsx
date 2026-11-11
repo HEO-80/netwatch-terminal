@@ -58,10 +58,23 @@ const CATEGORIES = [
     ],
   },
   {
-    label: "AI",
+    label: "AI & OUTPUT",
     color: "#39FF14",
     items: [
       { cmd: "nw ai",                desc: "Preguntar a Claude AI" },
+      { cmd: "nw json",              desc: "Ejecutar cmd y formatear JSON" },
+      { cmd: "nw fix",               desc: "Sugerir fix para último error" },
+    ],
+  },
+  {
+    label: "TOOLS",
+    color: M,
+    items: [
+      { cmd: "nw ctx",               desc: "Contexto del proyecto actual" },
+      { cmd: "nw clip",              desc: "Clipboard manager" },
+      { cmd: "nw rec start",         desc: "Grabar sesión de terminal" },
+      { cmd: "nw rec stop",          desc: "Parar grabación" },
+      { cmd: "nw rec list",          desc: "Listar grabaciones" },
     ],
   },
   {
@@ -70,7 +83,8 @@ const CATEGORIES = [
     items: [
       { cmd: "nw snip ls",           desc: "Listar snippets guardados" },
       { cmd: "nw snip add",          desc: "Guardar nuevo snippet" },
-      { cmd: "nw snip run",          desc: "Ejecutar snippet por ID" },
+      { cmd: "nw snip run",          desc: "Ejecutar snippet con templates" },
+      { cmd: "nw snip edit",         desc: "Ver snippet y variables" },
     ],
   },
 ];

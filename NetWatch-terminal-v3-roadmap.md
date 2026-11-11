@@ -330,24 +330,25 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] `nw clip <n>` — pegar item N al portapapeles
 - [x] `nw clip search <texto>` — buscar en historial
 - [x] `nw clip add <texto>` — guardar manualmente
-- [ ] Shortcut `Alt+V` para overlay visual
+- [x] Shortcut `Alt+V` ejecuta `nw clip` en terminal activa
 - [x] Persistir entre sesiones (localStorage)
 
 #### Contexto de proyecto automatico
-- [ ] Detectar tipo de proyecto al cambiar directorio (package.json, Cargo.toml, docker-compose.yml, etc.)
-- [ ] Mostrar runtime, version, scripts, rama git, estado dirty/clean en TabBar
-- [ ] Sugerir comandos relevantes en Command Palette segun contexto
+- [x] `nw ctx` — detectar tipo de proyecto (Node, Rust, Python, Docker, Go, Vite, Next, Astro, Hardhat)
+- [x] Mostrar runtime, version, scripts, rama git, estado dirty/clean
+- [ ] Sugerir comandos relevantes en Command Palette según contexto (futuro)
 
 #### Grabacion de sesiones
-- [ ] `nw rec start [nombre]` / `nw rec stop`
-- [ ] `nw rec list` / `nw rec play <nombre>`
-- [ ] `nw rec export <nombre>` — exportar como markdown o asciinema
+- [x] `nw rec start [nombre]` / `nw rec stop`
+- [x] `nw rec list` / `nw rec play <nombre>` / `nw rec del <nombre>`
+- [x] `nw rec export <nombre>` — exportar como markdown al portapapeles
+- [x] Persistir grabaciones en localStorage
 
 #### Snippets con templates
-- [ ] Variables de template: `{{name}}`, `{{port}}`, `{{date}}`
-- [ ] `nw snip run deploy --name=api --port=3000`
-- [ ] `nw snip edit <nombre>` — editor inline
-- [ ] Exportables como `.nw` o JSON
+- [x] Variables de template: `{{name}}`, `{{port}}`, `{{date}}`, `{{time}}`, `{{user}}`
+- [x] `nw snip run deploy --name=api --port=3000` — expande variables desde args
+- [x] `nw snip edit <nombre>` — ver snippet y variables
+- [x] Snippets guardados en localStorage, exportables con nw snip ls
 
 ### FASE 4 — Dojo integrado (training mode)
 
