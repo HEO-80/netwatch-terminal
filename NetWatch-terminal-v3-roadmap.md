@@ -339,7 +339,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 #### Contexto de proyecto automatico
 - [x] `nw ctx` — detectar tipo de proyecto (Node, Rust, Python, Docker, Go, Vite, Next, Astro, Hardhat)
 - [x] Mostrar runtime, version, scripts, rama git, estado dirty/clean
-- [ ] Sugerir comandos relevantes en Command Palette según contexto (futuro)
+- [x] Categoría "QUICK RUN" en Command Palette con scripts npm + git commands contextuales
 
 #### Grabacion de sesiones
 - [x] `nw rec start [nombre]` / `nw rec stop`

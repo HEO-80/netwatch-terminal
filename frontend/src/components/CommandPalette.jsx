@@ -94,6 +94,11 @@ const CATEGORIES = [
     ],
   },
   {
+    label: "QUICK RUN",
+    color: G,
+    get items() { return getContextItems(); },
+  },
+  {
     label: "ECOSYSTEM",
     color: "#00F0FF",
     items: [
@@ -110,6 +115,27 @@ const CATEGORIES = [
     ],
   },
 ];
+
+function getContextItems() {
+  const items = [];
+  try {
+    const scripts = JSON.parse(localStorage.getItem("nw-ctx-scripts") || "null");
+    if (scripts) {
+      scripts.forEach(s => items.push({ cmd: `npm run ${s}`, desc: `Script: ${s}` }));
+    }
+  } catch {}
+  if (items.length === 0) {
+    ["dev", "build", "start", "test", "lint"].forEach(s => {
+      items.push({ cmd: `npm run ${s}`, desc: `Script: ${s} (common)` });
+    });
+  }
+  items.push(
+    { cmd: "git status", desc: "Ver estado del repositorio" },
+    { cmd: "git log --oneline -10", desc: "Últimos 10 commits" },
+    { cmd: "git diff --stat", desc: "Resumen de cambios" },
+  );
+  return items;
+}
 
 function fuzzyMatch(text, query) {
   const lower = text.toLowerCase();

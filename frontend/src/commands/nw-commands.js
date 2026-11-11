@@ -870,10 +870,12 @@ async function cmdCtx(args, write) {
   if (info.NODE) write(`  ${C.dim("Node:")}   ${C.green(info.NODE)}` + nl);
   if (info.RUSTC) write(`  ${C.dim("Rust:")}   ${C.green(info.RUSTC)}` + nl);
   if (info.SCRIPTS) {
+    const scripts = info.SCRIPTS.split(",").filter(Boolean);
     write(nl + `  ${C.yellow("Scripts disponibles:")}` + nl);
-    info.SCRIPTS.split(",").forEach(s => {
+    scripts.forEach(s => {
       write(`    ${C.green("npm run " + s)}` + nl);
     });
+    try { localStorage.setItem("nw-ctx-scripts", JSON.stringify(scripts)); } catch {}
   }
   write(nl);
 }
