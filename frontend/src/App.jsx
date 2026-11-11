@@ -138,7 +138,7 @@ function AppInner() {
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
   const [showSetup, setShowSetup] = useState(false);
-  const { isEnabled, firstRunDone } = useModuleConfig();
+  const { isEnabled, firstRunDone, setModule } = useModuleConfig();
 
   useEffect(() => {
     if (!booting && !firstRunDone) setShowSetup(true);
@@ -182,8 +182,9 @@ function AppInner() {
   }, []);
 
   const togglePanel = useCallback((p) => {
+    if (!isEnabled(`panels.${p}`)) setModule(`panels.${p}`, true);
     setRightPanel(prev => prev === p ? null : p);
-  }, []);
+  }, [isEnabled, setModule]);
 
   const executePaletteCmd = useCallback((cmd) => {
     window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
@@ -307,6 +308,7 @@ function AppInner() {
               if (rightPanel) {
                 const idx = panelOrder.indexOf(rightPanel);
                 const prev = panelOrder[(idx - 1 + panelOrder.length) % panelOrder.length];
+                if (!isEnabled(`panels.${prev}`)) setModule(`panels.${prev}`, true);
                 setRightPanel(prev);
                 setFocusPanel(prev);
               }
@@ -316,6 +318,7 @@ function AppInner() {
               if (rightPanel) {
                 const idx = panelOrder.indexOf(rightPanel);
                 const next = panelOrder[(idx + 1) % panelOrder.length];
+                if (!isEnabled(`panels.${next}`)) setModule(`panels.${next}`, true);
                 setRightPanel(next);
                 setFocusPanel(next);
               }
@@ -328,10 +331,10 @@ function AppInner() {
       if (!e.altKey) return;
       const key = e.key.toLowerCase();
       e.preventDefault();
-      if      (key === "a") setAiOpen(o => !o);
-      else if (key === "m") setMetricsOpen(o => !o);
+      if      (key === "a") { if (!isEnabled("panels.ai")) setModule("panels.ai", true); setAiOpen(o => !o); }
+      else if (key === "m") { if (!isEnabled("panels.metrics")) setModule("panels.metrics", true); setMetricsOpen(o => !o); }
       else if (key === "p") setRightPanel(cycleRight);
-      else if (key === "i") setInfraOpen(o => !o);
+      else if (key === "i") { if (!isEnabled("panels.infra")) setModule("panels.infra", true); setInfraOpen(o => !o); }
       else if (key === "t") addTab("powershell");
       else if (key === "v") window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: "nw clip" }));
       else if (key === "w") closeTab(activeTab);
@@ -348,7 +351,7 @@ function AppInner() {
       window.removeEventListener("nw-open-settings", openSettings);
       window.removeEventListener("nw-open-tab", openTab);
     };
-  }, [booting, tabs, activeTab, cycleRight, focusPanel, rightPanel, panelOrder, infraOpen, aiOpen, metricsOpen]);
+  }, [booting, tabs, activeTab, cycleRight, focusPanel, rightPanel, panelOrder, infraOpen, aiOpen, metricsOpen, isEnabled, setModule]);
 
   const addTab = useCallback((type) => {
     const t = createTab(type);
@@ -480,12 +483,12 @@ function AppInner() {
           onSelect={setActiveTab} onClose={closeTab} onAdd={addTab}
           rightPanel={rightPanel} infraOpen={infraOpen} aiOpen={aiOpen} metricsOpen={metricsOpen}
           onCycleRight={() => setRightPanel(cycleRight)}
-          onToggleInfra={() => setInfraOpen(o => !o)}
-          onToggleAi={() => setAiOpen(o => !o)}
-          onToggleMetrics={() => setMetricsOpen(o => !o)}
+          onToggleInfra={() => { if (!isEnabled("panels.infra")) setModule("panels.infra", true); setInfraOpen(o => !o); }}
+          onToggleAi={() => { if (!isEnabled("panels.ai")) setModule("panels.ai", true); setAiOpen(o => !o); }}
+          onToggleMetrics={() => { if (!isEnabled("panels.metrics")) setModule("panels.metrics", true); setMetricsOpen(o => !o); }}
           accent={accent} theme={theme} onCycleTheme={cycleTheme}
           onReorderTabs={reorderTabs}
-          panelOrder={activePanelOrder} onReorderPanels={reorderPanels}
+          panelOrder={panelOrder} onReorderPanels={reorderPanels}
           onTogglePanel={togglePanel}
           focusPanel={focusPanel}
           isEnabled={isEnabled}
@@ -618,13 +621,11 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
     <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: `1px solid ${accent}`, flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
 
       {/* INFRA toggle izquierda */}
-      {isEnabled("panels.infra") && (
-        <button onClick={onToggleInfra} title="INFRA — SSH, puertos, K8s, Terraform, GitHub · Alt+I"
-          style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #333", color: infraOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
-          onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
-          onMouseOut={e => { if (!infraOpen) e.target.style.color = "#888"; }}
-        >◈ INFRA</button>
-      )}
+      <button onClick={onToggleInfra} title="INFRA — SSH, puertos, K8s, Terraform, GitHub · Alt+I"
+        style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #333", color: infraOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
+        onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
+        onMouseOut={e => { if (!infraOpen) e.target.style.color = "#888"; }}
+      >◈ INFRA</button>
 
       {/* Badge NETWATCH powerline */}
       <div style={{ background: "#FCEE0A", color: "#000", padding: "0 10px", display: "flex", alignItems: "center", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>NETWATCH</div>
@@ -673,22 +674,18 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
 
         {/* AI toggle */}
-        {isEnabled("panels.ai") && (
-          <button onClick={onToggleAi} title="AI — Chat con Ollama/Gemini/Claude · Alt+A"
-            style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
-            onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
-            onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
-          >◈ AI</button>
-        )}
+        <button onClick={onToggleAi} title="AI — Chat con Ollama/Gemini/Claude · Alt+A"
+          style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+          onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
+          onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
+        >◈ AI</button>
 
         {/* METRICS toggle */}
-        {isEnabled("panels.metrics") && (
-          <button onClick={onToggleMetrics} title="METRICS — CPU, RAM, Disco en tiempo real · Alt+M"
-            style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#333"}`, color: metricsOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
-            onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
-            onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
-          >◈ METRICS</button>
-        )}
+        <button onClick={onToggleMetrics} title="METRICS — CPU, RAM, Disco en tiempo real · Alt+M"
+          style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#333"}`, color: metricsOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+          onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
+          onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
+        >◈ METRICS</button>
 
         <div style={{ width: 1, height: 14, background: "#333", margin: "0 3px" }}/>
 
@@ -697,6 +694,8 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
           const meta = RIGHT_PANEL_META[p];
           const isActive = rightPanel === p;
           const isDragOver = panelDropTarget === i;
+          const moduleOn = isEnabled(`panels.${p}`);
+          const dimOpacity = moduleOn ? 0.5 : 0.25;
           return (
             <button key={p}
               draggable
@@ -706,18 +705,18 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
               onDrop={e => { e.preventDefault(); if (dragPanel.current !== null && dragPanel.current !== i) onReorderPanels(dragPanel.current, i); dragPanel.current = null; setPanelDropTarget(null); }}
               onDragEnd={() => { dragPanel.current = null; setPanelDropTarget(null); }}
               onClick={() => onTogglePanel(p)}
-              title={`${meta.label} — ${meta.tip}`}
+              title={`${meta.label} — ${meta.tip}${moduleOn ? "" : " (click para activar)"}`}
               style={{
                 background: isActive ? meta.color : "transparent",
-                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#444"}`,
+                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : moduleOn ? "#444" : "#222"}`,
                 color: isActive ? "#000" : meta.color,
-                opacity: isActive ? 1 : 0.5,
+                opacity: isActive ? 1 : dimOpacity,
                 fontFamily: "var(--font-mono)", fontSize: "7px",
                 padding: "1px 4px", cursor: "grab",
                 transition: "border-color 0.15s, opacity 0.15s",
               }}
               onMouseOver={e => { if (!isActive) { e.currentTarget.style.opacity = "1"; e.currentTarget.style.borderColor = meta.color; } }}
-              onMouseOut={e => { if (!isActive) { e.currentTarget.style.opacity = "0.5"; e.currentTarget.style.borderColor = isDragOver ? accent : "#444"; } }}
+              onMouseOut={e => { if (!isActive) { e.currentTarget.style.opacity = String(dimOpacity); e.currentTarget.style.borderColor = isDragOver ? accent : moduleOn ? "#444" : "#222"; } }}
             >{meta.label.slice(0, 3)}</button>
           );
         })}
