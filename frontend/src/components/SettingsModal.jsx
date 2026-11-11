@@ -14,15 +14,21 @@ const TABS = ["PRESETS", "MÓDULOS", "GENERAL"];
 function SettingsModal({ onClose, onOpenSetup }) {
   const { isEnabled, setModule, setPreset, preset, config } = useModuleConfig();
   const [tab, setTab] = useState(0);
-  const [fade, setFade] = useState(false);
+  const [phase, setPhase] = useState("idle");
   const [bootEnabled, setBootEnabled] = useState(() => {
     try { return localStorage.getItem("nw-skip-boot") !== "1"; } catch { return true; }
   });
 
   const switchTab = (i) => {
-    if (i === tab) return;
-    setFade(true);
-    setTimeout(() => { setTab(i); setFade(false); }, 150);
+    if (i === tab || phase !== "idle") return;
+    setPhase("out");
+    setTimeout(() => {
+      setTab(i);
+      setPhase("in");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPhase("idle"));
+      });
+    }, 180);
   };
 
   const handlePreset = (name) => {
@@ -95,9 +101,11 @@ function SettingsModal({ onClose, onOpenSetup }) {
         {/* Content */}
         <div style={{
           flex: 1, overflowY: "auto", padding: "16px 20px",
-          opacity: fade ? 0 : 1,
-          transform: fade ? "translateY(6px)" : "translateY(0)",
-          transition: "opacity 0.15s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          opacity: phase === "out" ? 0 : phase === "in" ? 0 : 1,
+          transform: phase === "out" ? "translateY(-12px)" : phase === "in" ? "translateY(18px)" : "translateY(0)",
+          transition: phase === "out"
+            ? "opacity 0.18s ease-in, transform 0.18s ease-in"
+            : "opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         }}>
 
           {/* PRESETS TAB */}
