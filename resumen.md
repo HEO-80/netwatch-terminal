@@ -363,18 +363,18 @@ Tercero (largo plazo):
 ### FASE 3.5: Mejoras UI especificas
 
 #### AI Panel
-- [ ] Sin provider activo: colapsar automaticamente a barra fina "AI - sin provider — click para configurar"
-- [ ] Providers como botones clickeables con guia paso a paso
-- [ ] No mostrar conversacion vieja si no hay provider activo
+- [x] Sin provider activo: colapsar automaticamente a barra fina "AI - sin provider — click para configurar"
+- [x] Providers como botones clickeables con guia paso a paso (badges clickeables + inline config)
+- [x] No mostrar conversacion vieja si no hay provider activo
 
 #### Dashboard
-- [ ] Seccion "Estado rapido" / hub con resumen de una linea de cada panel
+- [x] Seccion "Estado rapido" / hub con resumen de una linea de cada panel (Git, Puertos, Uptime, Docker)
 - [ ] Quick Actions: ultimos 5 comandos como botones re-ejecutables
 - [ ] Reducir espacio muerto entre "Features instalados" y el prompt
 
 #### Otros
-- [ ] Borde cyan del panel activo mas sutil (opacity 0.3 cuando no tiene focus)
-- [ ] Padding inferior del prompt de terminal (mas espacio antes de la barra de hints)
+- [x] Borde cyan del panel activo mas sutil (opacity 0.3 cuando no tiene focus)
+- [x] Padding inferior del prompt de terminal (mas espacio antes de la barra de hints)
 
 ### FASE 4: Navegacion completa por teclado
 
