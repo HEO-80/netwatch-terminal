@@ -320,16 +320,18 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Lazy-loaded (React.lazy), wired a Terminal via CustomEvent
 
 #### Output inteligente
-- [ ] Detectar stdout JSON valido y renderizar como tabla/arbol colapsable
-- [ ] Detectar errores comunes (npm, git, docker, python) y sugerir fix inline (pattern matching)
-- [ ] `nw fix` despues de un error para pedir fix a AI
+- [x] `nw json <cmd>` — ejecuta comando y formatea JSON como tabla o árbol coloreado
+- [x] `nw json table <cmd>` — fuerza renderizado como tabla
+- [x] Detectar errores comunes (npm, git, docker, python, rust, node) — smart-output.js con 15+ patrones
+- [x] `nw fix` después de un error — muestra sugerencias de fix automáticas
 
 #### Clipboard manager
-- [ ] `nw clip` — ultimos 20 items copiados
-- [ ] `nw clip <n>` — pegar item N
-- [ ] `nw clip search <texto>` — buscar en historial
-- [ ] Shortcut `Alt+V` para overlay
-- [ ] Persistir entre sesiones
+- [x] `nw clip` — últimos 20 items copiados
+- [x] `nw clip <n>` — pegar item N al portapapeles
+- [x] `nw clip search <texto>` — buscar en historial
+- [x] `nw clip add <texto>` — guardar manualmente
+- [ ] Shortcut `Alt+V` para overlay visual
+- [x] Persistir entre sesiones (localStorage)
 
 #### Contexto de proyecto automatico
 - [ ] Detectar tipo de proyecto al cambiar directorio (package.json, Cargo.toml, docker-compose.yml, etc.)
