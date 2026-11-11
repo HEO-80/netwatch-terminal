@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { secureGet, secureSet, secureDelete, isSecureBackend } from "../utils/secure-store";
+import WinControls from "./WinControls";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -20,7 +21,7 @@ function mask(val) {
   return val.slice(0, 4) + "•".repeat(Math.min(val.length - 8, 20)) + val.slice(-4);
 }
 
-function SettingsPanel({ open, focused, onFocus, onOverlay }) {
+function SettingsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) {
   const [values, setValues]     = useState({});
   const [editing, setEditing]   = useState(null);
   const [editVal, setEditVal]   = useState("");
@@ -111,8 +112,10 @@ function SettingsPanel({ open, focused, onFocus, onOverlay }) {
         }}>
           {secure ? "TAURI STORE" : "LOCAL STORAGE"}
         </span>
+        <WinControls minimized={minimized} onMinimize={onMinimize} onOverlay={onOverlay} color={Y} dim={DIM} />
       </div>
 
+      {!minimized && <>
       {/* Keys list */}
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
         <div style={{ fontSize: "9px", color: DIM, marginBottom: "12px", lineHeight: "1.5" }}>
@@ -252,6 +255,7 @@ function SettingsPanel({ open, focused, onFocus, onOverlay }) {
         <span><span style={{ color: Y }}>nw config</span> abrir desde terminal</span>
         <span><span style={{ color: DIM }}>Alt+P</span> ciclar paneles</span>
       </div>
+      </>}
     </div>
   );
 }

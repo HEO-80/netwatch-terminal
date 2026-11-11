@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
+import WinControls from "./WinControls";
+import { useState,useEffect, useCallback, useRef, useMemo, memo } from "react";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -85,7 +86,7 @@ function parseEventLines(raw) {
   });
 }
 
-function LogsPanel({ open, focused, onFocus, onOverlay }) {
+function LogsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) {
   const [entries, setEntries] = useState([]);
   const [filter, setFilter] = useState({ error: true, warn: true, info: true, debug: false });
   const [search, setSearch] = useState("");
@@ -175,7 +176,7 @@ function LogsPanel({ open, focused, onFocus, onOverlay }) {
       boxShadow: hovered && open ? "0 0 12px rgba(255, 85, 85, 0.3)" : "none",
     }}>
       {open && (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", height: minimized ? "28px" : "100%", overflow: "hidden" }}>
           {/* Header */}
           <div style={{ padding: "12px 10px 0 10px" }} onDoubleClick={onOverlay}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", cursor: "pointer" }} onClick={onFocus}>
@@ -200,9 +201,11 @@ function LogsPanel({ open, focused, onFocus, onOverlay }) {
                   title="Refrescar"
                   style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: loading ? DIM : R, cursor: "pointer" }}
                 >{loading ? "···" : "↺"}</span>
+                <WinControls minimized={minimized} onMinimize={onMinimize} onOverlay={onOverlay} color={R} dim={DIM} />
               </div>
             </div>
 
+            {!minimized && <>
             {/* Source selector */}
             <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
               {DEFAULT_SOURCES.map(s => (
@@ -247,8 +250,10 @@ function LogsPanel({ open, focused, onFocus, onOverlay }) {
                 padding: "3px 6px", outline: "none", marginBottom: "4px",
               }}
             />
+            </>}
           </div>
 
+          {!minimized && <>
           {/* Log entries */}
           <div
             ref={listRef}
@@ -284,6 +289,7 @@ function LogsPanel({ open, focused, onFocus, onOverlay }) {
               {autoScroll ? "auto-scroll ↓" : "scroll manual"}
             </span>
           </div>
+          </>}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
+import WinControls from "./WinControls";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -180,7 +181,7 @@ function GitButton({ label, color, onClick, disabled }) {
   );
 }
 
-function GitPanel({ open, focused, onFocus, onOverlay }) {
+function GitPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpd, setLastUpd] = useState(null);
@@ -258,21 +259,24 @@ function GitPanel({ open, focused, onFocus, onOverlay }) {
       boxShadow: hovered && open ? "0 0 12px rgba(217, 2, 125, 0.3)" : "none",
     }}>
       {open && (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", height: minimized ? "28px" : "100%", overflow: "hidden" }}>
           {/* Header */}
           <div style={{ padding: "12px 14px 0 14px" }} onDoubleClick={onOverlay}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: M, letterSpacing: "0.1em" }}>
                 ◈ GIT {focused ? "⊟" : ""}
               </span>
               <button
                 onClick={refresh}
-                style={{ background: "transparent", border: "none", color: loading ? DIM : M, fontFamily: "var(--font-mono)", fontSize: "9px", cursor: "pointer", padding: 0 }}
+                style={{ marginLeft: "auto", background: "transparent", border: "none", color: loading ? DIM : M, fontFamily: "var(--font-mono)", fontSize: "9px", cursor: "pointer", padding: 0 }}
                 title="Actualizar"
               >{loading ? "···" : "↺"}</button>
+              <WinControls minimized={minimized} onMinimize={onMinimize} onOverlay={onOverlay} color={M} dim={DIM} />
             </div>
-            {lastUpd && <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
+            {!minimized && lastUpd && <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
           </div>
+
+          {!minimized && <>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "0 14px 12px 14px" }}>
             {!data ? (
@@ -404,6 +408,7 @@ function GitPanel({ open, focused, onFocus, onOverlay }) {
           }}>
             Alt+P para ciclar paneles
           </div>
+          </>}
         </div>
       )}
     </div>

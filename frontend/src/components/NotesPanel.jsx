@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
+import WinControls from "./WinControls";
 
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
@@ -129,7 +130,7 @@ function NoteItem({ note, expanded, onToggle, onDelete, onPin, onEdit }) {
   );
 }
 
-function NotesPanel({ open, focused, onFocus, onOverlay }) {
+function NotesPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) {
   const [notes, setNotes] = useState(() => loadNotes());
   const [input, setInput] = useState("");
   const [hovered, setHovered] = useState(false);
@@ -193,18 +194,21 @@ function NotesPanel({ open, focused, onFocus, onOverlay }) {
       boxShadow: hovered && open ? "0 0 12px rgba(57, 255, 20, 0.3)" : "none",
     }}>
       {open && (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", height: minimized ? "28px" : "100%", overflow: "hidden" }}>
           {/* Header */}
           <div style={{ padding: "12px 14px 0 14px" }} onDoubleClick={onOverlay}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: G, letterSpacing: "0.1em" }}>
                 ◈ NOTES {focused ? "⊟" : ""}
               </span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>
+              <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>
                 {notes.length}
               </span>
+              <WinControls minimized={minimized} onMinimize={onMinimize} onOverlay={onOverlay} color={G} dim={DIM} />
             </div>
           </div>
+
+          {!minimized && <>
 
           {/* Input */}
           <div style={{ padding: "6px 14px", borderBottom: "1px solid #1a1a00" }}>
@@ -273,6 +277,7 @@ function NotesPanel({ open, focused, onFocus, onOverlay }) {
               >borrar todo</span>
             )}
           </div>
+          </>}
         </div>
       )}
     </div>

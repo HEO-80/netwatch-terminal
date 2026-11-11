@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
+import WinControls from "./WinControls";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const Y  = "#FCEE0A";
@@ -143,7 +144,7 @@ function useUptime() {
 }
 
 // ── Main SidePanel ────────────────────────────────────────────────────────────
-function SidePanel({ open, focused, onFocus, onOverlay }) {
+function SidePanel({ open, focused, onFocus, onOverlay, minimized, onMinimize }) {
   const [crypto,  setCrypto]  = useState(null);
   const [docker,  setDocker]  = useState(null);
   const [mev,     setMev]     = useState([]);
@@ -224,11 +225,11 @@ function SidePanel({ open, focused, onFocus, onOverlay }) {
       position:   "relative",
     }}>
       {open && (
-        <div style={{ padding: "12px 14px", overflowY: "auto", flex: 1 }}>
+        <div style={{ padding: "12px 14px", overflowY: minimized ? "hidden" : "auto", flex: minimized ? "none" : 1, height: minimized ? "28px" : undefined, boxSizing: "border-box" }}>
 
           {/* Header */}
           <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
+            display: "flex", alignItems: "center",
             marginBottom: "4px",
           }} onDoubleClick={onOverlay}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: C, letterSpacing: "0.1em", cursor: "pointer" }} onClick={onFocus}>
@@ -237,7 +238,7 @@ function SidePanel({ open, focused, onFocus, onOverlay }) {
             <button
               onClick={refresh}
               style={{
-                background: "transparent", border: "none",
+                marginLeft: "auto", background: "transparent", border: "none",
                 color: loading ? DIM : Y,
                 fontFamily: "var(--font-mono)", fontSize: "9px",
                 cursor: "pointer", padding: 0,
@@ -246,7 +247,9 @@ function SidePanel({ open, focused, onFocus, onOverlay }) {
             >
               {loading ? "···" : "↺"}
             </button>
+            <WinControls minimized={minimized} onMinimize={onMinimize} onOverlay={onOverlay} color={C} dim={DIM} />
           </div>
+          {!minimized && <>
           {lastUpdate && (
             <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
               upd: {lastUpdate}
@@ -398,6 +401,7 @@ function SidePanel({ open, focused, onFocus, onOverlay }) {
           <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", textAlign: "center" }}>
             Alt+P para cerrar
           </div>
+          </>}
         </div>
       )}
     </div>
