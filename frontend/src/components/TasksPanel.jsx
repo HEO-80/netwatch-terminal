@@ -5,7 +5,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#444";
+const DIM = "#888";
 
 const STORAGE_KEY = "nw-tasks";
 
@@ -58,16 +58,16 @@ function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging }
         display: "flex", alignItems: "flex-start", gap: "6px",
         padding: "4px 6px", marginBottom: "3px",
         background: isDragging ? "#1a1a00" : "#0a0a00",
-        border: isDragging ? `1px dashed ${Y}44` : "1px solid #111",
+        border: isDragging ? `1px dashed ${Y}44` : "1px solid #2a2a2a",
         opacity: isDragging ? 0.5 : 1,
         cursor: "grab",
         transition: "border-color 0.15s, opacity 0.15s",
       }}
       onMouseOver={e => { if (!isDragging) e.currentTarget.style.borderColor = col.color + "44"; }}
-      onMouseOut={e => { if (!isDragging) e.currentTarget.style.borderColor = "#111"; }}
+      onMouseOut={e => { if (!isDragging) e.currentTarget.style.borderColor = "#2a2a2a"; }}
     >
       {/* Drag handle + advance */}
-      <span style={{ color: "#222", fontSize: "8px", cursor: "grab", flexShrink: 0, marginTop: "2px", userSelect: "none" }}>⠿</span>
+      <span style={{ color: "#777", fontSize: "8px", cursor: "grab", flexShrink: 0, marginTop: "2px", userSelect: "none" }}>⠿</span>
 
       {nextStatus && (
         <span
@@ -89,7 +89,7 @@ function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging }
       {/* Text */}
       <span style={{
         flex: 1, fontFamily: "var(--font-mono)", fontSize: "10px",
-        color: task.status === "done" ? "#555" : "#ccc",
+        color: task.status === "done" ? "#999" : "#ccc",
         textDecoration: task.status === "done" ? "line-through" : "none",
         lineHeight: "1.4", wordBreak: "break-word",
       }}>
@@ -102,17 +102,17 @@ function TaskItem({ task, onMove, onDelete, onDragStart, onDragEnd, isDragging }
           <span
             onClick={() => onMove(task.id, prevStatus)}
             title="Retroceder"
-            style={{ color: "#333", cursor: "pointer", fontSize: "9px", fontFamily: "var(--font-mono)" }}
+            style={{ color: "#777", cursor: "pointer", fontSize: "9px", fontFamily: "var(--font-mono)" }}
             onMouseOver={e => e.currentTarget.style.color = Y}
-            onMouseOut={e => e.currentTarget.style.color = "#333"}
+            onMouseOut={e => e.currentTarget.style.color = "#777"}
           >◂</span>
         )}
         <span
           onClick={() => onDelete(task.id)}
           title="Eliminar"
-          style={{ color: "#333", cursor: "pointer", fontSize: "10px", fontFamily: "var(--font-mono)" }}
+          style={{ color: "#777", cursor: "pointer", fontSize: "10px", fontFamily: "var(--font-mono)" }}
           onMouseOver={e => e.currentTarget.style.color = R}
-          onMouseOut={e => e.currentTarget.style.color = "#333"}
+          onMouseOut={e => e.currentTarget.style.color = "#777"}
         >×</span>
       </div>
     </div>
@@ -244,7 +244,7 @@ function TasksPanel({ open }) {
                 onClick={addTask}
                 style={{
                   background: "transparent", border: "1px solid #1a1a00",
-                  color: input.trim() ? Y : "#222",
+                  color: input.trim() ? Y : "#777",
                   fontFamily: "var(--font-mono)", fontSize: "10px",
                   padding: "2px 8px", cursor: input.trim() ? "pointer" : "default",
                 }}
@@ -271,7 +271,7 @@ function TasksPanel({ open }) {
                   </SectionTitle>
                   <DropZone columnId={col.id} color={col.color} isOver={isOver && items.length === 0}>
                     {items.length === 0 && !isOver && (
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#222", padding: "2px 0" }}>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#777", padding: "2px 0" }}>
                         —
                       </div>
                     )}
@@ -298,11 +298,11 @@ function TasksPanel({ open }) {
                   onClick={clearDone}
                   style={{
                     background: "transparent", border: "1px solid #1a1a00",
-                    color: "#333", fontFamily: "var(--font-mono)", fontSize: "8px",
+                    color: "#777", fontFamily: "var(--font-mono)", fontSize: "8px",
                     padding: "2px 10px", cursor: "pointer",
                   }}
                   onMouseOver={e => { e.currentTarget.style.borderColor = R; e.currentTarget.style.color = R; }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = "#1a1a00"; e.currentTarget.style.color = "#333"; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = "#1a1a00"; e.currentTarget.style.color = "#777"; }}
                 >limpiar completadas</button>
               </div>
             )}
@@ -311,7 +311,7 @@ function TasksPanel({ open }) {
           {/* Footer */}
           <div style={{
             padding: "4px 14px", borderTop: "1px solid #1a1a00",
-            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#222", textAlign: "center",
+            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#777", textAlign: "center",
           }}>
             arrastra tareas entre columnas · Alt+P ciclar
           </div>

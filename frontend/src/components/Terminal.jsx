@@ -45,7 +45,7 @@ const WS_BASE = "ws://127.0.0.1:7777";
 
 const WS_STATUS = { connected: "connected", reconnecting: "reconnecting", disconnected: "disconnected" };
 
-export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClose, systemUser = "Usuario" }) {
+export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClose, systemUser = "Usuario", onAddTab }) {
   const containerRef = useRef(null);
   const termRef      = useRef(null);
   const fitRef       = useRef(null);
@@ -227,7 +227,33 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
         <span style={{ color:"#2a3a3a" }}>·</span>
         <span style={{ color:"#546E7A" }}>netwatch@{systemUser}</span>
         <div style={{ flex:1 }}/>
-        <span style={{ color:"#1a1a00" }}>ws://127.0.0.1:7777</span>
+        {onAddTab && (
+          <div style={{ display:"flex", gap:"3px", alignItems:"center", marginRight:"8px" }}>
+            {[
+              { type:"powershell", label:"+PS",  color:"var(--nw-accent)" },
+              { type:"wsl",        label:"+WSL", color:"#39FF14" },
+              { type:"cmd",        label:"+CMD", color:"#FCEE0A" },
+            ].map(btn => (
+              <button key={btn.type} onClick={() => onAddTab(btn.type)}
+                style={{ background:"transparent", border:"1px solid #333", color:"#777", fontFamily:"var(--font-mono)", fontSize:"8px", padding:"0px 5px", cursor:"pointer", lineHeight:"14px" }}
+                onMouseOver={e => { e.target.style.borderColor = btn.color; e.target.style.color = btn.color; }}
+                onMouseOut={e => { e.target.style.borderColor = "#333"; e.target.style.color = "#777"; }}
+              >{btn.label}</button>
+            ))}
+            <div style={{ width:1, height:10, background:"#333", margin:"0 2px" }}/>
+            {[
+              { type:"dojo",     label:"DOJO", color:"#D9027D" },
+              { type:"notebook", label:"NB",   color:"#39FF14" },
+            ].map(btn => (
+              <button key={btn.type} onClick={() => onAddTab(btn.type)}
+                style={{ background:"transparent", border:"1px solid #333", color:"#777", fontFamily:"var(--font-mono)", fontSize:"8px", padding:"0px 5px", cursor:"pointer", lineHeight:"14px" }}
+                onMouseOver={e => { e.target.style.borderColor = btn.color; e.target.style.color = btn.color; }}
+                onMouseOut={e => { e.target.style.borderColor = "#333"; e.target.style.color = "#777"; }}
+              >{btn.label}</button>
+            ))}
+          </div>
+        )}
+        <span style={{ color:"#555" }}>ws://127.0.0.1:7777</span>
       </div>
 
       {/* xterm */}

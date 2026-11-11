@@ -5,7 +5,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#444";
+const DIM = "#888";
 
 const STORAGE_KEY = "nw-notes";
 
@@ -41,7 +41,7 @@ function NoteItem({ note, onDelete, onPin }) {
         display: "flex", justifyContent: "space-between", alignItems: "center",
         marginTop: "3px",
       }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "7px", color: "#333" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "7px", color: "#777" }}>
           {note.time}
         </span>
         <div style={{ display: "flex", gap: "6px" }}>
@@ -50,20 +50,20 @@ function NoteItem({ note, onDelete, onPin }) {
             title={isPinned ? "Desfijar" : "Fijar arriba"}
             style={{
               fontFamily: "var(--font-mono)", fontSize: "9px",
-              color: isPinned ? Y : "#333", cursor: "pointer",
+              color: isPinned ? Y : "#777", cursor: "pointer",
             }}
             onMouseOver={e => e.currentTarget.style.color = Y}
-            onMouseOut={e => e.currentTarget.style.color = isPinned ? Y : "#333"}
+            onMouseOut={e => e.currentTarget.style.color = isPinned ? Y : "#777"}
           >{isPinned ? "★" : "☆"}</span>
           <span
             onClick={() => onDelete(note.id)}
             title="Eliminar"
             style={{
               fontFamily: "var(--font-mono)", fontSize: "10px",
-              color: "#333", cursor: "pointer",
+              color: "#777", cursor: "pointer",
             }}
             onMouseOver={e => e.currentTarget.style.color = R}
-            onMouseOut={e => e.currentTarget.style.color = "#333"}
+            onMouseOut={e => e.currentTarget.style.color = "#777"}
           >×</span>
         </div>
       </div>
@@ -158,7 +158,7 @@ function NotesPanel({ open }) {
                 style={{
                   background: "transparent",
                   border: `1px solid ${input.trim() ? G : "#1a1a00"}`,
-                  color: input.trim() ? G : "#222",
+                  color: input.trim() ? G : "#777",
                   fontFamily: "var(--font-mono)", fontSize: "9px",
                   padding: "1px 10px", cursor: input.trim() ? "pointer" : "default",
                 }}
@@ -169,7 +169,7 @@ function NotesPanel({ open }) {
           {/* Notes list */}
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 14px" }}>
             {sorted.length === 0 ? (
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#222", textAlign: "center", marginTop: "20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#777", textAlign: "center", marginTop: "20px" }}>
                 Sin notas todavia.<br/>
                 <span style={{ color: DIM }}>nw note "texto"</span> desde la terminal
               </div>
@@ -183,7 +183,7 @@ function NotesPanel({ open }) {
           {/* Footer */}
           <div style={{
             padding: "4px 14px", borderTop: "1px solid #1a1a00",
-            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#222",
+            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#777",
             display: "flex", justifyContent: "space-between",
           }}>
             <span>Alt+P ciclar</span>
@@ -192,7 +192,7 @@ function NotesPanel({ open }) {
                 onClick={clearAll}
                 style={{ cursor: "pointer" }}
                 onMouseOver={e => e.currentTarget.style.color = R}
-                onMouseOut={e => e.currentTarget.style.color = "#222"}
+                onMouseOut={e => e.currentTarget.style.color = "#777"}
               >borrar todo</span>
             )}
           </div>

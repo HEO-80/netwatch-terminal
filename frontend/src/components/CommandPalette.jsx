@@ -4,7 +4,7 @@ const C   = "var(--nw-accent)";
 const Y   = "#FCEE0A";
 const G   = "#39FF14";
 const M   = "#D9027D";
-const DIM = "#333";
+const DIM = "#888";
 
 const CATEGORIES = [
   {

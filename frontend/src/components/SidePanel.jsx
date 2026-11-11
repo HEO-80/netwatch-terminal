@@ -6,7 +6,7 @@ const G  = "#39FF14";
 const C  = "var(--nw-accent)";
 const M  = "#D9027D";
 const R  = "#ff5555";
-const DIM = "#444";
+const DIM = "#888";
 
 function Label({ children, color = DIM }) {
   return (
@@ -215,7 +215,7 @@ function SidePanel({ open }) {
             </button>
           </div>
           {lastUpdate && (
-            <div style={{ fontSize: "8px", color: "#333", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
+            <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
               upd: {lastUpdate}
             </div>
           )}
@@ -309,7 +309,7 @@ function SidePanel({ open }) {
 
           {/* Separador final */}
           <div style={{ height: 1, background: "#1a1a1a", margin: "12px 0" }}/>
-          <div style={{ fontSize: "8px", color: "#222", fontFamily: "var(--font-mono)", textAlign: "center" }}>
+          <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", textAlign: "center" }}>
             Alt+P para cerrar
           </div>
         </div>

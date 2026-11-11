@@ -5,7 +5,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#444";
+const DIM = "#888";
 
 const MAX_LINES = 500;
 
@@ -42,7 +42,7 @@ function LogLine({ entry }) {
       fontFamily: "var(--font-mono)", fontSize: "9px", lineHeight: "1.5",
     }}>
       <span style={{
-        color: "#222", fontSize: "8px", flexShrink: 0, width: "38px", textAlign: "right",
+        color: "#777", fontSize: "8px", flexShrink: 0, width: "38px", textAlign: "right",
       }}>{entry.time}</span>
       <span style={{
         color: sev.color, fontSize: "8px", flexShrink: 0, width: "22px",
@@ -205,8 +205,8 @@ function LogsPanel({ open }) {
                   onClick={() => setSource(s.id)}
                   style={{
                     background: source === s.id ? "#1a0000" : "transparent",
-                    border: `1px solid ${source === s.id ? R + "66" : "#111"}`,
-                    color: source === s.id ? R : "#333",
+                    border: `1px solid ${source === s.id ? R + "66" : "#2a2a2a"}`,
+                    color: source === s.id ? R : "#888",
                     fontFamily: "var(--font-mono)", fontSize: "8px",
                     padding: "1px 6px", cursor: "pointer",
                   }}
@@ -221,8 +221,8 @@ function LogsPanel({ open }) {
                   onClick={() => setFilter(f => ({ ...f, [key]: !f[key] }))}
                   style={{
                     background: filter[key] ? sev.color + "18" : "transparent",
-                    border: `1px solid ${filter[key] ? sev.color + "55" : "#111"}`,
-                    color: filter[key] ? sev.color : "#222",
+                    border: `1px solid ${filter[key] ? sev.color + "55" : "#2a2a2a"}`,
+                    color: filter[key] ? sev.color : "#777",
                     fontFamily: "var(--font-mono)", fontSize: "8px",
                     padding: "1px 5px", cursor: "pointer",
                   }}
@@ -252,7 +252,7 @@ function LogsPanel({ open }) {
           >
             {filtered.length === 0 ? (
               <div style={{
-                fontFamily: "var(--font-mono)", fontSize: "9px", color: "#222",
+                fontFamily: "var(--font-mono)", fontSize: "9px", color: "#777",
                 textAlign: "center", marginTop: "20px",
               }}>
                 {loading ? "Cargando logs..." : entries.length === 0 ? "Sin logs todavia." : "Sin resultados para el filtro."}
@@ -271,11 +271,11 @@ function LogsPanel({ open }) {
           {/* Footer */}
           <div style={{
             padding: "4px 10px", borderTop: "1px solid #1a1a00",
-            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#222",
+            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#777",
             display: "flex", justifyContent: "space-between",
           }}>
             <span>{filtered.length}/{entries.length} lineas</span>
-            <span style={{ color: autoScroll ? G : "#222" }}>
+            <span style={{ color: autoScroll ? G : "#777" }}>
               {autoScroll ? "auto-scroll ↓" : "scroll manual"}
             </span>
           </div>

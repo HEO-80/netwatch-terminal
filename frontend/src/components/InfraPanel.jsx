@@ -7,7 +7,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#444";
+const DIM = "#888";
 const W   = "#888";
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
@@ -275,7 +275,7 @@ function InfraPanel({ open }) {
               {loading ? "···" : "↺"}
             </button>
           </div>
-          {lastUpd && <div style={{ fontSize: "8px", color: "#333", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
+          {lastUpd && <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
 
           {/* ── SSH ── */}
           <SectionTitle>SSH Servers</SectionTitle>
@@ -410,7 +410,7 @@ function InfraPanel({ open }) {
           )}
 
           <div style={{ height: 1, background: "#1a1a1a", margin: "12px 0" }}/>
-          <div style={{ fontSize: "8px", color: "#222", fontFamily: "var(--font-mono)", textAlign: "center" }}>
+          <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", textAlign: "center" }}>
             Alt+I para cerrar
           </div>
         </div>

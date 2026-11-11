@@ -5,7 +5,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#333";
+const DIM = "#888";
 const W   = "#E8E8E8";
 const CYAN = "#00F0FF";
 
@@ -553,7 +553,7 @@ function DojoPanel() {
               style={{
                 background: mode === m ? `${M}33` : "transparent",
                 border: `1px solid ${mode === m ? M : "#1a1a1a"}`,
-                color: mode === m ? M : "#444",
+                color: mode === m ? M : "#888",
                 fontFamily: "var(--font-mono)", fontSize: "9px",
                 padding: "3px 10px", cursor: "pointer",
                 textTransform: "uppercase", letterSpacing: "0.08em",
@@ -580,11 +580,11 @@ function DojoPanel() {
             {/* Category filters */}
             <div style={{ display: "flex", gap: "4px", marginBottom: "16px", flexWrap: "wrap" }}>
               <button onClick={() => { setCatFilter(null); setCurrentQ(null); }}
-                style={{ background: !catFilter ? "#1a1a00" : "transparent", border: `1px solid ${!catFilter ? Y + "55" : "#111"}`, color: !catFilter ? Y : "#333", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
+                style={{ background: !catFilter ? "#1a1a00" : "transparent", border: `1px solid ${!catFilter ? Y + "55" : "#2a2a2a"}`, color: !catFilter ? Y : "#888", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
               >ALL</button>
               {cats.map(cat => (
                 <button key={cat} onClick={() => { setCatFilter(cat); setCurrentQ(null); }}
-                  style={{ background: catFilter === cat ? `${CAT_COLORS[cat]}18` : "transparent", border: `1px solid ${catFilter === cat ? CAT_COLORS[cat] + "55" : "#111"}`, color: catFilter === cat ? CAT_COLORS[cat] : "#333", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer", textTransform: "uppercase" }}
+                  style={{ background: catFilter === cat ? `${CAT_COLORS[cat]}18` : "transparent", border: `1px solid ${catFilter === cat ? CAT_COLORS[cat] + "55" : "#2a2a2a"}`, color: catFilter === cat ? CAT_COLORS[cat] : "#888", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer", textTransform: "uppercase" }}
                 >{cat}</button>
               ))}
             </div>
@@ -653,11 +653,11 @@ function DojoPanel() {
             {/* Mission category filter */}
             <div style={{ display: "flex", gap: "4px", marginBottom: "14px", flexWrap: "wrap" }}>
               <button onClick={() => setMissionCatFilter(null)}
-                style={{ background: !missionCatFilter ? "#1a1a00" : "transparent", border: `1px solid ${!missionCatFilter ? Y + "55" : "#111"}`, color: !missionCatFilter ? Y : "#444", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
+                style={{ background: !missionCatFilter ? "#1a1a00" : "transparent", border: `1px solid ${!missionCatFilter ? Y + "55" : "#2a2a2a"}`, color: !missionCatFilter ? Y : "#888", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
               >ALL</button>
               {missionCats.map(cat => (
                 <button key={cat} onClick={() => setMissionCatFilter(cat)}
-                  style={{ background: missionCatFilter === cat ? `${MISSION_CAT_COLORS[cat] || W}18` : "transparent", border: `1px solid ${missionCatFilter === cat ? (MISSION_CAT_COLORS[cat] || W) + "55" : "#111"}`, color: missionCatFilter === cat ? (MISSION_CAT_COLORS[cat] || W) : "#444", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer", textTransform: "uppercase" }}
+                  style={{ background: missionCatFilter === cat ? `${MISSION_CAT_COLORS[cat] || W}18` : "transparent", border: `1px solid ${missionCatFilter === cat ? (MISSION_CAT_COLORS[cat] || W) + "55" : "#2a2a2a"}`, color: missionCatFilter === cat ? (MISSION_CAT_COLORS[cat] || W) : "#888", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer", textTransform: "uppercase" }}
                 >{cat}</button>
               ))}
             </div>
@@ -751,7 +751,7 @@ function DojoPanel() {
               {/* Hint toggle */}
               <div style={{ marginBottom: "12px" }}>
                 <button onClick={() => setShowHint(!showHint)}
-                  style={{ background: "transparent", border: `1px solid #1a1a1a`, color: showHint ? Y : "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "3px 10px", cursor: "pointer" }}
+                  style={{ background: "transparent", border: `1px solid #333`, color: showHint ? Y : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "3px 10px", cursor: "pointer" }}
                 >{showHint ? "▾ OCULTAR PISTA" : "▸ MOSTRAR PISTA"}</button>
                 {showHint && (
                   <div style={{
@@ -907,7 +907,7 @@ function DojoPanel() {
                 }}
               >{forjaRunning ? "EJECUTANDO..." : "▸ EJECUTAR Y VALIDAR"}</button>
               <button onClick={() => setForjaShowHint(!forjaShowHint)}
-                style={{ background: "transparent", border: `1px solid #1a1a1a`, color: forjaShowHint ? Y : "#555", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "4px 10px", cursor: "pointer" }}
+                style={{ background: "transparent", border: `1px solid #333`, color: forjaShowHint ? Y : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "4px 10px", cursor: "pointer" }}
               >{forjaShowHint ? "▾ PISTA" : "▸ PISTA"}</button>
             </div>
 

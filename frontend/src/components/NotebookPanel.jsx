@@ -5,7 +5,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#333";
+const DIM = "#888";
 const W   = "#E8E8E8";
 
 const NB_KEY = "nw-notebooks";
@@ -169,8 +169,8 @@ function NotebookPanel() {
         <div style={{ display: "flex", gap: "4px" }}>
           <button onClick={executeAll} style={{ background: "transparent", border: `1px solid ${G}`, color: G, fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 8px", cursor: "pointer" }}>▸ RUN ALL</button>
           <button onClick={saveCurrentNb} style={{ background: "transparent", border: `1px solid ${Y}`, color: Y, fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 8px", cursor: "pointer" }}>💾 SAVE</button>
-          <button onClick={() => addCell("code")} style={{ background: "transparent", border: "1px solid #1a1a1a", color: "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 8px", cursor: "pointer" }}>+ CODE</button>
-          <button onClick={() => addCell("markdown")} style={{ background: "transparent", border: "1px solid #1a1a1a", color: "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 8px", cursor: "pointer" }}>+ MD</button>
+          <button onClick={() => addCell("code")} style={{ background: "transparent", border: "1px solid #333", color: "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 8px", cursor: "pointer" }}>+ CODE</button>
+          <button onClick={() => addCell("markdown")} style={{ background: "transparent", border: "1px solid #333", color: "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 8px", cursor: "pointer" }}>+ MD</button>
         </div>
       </div>
 
@@ -213,7 +213,7 @@ function NotebookPanel() {
             {/* Cell output */}
             {cell.output && (
               <div style={{
-                padding: "6px 10px", borderTop: "1px solid #111",
+                padding: "6px 10px", borderTop: "1px solid #2a2a2a",
                 background: "#030300", fontSize: "10px", color: "#888",
                 whiteSpace: "pre-wrap", maxHeight: "200px", overflow: "auto",
                 lineHeight: "16px",

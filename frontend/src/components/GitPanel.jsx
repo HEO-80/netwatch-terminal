@@ -5,7 +5,7 @@ const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
 const R   = "#ff5555";
-const DIM = "#444";
+const DIM = "#888";
 
 async function invoke(cmd, args) {
   try {
@@ -172,7 +172,7 @@ function GitButton({ label, color, onClick, disabled }) {
       disabled={disabled}
       style={{
         background: "transparent", border: `1px solid ${disabled ? "#222" : color}`,
-        color: disabled ? "#333" : color, fontFamily: "var(--font-mono)", fontSize: "8px",
+        color: disabled ? "#777" : color, fontFamily: "var(--font-mono)", fontSize: "8px",
         padding: "3px 8px", cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1, transition: "border-color 0.15s",
       }}
@@ -266,7 +266,7 @@ function GitPanel({ open }) {
                 title="Actualizar"
               >{loading ? "···" : "↺"}</button>
             </div>
-            {lastUpd && <div style={{ fontSize: "8px", color: "#333", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
+            {lastUpd && <div style={{ fontSize: "8px", color: "#777", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>upd: {lastUpd}</div>}
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "0 14px 12px 14px" }}>
@@ -395,7 +395,7 @@ function GitPanel({ open }) {
           {/* Footer */}
           <div style={{
             padding: "4px 14px", borderTop: "1px solid #1a1a00",
-            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#222", textAlign: "center",
+            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#777", textAlign: "center",
           }}>
             Alt+P para ciclar paneles
           </div>

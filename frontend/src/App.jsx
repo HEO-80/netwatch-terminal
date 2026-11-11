@@ -39,7 +39,7 @@ const BOOT_LINES = [
   { text: "► Reading CPU / RAM / OS data...",           color: "#39FF14" },
   { text: "► Mounting shortcuts registry...",           color: "#39FF14" },
   { text: "► PTY server online [ws://127.0.0.1:7777]", color: "var(--nw-accent)" },
-  { text: "────────────────────────────────────────────", color: "#1a1a1a" },
+  { text: "────────────────────────────────────────────", color: "#333" },
   { text: "SYSTEM STATUS: ONLINE  ●",                  color: "#39FF14" },
   { text: "ACCESS GRANTED — Welcome, HEO-80",          color: "#FCEE0A" },
 ];
@@ -93,9 +93,9 @@ function BootScreen({ onDone }) {
         )}
       </div>
       <button onClick={skip}
-        style={{ position: "absolute", bottom: 40, right: 40, background: "transparent", border: "1px solid #333", color: "#555", fontFamily: "var(--font-mono)", fontSize: "10px", padding: "4px 14px", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+        style={{ position: "absolute", bottom: 40, right: 40, background: "transparent", border: "1px solid #555", color: "#999", fontFamily: "var(--font-mono)", fontSize: "10px", padding: "4px 14px", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
         onMouseOver={e => { e.target.style.borderColor = "#FCEE0A"; e.target.style.color = "#FCEE0A"; }}
-        onMouseOut={e => { e.target.style.borderColor = "#333"; e.target.style.color = "#555"; }}
+        onMouseOut={e => { e.target.style.borderColor = "#555"; e.target.style.color = "#999"; }}
       >SKIP ▸</button>
     </div>
   );
@@ -294,7 +294,7 @@ export default function App() {
                     ? <DojoPanel />
                     : tab.type === "notebook"
                     ? <NotebookPanel />
-                    : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} onClose={closeTab} systemUser={systemUser} />
+                    : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} onClose={closeTab} systemUser={systemUser} onAddTab={addTab} />
                   }
                 </div>
               ))
@@ -376,9 +376,9 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
 
       {/* INFRA toggle izquierda */}
       <button onClick={onToggleInfra} title="Alt+I"
-        style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #1a1a1a", color: infraOpen ? "#000" : "#444", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
+        style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #333", color: infraOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
         onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
-        onMouseOut={e => { if (!infraOpen) e.target.style.color = "#444"; }}
+        onMouseOut={e => { if (!infraOpen) e.target.style.color = "#888"; }}
       >◈ INFRA</button>
 
       {/* Badge NETWATCH powerline */}
@@ -402,10 +402,10 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
               style={{
                 display: "flex", alignItems: "center", gap: "5px", padding: "0 12px",
                 background:  active ? "#0d0d00" : "transparent",
-                borderRight: "1px solid #111",
+                borderRight: "1px solid #2a2a2a",
                 borderTop:   active ? "1px solid #FCEE0A" : "1px solid transparent",
                 borderLeft:  isDragOver ? `2px solid ${accent}` : "2px solid transparent",
-                color:       active ? "#FCEE0A" : "#444",
+                color:       active ? "#FCEE0A" : "#888",
                 fontSize: "10px", cursor: tab.closeable ? "grab" : "pointer", whiteSpace: "nowrap",
                 letterSpacing: "0.05em", userSelect: "none",
                 transition: "border-left-color 0.1s",
@@ -414,9 +414,9 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
               <span>{tab.label}</span>
               {tab.closeable && (
                 <span onClick={e => { e.stopPropagation(); onClose(tab.id); }}
-                  style={{ marginLeft: 3, color: "#333", fontSize: "12px", cursor: "pointer" }}
+                  style={{ marginLeft: 3, color: "#777", fontSize: "12px", cursor: "pointer" }}
                   onMouseOver={e => e.target.style.color = "#ff5555"}
-                  onMouseOut={e => e.target.style.color = "#333"}
+                  onMouseOut={e => e.target.style.color = "#777"}
                 >×</span>
               )}
             </div>
@@ -426,37 +426,22 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
 
       {/* Controles derecha */}
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
-        {[
-          { type: "powershell", label: "+ PS",  color: "var(--nw-accent)" },
-          { type: "wsl",        label: "+ WSL", color: "#39FF14" },
-          { type: "cmd",        label: "+ CMD", color: "#FCEE0A" },
-          { type: "dojo",       label: "⛩ DOJO",   color: "#D9027D" },
-          { type: "notebook",   label: "📓 NB", color: "#39FF14" },
-        ].map(btn => (
-          <button key={btn.type} onClick={() => onAdd(btn.type)}
-            style={{ background: "transparent", border: "1px solid #1a1a1a", color: "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
-            onMouseOver={e => { e.target.style.borderColor = btn.color; e.target.style.color = btn.color; }}
-            onMouseOut={e => { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; }}
-          >{btn.label}</button>
-        ))}
-
-        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
 
         {/* AI toggle */}
         <button onClick={onToggleAi} title="Alt+A — Panel AI"
-          style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#1a1a1a"}`, color: aiOpen ? "#000" : "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+          style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
           onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
-          onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
+          onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
         >◈ AI</button>
 
         {/* METRICS toggle */}
         <button onClick={onToggleMetrics} title="Alt+M — Panel Metrics"
-          style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#1a1a1a"}`, color: metricsOpen ? "#000" : "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
+          style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#333"}`, color: metricsOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
           onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
-          onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#1a1a1a"; e.target.style.color = "#333"; } }}
+          onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
         >◈ METRICS</button>
 
-        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
+        <div style={{ width: 1, height: 14, background: "#333", margin: "0 3px" }}/>
 
         {/* Panel chips — draggable to reorder, click to toggle */}
         {panelOrder.map((p, i) => {
@@ -475,26 +460,26 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
               title={`${meta.label} — arrastra para reordenar`}
               style={{
                 background: isActive ? meta.color : "transparent",
-                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#1a1a1a"}`,
-                color: isActive ? "#000" : "#333",
+                border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#333"}`,
+                color: isActive ? "#000" : "#888",
                 fontFamily: "var(--font-mono)", fontSize: "7px",
                 padding: "1px 4px", cursor: "grab",
                 transition: "border-color 0.1s",
               }}
               onMouseOver={e => { if (!isActive) { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; } }}
-              onMouseOut={e => { if (!isActive) { e.currentTarget.style.borderColor = isDragOver ? accent : "#1a1a1a"; e.currentTarget.style.color = "#333"; } }}
+              onMouseOut={e => { if (!isActive) { e.currentTarget.style.borderColor = isDragOver ? accent : "#333"; e.currentTarget.style.color = "#888"; } }}
             >{meta.label.slice(0, 3)}</button>
           );
         })}
 
         {/* Alt+P cycle */}
         <button onClick={onCycleRight} title="Alt+P — Ciclar panel derecho"
-          style={{ background: "transparent", border: "1px solid #1a1a1a", color: "#333", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 4px", cursor: "pointer" }}
+          style={{ background: "transparent", border: "1px solid #333", color: "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 4px", cursor: "pointer" }}
           onMouseOver={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
-          onMouseOut={e => { e.currentTarget.style.borderColor = "#1a1a1a"; e.currentTarget.style.color = "#333"; }}
+          onMouseOut={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#888"; }}
         >▸</button>
 
-        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
+        <div style={{ width: 1, height: 14, background: "#333", margin: "0 3px" }}/>
 
         {/* Theme cycle button */}
         <button onClick={onCycleTheme} title="Cambiar tema de color"
@@ -511,7 +496,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
           {theme.toUpperCase()}
         </button>
 
-        <div style={{ width: 1, height: 14, background: "#1a1a1a", margin: "0 3px" }}/>
+        <div style={{ width: 1, height: 14, background: "#333", margin: "0 3px" }}/>
         <span style={{ fontSize: "10px", color: "#FCEE0A", letterSpacing: "0.08em" }}>⏱ {time}</span>
       </div>
     </div>

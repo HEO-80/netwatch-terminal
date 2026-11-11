@@ -65,10 +65,10 @@ function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", onNewTab,
         }}
       >
         {title}
-        <span style={{ color: "#333", margin: "0 8px" }}>·</span>
+        <span style={{ color: "#666", margin: "0 8px" }}>·</span>
         <span style={{ color: "#39FF14" }}>{subtitle}</span>
         {activeTabLabel && (
-          <span style={{ color: "#444", marginLeft: 12, fontSize: "10px", fontWeight: 400 }}>
+          <span style={{ color: "#888", marginLeft: 12, fontSize: "10px", fontWeight: 400 }}>
             — {activeTabLabel}
           </span>
         )}
