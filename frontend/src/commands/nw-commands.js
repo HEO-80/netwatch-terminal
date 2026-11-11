@@ -882,12 +882,23 @@ export function recordCommand(input, output) {
   }
 }
 
+// ── nw dojo / nw notebook ──────────────────────────────────────────────────
+async function cmdDojo(args, write) {
+  window.dispatchEvent(new CustomEvent("nw-open-tab", { detail: "dojo" }));
+  write(nl + C.magenta("⛩ Abriendo DOJO — entrenamiento interactivo") + nl + nl);
+}
+
+async function cmdNotebook(args, write) {
+  window.dispatchEvent(new CustomEvent("nw-open-tab", { detail: "notebook" }));
+  write(nl + C.green("📓 Abriendo NOTEBOOK") + nl + nl);
+}
+
 // ── Registro ──────────────────────────────────────────────────────────────────
 export const NW_COMMANDS = {
   help: cmdHelp, status: cmdStatus, eth: cmdEth, repos: cmdRepos,
   ssh: cmdSsh, snip: cmdSnip, deploy: cmdDeploy, ai: cmdAi, task: cmdTask, note: cmdNote,
   config: cmdConfig, theme: cmdTheme, json: cmdJson, fix: cmdFix, clip: cmdClip,
-  ctx: cmdCtx, rec: cmdRec,
+  ctx: cmdCtx, rec: cmdRec, dojo: cmdDojo, notebook: cmdNotebook,
 };
 
 async function tryRustBackend(input) {

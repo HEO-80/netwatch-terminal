@@ -15,6 +15,8 @@ const InfraPanel   = lazy(() => import("./components/InfraPanel"));
 const AIPanel      = lazy(() => import("./components/AIPanel"));
 const MetricsPanel = lazy(() => import("./components/MetricsPanel"));
 const CommandPalette = lazy(() => import("./components/CommandPalette"));
+const DojoPanel      = lazy(() => import("./components/DojoPanel"));
+const NotebookPanel  = lazy(() => import("./components/NotebookPanel"));
 
 let tabIdCounter = 1;
 function createTab(type = "powershell") {
@@ -24,6 +26,8 @@ function createTab(type = "powershell") {
     powershell: { label: "PowerShell", icon: "PS", shell: "pwsh.exe", closeable: true  },
     wsl:        { label: "WSL",        icon: "λ",  shell: "wsl.exe",  closeable: true  },
     cmd:        { label: "CMD",        icon: "⚡", shell: "cmd.exe",  closeable: true  },
+    dojo:       { label: "DOJO",       icon: "⛩",  shell: null,       closeable: true  },
+    notebook:   { label: "NOTEBOOK",   icon: "📓", shell: null,       closeable: true  },
   };
   return { id, type, ...meta[type] };
 }
@@ -199,11 +203,14 @@ export default function App() {
       else if (e.key >= "1" && e.key <= "9") { const idx = parseInt(e.key) - 1; if (tabs[idx]) setActiveTab(tabs[idx].id); }
     };
     const openSettings = () => setRightPanel("settings");
+    const openTab = (e) => { if (e.detail) addTab(e.detail); };
     window.addEventListener("keydown", handler);
     window.addEventListener("nw-open-settings", openSettings);
+    window.addEventListener("nw-open-tab", openTab);
     return () => {
       window.removeEventListener("keydown", handler);
       window.removeEventListener("nw-open-settings", openSettings);
+      window.removeEventListener("nw-open-tab", openTab);
     };
   }, [booting, tabs, activeTab, cycleRight]);
 
@@ -283,6 +290,10 @@ export default function App() {
                 }}>
                   {tab.type === "dashboard"
                     ? <Dashboard onLaunchTerminal={() => addTab("powershell")} />
+                    : tab.type === "dojo"
+                    ? <DojoPanel />
+                    : tab.type === "notebook"
+                    ? <NotebookPanel />
                     : <TerminalPane key={`term-${tab.id}`} tabId={tab.id} shell={tab.shell} active={tab.id === activeTab} onClose={closeTab} systemUser={systemUser} />
                   }
                 </div>
