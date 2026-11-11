@@ -379,34 +379,34 @@ Tercero (largo plazo):
 ### FASE 4: Navegacion completa por teclado
 
 #### 4A. Teclas F para focus en zona de paneles
-- [ ] F1 -> Focus panel izquierdo (INFRA)
-- [ ] F2 -> Focus panel derecho (CRYPTO/GIT/TASKS/NOTES/LOGS/SETTINGS)
-- [ ] F3 -> Focus panel superior (AI)
-- [ ] F4 -> Focus panel inferior (METRICS)
-- [ ] F5 -> Focus de vuelta a la terminal
-- [ ] Al dar focus a panel: glow de borde se activa
+- [x] F1 -> Focus panel izquierdo (INFRA)
+- [x] F2 -> Focus panel derecho (CRYPTO/GIT/TASKS/NOTES/LOGS/SETTINGS)
+- [x] F3 -> Focus panel superior (AI)
+- [x] F4 -> Focus panel inferior (METRICS)
+- [x] F5 -> Focus de vuelta a la terminal
+- [x] Al dar focus a panel: glow de borde se activa
 
 #### 4B. Tab/Shift+Tab para ciclar entre paneles
-- [ ] Tab dentro de panel -> cicla al siguiente panel visible (izq -> arriba -> der -> abajo -> terminal)
-- [ ] Shift+Tab -> cicla en sentido contrario
-- [ ] Solo cicla entre paneles visibles/abiertos
+- [x] Tab dentro de panel -> cicla al siguiente panel visible (izq -> arriba -> der -> abajo -> terminal)
+- [x] Shift+Tab -> cicla en sentido contrario
+- [x] Solo cicla entre paneles visibles/abiertos
 
 #### 4C. Navegacion dentro de panel con flechas
 - [ ] Flecha arriba/abajo -> navegar entre elementos/secciones del panel
 - [ ] Elemento seleccionado resaltado con fondo sutil (como hover raton)
 - [ ] Enter -> ejecutar accion del elemento (equivalente a click)
 - [ ] Space -> expandir/colapsar seccion del panel
-- [ ] Esc -> salir del panel, volver focus a terminal
+- [x] Esc -> salir del panel, volver focus a terminal
 
 #### 4D. Atajos rapidos dentro de panel
 - [ ] `c` -> Copiar (IP, precio, path) al clipboard
 - [ ] `o` -> Open (abrir en navegador si aplica)
 - [ ] `e` -> Edit/Expand (expandir detalle, editar server)
 - [ ] `d` -> Delete/Disconnect (segun contexto)
-- [ ] `r` -> Refresh (refrescar datos del panel)
+- [x] `r` -> Refresh (refrescar datos del panel)
 
 #### 4E. Ciclar paneles en misma posicion
-- [ ] Ctrl+F2 -> cicla al siguiente panel de esa posicion (CRYPTO -> GIT -> TASKS -> NOTES)
+- [x] Ctrl+F2 -> cicla al siguiente panel de esa posicion (CRYPTO -> GIT -> TASKS -> NOTES)
 - [ ] Alternativa: `[` y `]` cuando panel tiene focus
 
 #### 4F. Controles de ventana por teclado
@@ -415,22 +415,22 @@ Tercero (largo plazo):
 - [ ] Esc -> restaurar si esta maximizado
 
 #### 4G. Indicador visual de focus
-- [ ] Borde mas brillante que hover de raton
-- [ ] Etiqueta "[FOCUS]" o icono keyboard en el header
+- [x] Borde mas brillante que hover de raton
+- [x] Etiqueta "[FOCUS]" o icono keyboard en el header
 - [ ] Elemento seleccionado: fondo highlight amarillo tenue o borde izquierdo `#FCEE0A` opacity 0.3
-- [ ] En TabBar/barra de estado: mostrar que panel y elemento tiene focus
+- [x] En TabBar/barra de estado: mostrar que panel y elemento tiene focus
 
 #### 4H. Cheat sheet de atajos
-- [ ] `?` o F12 -> overlay con todos los atajos organizados por categoria
-- [ ] Categorias: paneles, terminal, tabs, comandos nw
-- [ ] Esc o `?` de nuevo cierra
-- [ ] Mantener actualizado con cada nuevo atajo
+- [x] `?` o F12 -> overlay con todos los atajos organizados por categoria
+- [x] Categorias: paneles, terminal, tabs, comandos nw
+- [x] Esc o `?` de nuevo cierra
+- [x] Mantener actualizado con cada nuevo atajo
 
 #### Reglas de teclado
-- [ ] F1-F5 y Tab para paneles solo funcionan cuando focus NO esta en linea de comandos
-- [ ] Si estas escribiendo en xterm.js, terminal tiene prioridad total
-- [ ] Focus se transfiere a terminal automaticamente cuando empiezas a escribir
-- [ ] Animaciones rapidas (200ms max)
+- [x] F1-F5 y Tab para paneles solo funcionan cuando focus NO esta en linea de comandos
+- [x] Si estas escribiendo en xterm.js, terminal tiene prioridad total
+- [x] Focus se transfiere a terminal automaticamente cuando empiezas a escribir
+- [x] Animaciones rapidas (200ms max)
 
 ### FASE 5: Arquitectura modular
 

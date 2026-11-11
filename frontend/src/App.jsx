@@ -125,6 +125,7 @@ export default function App() {
   const [focusPanel,   setFocusPanel]   = useState(null);
   const [panelOverlay, setPanelOverlay] = useState(null);
   const [panelMini,    setPanelMini]    = useState({});
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
 
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
@@ -185,17 +186,78 @@ export default function App() {
         setPaletteOpen(o => !o);
       }
       if (e.key === "Escape") {
+        if (showCheatSheet) { setShowCheatSheet(false); return; }
         if (panelOverlay) { setPanelOverlay(null); return; }
         if (focusPanel) { setFocusPanel(null); return; }
       }
     };
     window.addEventListener("keydown", paletteHandler);
     return () => window.removeEventListener("keydown", paletteHandler);
-  }, [booting, panelOverlay, focusPanel]);
+  }, [booting, panelOverlay, focusPanel, showCheatSheet]);
 
   useEffect(() => {
     if (booting) return;
     const handler = (e) => {
+      const ae = document.activeElement;
+      const isTerminalFocused = !!ae?.closest?.(".xterm") ||
+        ae?.tagName === "INPUT" || ae?.tagName === "TEXTAREA" || ae?.tagName === "SELECT";
+
+      if (e.key === "F12" || (e.key === "?" && !isTerminalFocused)) {
+        e.preventDefault();
+        setShowCheatSheet(s => !s);
+        return;
+      }
+
+      if (!isTerminalFocused && !e.altKey) {
+        if (e.ctrlKey && e.key === "F2") {
+          if (focusPanel && rightPanel) {
+            e.preventDefault();
+            const next = panelOrder[(panelOrder.indexOf(rightPanel) + 1) % panelOrder.length];
+            setRightPanel(next);
+            setFocusPanel(next);
+          }
+          return;
+        }
+        if (!e.ctrlKey && !e.metaKey) {
+          if (e.key === "F1") { e.preventDefault(); setInfraOpen(true); setFocusPanel("infra"); return; }
+          if (e.key === "F2") {
+            e.preventDefault();
+            const target = rightPanel || panelOrder[0];
+            if (!rightPanel) setRightPanel(target);
+            setFocusPanel(target);
+            return;
+          }
+          if (e.key === "F3") { e.preventDefault(); setAiOpen(true); setFocusPanel("ai"); return; }
+          if (e.key === "F4") { e.preventDefault(); setMetricsOpen(true); setFocusPanel("metrics"); return; }
+          if (e.key === "F5") {
+            e.preventDefault();
+            setFocusPanel(null);
+            document.querySelector(".xterm-helper-textarea")?.focus();
+            return;
+          }
+          if (focusPanel) {
+            if (e.key === "Tab") {
+              e.preventDefault();
+              const visiblePanels = [];
+              if (infraOpen) visiblePanels.push("infra");
+              if (aiOpen) visiblePanels.push("ai");
+              if (rightPanel) visiblePanels.push(rightPanel);
+              if (metricsOpen) visiblePanels.push("metrics");
+              if (visiblePanels.length > 0) {
+                const idx = visiblePanels.indexOf(focusPanel);
+                const n = visiblePanels.length;
+                setFocusPanel(visiblePanels[e.shiftKey ? (idx - 1 + n) % n : (idx + 1) % n]);
+              }
+              return;
+            }
+            if (e.key === "r") {
+              window.dispatchEvent(new CustomEvent("nw-panel-action", { detail: { panel: focusPanel, action: "refresh" } }));
+              return;
+            }
+          }
+        }
+      }
+
       if (!e.altKey) return;
       const key = e.key.toLowerCase();
       e.preventDefault();
@@ -219,7 +281,7 @@ export default function App() {
       window.removeEventListener("nw-open-settings", openSettings);
       window.removeEventListener("nw-open-tab", openTab);
     };
-  }, [booting, tabs, activeTab, cycleRight]);
+  }, [booting, tabs, activeTab, cycleRight, focusPanel, rightPanel, panelOrder, infraOpen, aiOpen, metricsOpen]);
 
   const addTab = useCallback((type) => {
     const t = createTab(type);
@@ -365,6 +427,7 @@ export default function App() {
           onReorderTabs={reorderTabs}
           panelOrder={panelOrder} onReorderPanels={reorderPanels}
           onTogglePanel={togglePanel}
+          focusPanel={focusPanel}
         />
       )}
 
@@ -382,6 +445,74 @@ export default function App() {
           pointerEvents: "auto",
         }}/>
       )}
+
+      {/* Cheat sheet (? / F12) */}
+      {showCheatSheet && (
+        <div onClick={() => setShowCheatSheet(false)} style={{
+          position: "absolute", inset: 0, zIndex: 200,
+          background: "rgba(0,0,0,0.85)",
+          backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#0a0a00", border: `1px solid ${accent}`,
+            padding: "24px 32px", maxWidth: "600px", width: "90%",
+            maxHeight: "80vh", overflowY: "auto",
+            fontFamily: "var(--font-mono)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <span style={{ fontSize: "14px", color: "#FCEE0A", letterSpacing: "0.1em" }}>ATAJOS DE TECLADO</span>
+              <span onClick={() => setShowCheatSheet(false)} style={{ color: "#888", cursor: "pointer", fontSize: "14px" }}>×</span>
+            </div>
+
+            {[
+              { title: "PANELES", color: "#D9027D", keys: [
+                ["F1", "Focus panel izquierdo (INFRA)"],
+                ["F2", "Focus panel derecho"],
+                ["F3", "Focus panel superior (AI)"],
+                ["F4", "Focus panel inferior (METRICS)"],
+                ["F5", "Volver a la terminal"],
+                ["Tab", "Ciclar al siguiente panel"],
+                ["Shift+Tab", "Ciclar al panel anterior"],
+                ["Ctrl+F2", "Ciclar paneles derechos"],
+                ["Esc", "Cerrar overlay/focus"],
+              ]},
+              { title: "TERMINAL", color: "#39FF14", keys: [
+                ["Alt+T", "Nueva terminal"],
+                ["Alt+W", "Cerrar tab"],
+                ["Alt+D", "Dashboard"],
+                ["Alt+1-9", "Saltar a tab"],
+              ]},
+              { title: "PANELES TOGGLE", color: "var(--nw-accent)", keys: [
+                ["Alt+I", "Toggle INFRA"],
+                ["Alt+A", "Toggle AI"],
+                ["Alt+M", "Toggle METRICS"],
+                ["Alt+P", "Ciclar panel derecho"],
+              ]},
+              { title: "DENTRO DE PANEL", color: "#FCEE0A", keys: [
+                ["r", "Refrescar datos"],
+                ["Esc", "Salir del panel"],
+              ]},
+              { title: "GENERAL", color: "#ff5555", keys: [
+                ["Ctrl+Shift+P", "Paleta de comandos"],
+                ["? / F12", "Este cheat sheet"],
+              ]},
+            ].map(section => (
+              <div key={section.title} style={{ marginBottom: "14px" }}>
+                <div style={{ color: section.color, fontSize: "10px", letterSpacing: "0.12em", marginBottom: "6px", borderBottom: `1px solid ${section.color}33`, paddingBottom: "3px" }}>
+                  {section.title}
+                </div>
+                {section.keys.map(([key, desc]) => (
+                  <div key={key} style={{ display: "flex", gap: "12px", padding: "2px 0", fontSize: "10px" }}>
+                    <span style={{ color: "#FCEE0A", minWidth: "120px" }}>{key}</span>
+                    <span style={{ color: "#888" }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -395,7 +526,7 @@ const RIGHT_PANEL_META = {
   settings: { label: "SETTINGS", color: "#D9027D",          tip: "API keys, config, tema" },
 };
 
-function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel }) {
+function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel, focusPanel }) {
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
   const dragTab = useRef(null);
@@ -531,6 +662,11 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
 
         <div style={{ width: 1, height: 14, background: "#333", margin: "0 3px" }}/>
         <span style={{ fontSize: "10px", color: "#FCEE0A", letterSpacing: "0.08em" }}>⏱ {time}</span>
+        {focusPanel && (
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: "#FCEE0A", padding: "0 6px", opacity: 0.7 }}>
+            ⌨ {focusPanel.toUpperCase()}
+          </span>
+        )}
       </div>
     </div>
   );
