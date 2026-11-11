@@ -1089,12 +1089,15 @@ async function cmdDojo(args, write) {
   } else if (sub === "quiz") {
     window.dispatchEvent(new CustomEvent("nw-dojo-mode", { detail: "quiz" }));
     write(nl + C.magenta("⛩ Abriendo DOJO → Modo QUIZ") + nl + nl);
+  } else if (sub === "forja") {
+    window.dispatchEvent(new CustomEvent("nw-dojo-mode", { detail: "forja" }));
+    write(nl + C.magenta("⛩ Abriendo DOJO → Modo FORJA — escribe scripts desde cero") + nl + nl);
   } else if (sub === "rosetta") {
     window.dispatchEvent(new CustomEvent("nw-dojo-mode", { detail: "rosetta" }));
     write(nl + C.magenta("⛩ Abriendo DOJO → Modo ROSETTA") + nl + nl);
   } else {
     write(nl + C.magenta("⛩ Abriendo DOJO — entrenamiento interactivo") + nl);
-    write(C.dim("  Submodos: nw dojo quiz | tatami | rosetta") + nl + nl);
+    write(C.dim("  Submodos: nw dojo quiz | tatami | forja | rosetta") + nl + nl);
   }
 }
 

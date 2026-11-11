@@ -260,7 +260,66 @@ function loadTatami() {
 }
 function saveTatami(t) { localStorage.setItem(TATAMI_KEY, JSON.stringify(t)); }
 
-const MODES = ["quiz", "tatami", "rosetta", "progress"];
+const FORJA_KEY = "nw-forja-progress";
+
+const FORJA_CHALLENGES = [
+  {
+    id: "forja-01", cat: "powershell", title: "Listar archivos grandes",
+    desc: "Escribe un script que liste los 5 archivos más grandes del directorio TEMP.",
+    difficulty: 1, xp: 20,
+    starter: "# Lista los 5 archivos más grandes de $env:TEMP\n",
+    validate: `$out = __OUTPUT__; if ($out -match '\\d' -and $out.Split(\"\\n\").Count -ge 2) { "OK" } else { "FAIL:El script debe producir una lista de archivos con tamaños" }`,
+    hint: "Get-ChildItem $env:TEMP -File | Sort Length -Descending | Select -First 5 Name, @{N='MB';E={[math]::Round($_.Length/1MB,2)}}",
+  },
+  {
+    id: "forja-02", cat: "powershell", title: "Servicios activos a CSV",
+    desc: "Exporta los servicios en estado 'Running' a un CSV con Name y DisplayName.",
+    difficulty: 1, xp: 20,
+    starter: "# Exporta servicios Running a CSV\n",
+    validate: `$out = __OUTPUT__; if ($out -match 'Name' -or $out -match 'Running' -or $out -match ',') { "OK" } else { "FAIL:El output debe contener datos CSV con nombres de servicios" }`,
+    hint: "Get-Service | Where Status -eq Running | Select Name, DisplayName | ConvertTo-Csv -NoTypeInformation",
+  },
+  {
+    id: "forja-03", cat: "filesystem", title: "Contador de extensiones",
+    desc: "Cuenta cuántos archivos hay por extensión en el directorio actual.",
+    difficulty: 2, xp: 30,
+    starter: "# Cuenta archivos agrupados por extensión\n",
+    validate: `$out = __OUTPUT__; if ($out -match '\\.' -and $out.Split(\"\\n\").Count -ge 1) { "OK" } else { "FAIL:El output debe mostrar extensiones con sus conteos" }`,
+    hint: "Get-ChildItem -File | Group-Object Extension | Sort Count -Descending | Select Count, Name",
+  },
+  {
+    id: "forja-04", cat: "networking", title: "Puertos en escucha",
+    desc: "Muestra los puertos TCP en estado Listen con el proceso asociado.",
+    difficulty: 2, xp: 30,
+    starter: "# Muestra puertos TCP Listen con nombre del proceso\n",
+    validate: `$out = __OUTPUT__; if ($out -match '\\d+' -and ($out -match 'Listen' -or $out -match 'LocalPort' -or $out -match 'Process')) { "OK" } else { "FAIL:Debe mostrar puertos con proceso asociado" }`,
+    hint: "Get-NetTCPConnection -State Listen | Select LocalPort, OwningProcess, @{N='Process';E={(Get-Process -Id $_.OwningProcess -EA 0).ProcessName}} | Sort LocalPort -Unique",
+  },
+  {
+    id: "forja-05", cat: "git", title: "Resumen de commits",
+    desc: "Muestra los últimos 10 commits con fecha, autor y mensaje en una línea.",
+    difficulty: 1, xp: 20,
+    starter: "# Últimos 10 commits: fecha + autor + mensaje\n",
+    validate: `$out = __OUTPUT__; if ($out -and $out.Split(\"\\n\").Count -ge 1) { "OK" } else { "FAIL:Debe mostrar commits con formato" }`,
+    hint: "git log --oneline --format='%h %ad %an: %s' --date=short -10",
+  },
+  {
+    id: "forja-06", cat: "powershell", title: "Monitor de RAM",
+    desc: "Muestra la RAM total, usada y libre del sistema en GB.",
+    difficulty: 2, xp: 25,
+    starter: "# Muestra RAM: total, usada, libre (en GB)\n",
+    validate: `$out = __OUTPUT__; if ($out -match 'GB' -or $out -match '\\d+\\.\\d+') { "OK" } else { "FAIL:Debe mostrar valores de RAM en GB" }`,
+    hint: "$os = Get-CimInstance Win32_OperatingSystem; $total = [math]::Round($os.TotalVisibleMemorySize/1MB,2); $free = [math]::Round($os.FreePhysicalMemory/1MB,2); \"Total: ${total}GB | Libre: ${free}GB | Usada: $([math]::Round($total-$free,2))GB\"",
+  },
+];
+
+function loadForja() {
+  try { return JSON.parse(localStorage.getItem(FORJA_KEY) || "null") || { completed: [], solutions: {} }; }
+  catch { return { completed: [], solutions: {} }; }
+}
+function saveForja(f) { localStorage.setItem(FORJA_KEY, JSON.stringify(f)); }
+
+const MODES = ["quiz", "tatami", "forja", "rosetta", "progress"];
 
 function DojoPanel() {
   const [progress, setProgress] = useState(loadProgress);
@@ -278,8 +337,17 @@ function DojoPanel() {
   const [showHint, setShowHint] = useState(false);
   const [missionCatFilter, setMissionCatFilter] = useState(null);
 
+  const [forja, setForja] = useState(loadForja);
+  const [forjaChallenge, setForjaChallenge] = useState(null);
+  const [forjaCode, setForjaCode] = useState("");
+  const [forjaRunning, setForjaRunning] = useState(false);
+  const [forjaOutput, setForjaOutput] = useState(null);
+  const [forjaResult, setForjaResult] = useState(null);
+  const [forjaShowHint, setForjaShowHint] = useState(false);
+
   useEffect(() => { saveProgress(progress); }, [progress]);
   useEffect(() => { saveTatami(tatami); }, [tatami]);
+  useEffect(() => { saveForja(forja); }, [forja]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -398,6 +466,57 @@ function DojoPanel() {
     setShowHint(false);
     setTatami(prev => ({ ...prev, current: null, currentStep: 0 }));
   }, []);
+
+  const startForjaChallenge = useCallback((ch) => {
+    setForjaChallenge(ch);
+    setForjaCode(forja.solutions[ch.id] || ch.starter);
+    setForjaOutput(null);
+    setForjaResult(null);
+    setForjaShowHint(false);
+  }, [forja]);
+
+  const runForjaCode = useCallback(async () => {
+    if (!forjaChallenge || forjaRunning) return;
+    setForjaRunning(true);
+    setForjaOutput(null);
+    setForjaResult(null);
+    try {
+      const res = await invoke("run_powershell", { command: forjaCode });
+      const stdout = (res?.stdout || "").trim();
+      const stderr = (res?.stderr || "").trim();
+      setForjaOutput(stdout || stderr || "(sin output)");
+
+      const validateCmd = forjaChallenge.validate.replace("__OUTPUT__", `'${stdout.replace(/'/g, "''")}'`);
+      const valRes = await invoke("run_powershell", { command: validateCmd });
+      const valOut = (valRes?.stdout || "").trim();
+
+      if (valOut === "OK") {
+        setForjaResult("ok");
+        const today = new Date().toISOString().slice(0, 10);
+        setForja(prev => ({
+          ...prev,
+          completed: prev.completed.includes(forjaChallenge.id) ? prev.completed : [...prev.completed, forjaChallenge.id],
+          solutions: { ...prev.solutions, [forjaChallenge.id]: forjaCode },
+        }));
+        if (!forja.completed.includes(forjaChallenge.id)) {
+          setProgress(prev => {
+            const streak = prev.lastDay === today ? prev.streak :
+              (prev.lastDay === new Date(Date.now() - 86400000).toISOString().slice(0, 10) ? prev.streak + 1 : 1);
+            const newXp = prev.xp + forjaChallenge.xp;
+            return { ...prev, level: Math.floor(newXp / 100) + 1, xp: newXp, streak, lastDay: today };
+          });
+        }
+      } else if (valOut.startsWith("FAIL:")) {
+        setForjaResult("fail:" + valOut.slice(5));
+      } else {
+        setForjaResult("fail");
+      }
+    } catch {
+      setForjaOutput("Error al ejecutar el script");
+      setForjaResult("fail");
+    }
+    setForjaRunning(false);
+  }, [forjaChallenge, forjaCode, forjaRunning, forja]);
 
   const missionCats = [...new Set(MISSIONS_BANK.map(m => m.cat))];
   const filteredMissions = missionCatFilter
@@ -690,6 +809,150 @@ function DojoPanel() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {mode === "forja" && !forjaChallenge && (
+          <div>
+            <div style={{ color: Y, fontSize: "11px", marginBottom: "8px", letterSpacing: "0.1em" }}>
+              FORJA — Escribe scripts desde cero
+            </div>
+            <div style={{ color: DIM, fontSize: "9px", marginBottom: "12px" }}>
+              Escribe el script completo, ejecútalo y valida que el resultado es correcto.
+            </div>
+
+            {FORJA_CHALLENGES.map(ch => {
+              const done = forja.completed.includes(ch.id);
+              const color = MISSION_CAT_COLORS[ch.cat] || W;
+              return (
+                <div key={ch.id}
+                  onClick={() => startForjaChallenge(ch)}
+                  style={{
+                    padding: "10px 12px", marginBottom: "6px",
+                    border: `1px solid ${done ? G + "33" : color + "22"}`,
+                    background: done ? `${G}08` : "#0a0a00",
+                    cursor: "pointer", transition: "border-color 0.15s",
+                  }}
+                  onMouseOver={e => e.currentTarget.style.borderColor = color + "66"}
+                  onMouseOut={e => e.currentTarget.style.borderColor = done ? G + "33" : color + "22"}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ color: done ? G : color, fontSize: "10px" }}>{done ? "✓" : "⚒"}</span>
+                      <span style={{ color: done ? G + "88" : W, fontSize: "11px" }}>{ch.title}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <span style={{ color: DIM, fontSize: "8px" }}>{"★".repeat(ch.difficulty)}{"☆".repeat(3 - ch.difficulty)}</span>
+                      <span style={{ color: Y + "88", fontSize: "8px" }}>+{ch.xp}xp</span>
+                    </div>
+                  </div>
+                  <div style={{ color: DIM, fontSize: "9px", marginLeft: "18px" }}>{ch.desc}</div>
+                </div>
+              );
+            })}
+
+            <div style={{ marginTop: "12px", color: DIM, fontSize: "9px", textAlign: "center" }}>
+              {forja.completed.length}/{FORJA_CHALLENGES.length} retos completados
+            </div>
+          </div>
+        )}
+
+        {mode === "forja" && forjaChallenge && (
+          <div>
+            {/* Challenge header */}
+            <div style={{ marginBottom: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: MISSION_CAT_COLORS[forjaChallenge.cat] || W, fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  {forjaChallenge.cat} · ⚒ FORJA
+                </span>
+                <button onClick={() => { setForja(prev => ({ ...prev, solutions: { ...prev.solutions, [forjaChallenge.id]: forjaCode } })); setForjaChallenge(null); }}
+                  style={{ background: "transparent", border: `1px solid ${R}33`, color: R + "88", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" }}
+                >SALIR</button>
+              </div>
+              <div style={{ color: W, fontSize: "13px", marginTop: "6px" }}>{forjaChallenge.title}</div>
+              <div style={{ color: DIM, fontSize: "10px", marginTop: "4px", lineHeight: "16px" }}>{forjaChallenge.desc}</div>
+            </div>
+
+            {/* Code editor */}
+            <textarea
+              value={forjaCode}
+              onChange={e => setForjaCode(e.target.value)}
+              spellCheck={false}
+              style={{
+                width: "100%", minHeight: "120px", maxHeight: "200px",
+                background: "#0a0a00", border: `1px solid ${Y}22`,
+                color: Y, fontFamily: "var(--font-mono)", fontSize: "11px",
+                padding: "10px", resize: "vertical", outline: "none",
+                lineHeight: "18px", tabSize: 2,
+              }}
+              onKeyDown={e => {
+                if (e.key === "Tab") {
+                  e.preventDefault();
+                  const start = e.target.selectionStart;
+                  const end = e.target.selectionEnd;
+                  setForjaCode(forjaCode.substring(0, start) + "  " + forjaCode.substring(end));
+                  setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = start + 2; }, 0);
+                }
+              }}
+            />
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "8px", marginTop: "10px", alignItems: "center" }}>
+              <button onClick={runForjaCode} disabled={forjaRunning}
+                style={{
+                  background: forjaRunning ? "#1a1a00" : `${G}18`,
+                  border: `1px solid ${G}55`, color: forjaRunning ? DIM : G,
+                  fontFamily: "var(--font-mono)", fontSize: "10px",
+                  padding: "6px 16px", cursor: forjaRunning ? "wait" : "pointer",
+                }}
+              >{forjaRunning ? "EJECUTANDO..." : "▸ EJECUTAR Y VALIDAR"}</button>
+              <button onClick={() => setForjaShowHint(!forjaShowHint)}
+                style={{ background: "transparent", border: `1px solid #1a1a1a`, color: forjaShowHint ? Y : "#555", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "4px 10px", cursor: "pointer" }}
+              >{forjaShowHint ? "▾ PISTA" : "▸ PISTA"}</button>
+            </div>
+
+            {/* Hint */}
+            {forjaShowHint && (
+              <div style={{
+                marginTop: "8px", padding: "8px 10px",
+                background: "#111", border: `1px solid ${Y}18`,
+                fontFamily: "var(--font-mono)", fontSize: "10px", color: Y + "cc",
+                wordBreak: "break-all", userSelect: "all", whiteSpace: "pre-wrap",
+              }}>
+                {forjaChallenge.hint}
+              </div>
+            )}
+
+            {/* Output */}
+            {forjaOutput && (
+              <div style={{ marginTop: "10px" }}>
+                <div style={{ color: DIM, fontSize: "9px", marginBottom: "4px" }}>OUTPUT</div>
+                <div style={{
+                  padding: "8px 10px", background: "#050500",
+                  border: `1px solid ${forjaResult === "ok" ? G + "33" : "#1a1a1a"}`,
+                  fontFamily: "var(--font-mono)", fontSize: "10px",
+                  color: "#ccc", maxHeight: "150px", overflowY: "auto",
+                  whiteSpace: "pre-wrap", wordBreak: "break-all",
+                }}>
+                  {forjaOutput}
+                </div>
+              </div>
+            )}
+
+            {/* Result */}
+            {forjaResult && (
+              <div style={{ marginTop: "8px", fontSize: "11px" }}>
+                {forjaResult === "ok" && (
+                  <span style={{ color: G }}>✓ Script validado — +{forjaChallenge.xp} XP</span>
+                )}
+                {forjaResult === "fail" && (
+                  <span style={{ color: R }}>✗ El output no cumple los requisitos — revisa tu script</span>
+                )}
+                {typeof forjaResult === "string" && forjaResult.startsWith("fail:") && (
+                  <span style={{ color: R }}>✗ {forjaResult.slice(5)}</span>
+                )}
+              </div>
+            )}
           </div>
         )}
 

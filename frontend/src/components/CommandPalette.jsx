@@ -25,6 +25,7 @@ const CATEGORIES = [
       { cmd: "nw dojo",              desc: "Abrir tab DOJO (entrenamiento)" },
       { cmd: "nw dojo tatami",       desc: "Misiones guiadas paso a paso" },
       { cmd: "nw dojo quiz",         desc: "Preguntas de entrenamiento" },
+      { cmd: "nw dojo forja",        desc: "Escribir scripts con validación" },
       { cmd: "nw notebook",          desc: "Abrir tab NOTEBOOK" },
     ],
   },

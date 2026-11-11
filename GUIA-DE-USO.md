@@ -395,6 +395,17 @@ Modo sandbox con misiones paso a paso. Ejecuta comandos reales en tu terminal y 
 | docker      | 1        | Primeros pasos con Docker |
 | powershell  | 1        | Procesos y rendimiento del sistema |
 
+### Forja (escribir scripts)
+Modo de retos donde escribes scripts completos desde cero. Tienes un editor integrado con soporte para Tab.
+
+- **6 retos** de scripting: listar archivos grandes, exportar servicios, contar extensiones, puertos en escucha, resumen de commits, monitor de RAM
+- Escribe tu script en el editor y pulsa **EJECUTAR Y VALIDAR**
+- El sistema ejecuta tu script, muestra el output, y valida que cumple los requisitos
+- Si necesitas ayuda, pulsa **PISTA** para ver una solución de referencia
+- Tu código se guarda automáticamente — puedes volver a mejorar tu solución
+- Al completar un reto ganas **XP** (20-30 según dificultad)
+- Los retos completados se marcan con ✓ pero puedes volver a ejecutarlos
+
 ### Rosetta
 Tabla de equivalencias entre shells: 15 acciones comunes mostrando el comando en PowerShell, Bash y CMD lado a lado.
 

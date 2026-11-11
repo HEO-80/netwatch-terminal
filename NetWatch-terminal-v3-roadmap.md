@@ -359,7 +359,7 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Quiz interactivo (PowerShell, Linux, redes, Docker, K8s, git) — 25+ preguntas, categorías
 - [x] Modo tatami — sandbox con misiones guiadas (8 misiones, 6 categorías, validación PowerShell)
 - [x] Modo rosetta — equivalencias entre shells (PS vs bash vs cmd) — tabla 15 acciones
-- [ ] Modo forja — escribir scripts con validacion automatica (futuro)
+- [x] Modo forja — escribir scripts con validación automática (6 retos, editor integrado, ejecución + validación)
 - [x] Progreso persistente: racha diaria, puntos XP, nivel, historial (localStorage)
 - [x] Dashboard visual de progreso (barras por categoría, stats, nivel + XP bar)
 - [x] Banco de preguntas ampliable (QUIZ_BANK array extensible, filtro por categoría)
