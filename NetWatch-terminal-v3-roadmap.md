@@ -218,7 +218,8 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 - [x] Persistente entre sesiones (localStorage `nw-notes`)
 - [x] Pin/unpin notas (★/☆) — fijadas siempre arriba
 - [x] `nw note` / `nw note add` / `nw note rm` / `nw note clear` desde terminal
-- [ ] Exportar como `.md`
+- [x] `nw note export` — exportar notas como markdown al portapapeles
+- [x] `nw note pin <n>` — fijar/desfijar notas desde terminal
 
 ---
 
@@ -388,6 +389,8 @@ El panel derecho deja de ser solo CRYPTO. `Alt+P` cicla entre paneles disponible
 #### Theme engine
 - [x] 5 temas integrados: Cyberpunk-2077 (cyan), Blade Runner (red), Deus Ex (yellow), Matrix (green), Ghost in Shell (magenta)
 - [x] `nw theme` lista temas, `nw theme <nombre>` cambia tema
+- [x] Aliases por nombre (matrix, blade-runner, ghost, cyberpunk, deus-ex)
+- [x] `nw theme create/delete` — crear/eliminar temas custom con colores personalizados
 - [x] Hot-switch sin reiniciar — CSS custom properties + `useTheme` hook
 - [ ] Archivos `.nw-theme` custom (JSON con paleta, fuente, opacidad, efectos) — futuro
 
