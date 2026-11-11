@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { handleNwCommand, setLastOutput } from "../commands/nw-commands";
+import { handleNwCommand, setLastOutput, recordCommand } from "../commands/nw-commands";
 
 // ── Xterm theme — paleta original NETWATCH con filosofía minimalista ──────────
 // UN color = UN significado. Nunca decorativo.
@@ -54,6 +54,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
   const retries      = useRef(0);
   const initialized  = useRef(false);
   const inputBuffer  = useRef("");
+  const lastCmd      = useRef("");
   const wsStatus     = useRef(WS_STATUS.disconnected);
   const statusEl     = useRef(null);
 
@@ -92,6 +93,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
           sendToShell({ type: "input", data: "" });
           return;
         }
+        lastCmd.current = input;
         inputBuffer.current = "";
         sendToShell({ type: "input", data });
         return;
@@ -175,6 +177,7 @@ export default function TerminalPane({ tabId, shell = "pwsh.exe", active, onClos
         if (msg.type === "output") {
           term.write(msg.data);
           setLastOutput(msg.data);
+          if (lastCmd.current) { recordCommand(lastCmd.current, msg.data); lastCmd.current = ""; }
         }
         if (msg.type === "exit")   term.writeln(`\r\n\x1b[33m[Shell cerrada: ${msg.code}]\x1b[0m`);
       } catch {}

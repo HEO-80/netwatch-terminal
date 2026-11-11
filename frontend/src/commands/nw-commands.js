@@ -49,7 +49,8 @@ async function cmdHelp(args, write) {
     [C.green("nw deploy <n>"),       "lanzar opción de deploy"],
     [C.gray("nw snip ls"),           "listar snippets"],
     [C.gray("nw snip add <id> <cmd>"),"guardar snippet"],
-    [C.gray("nw snip run <id>"),     "ejecutar snippet"],
+    [C.gray("nw snip run <id> [--k=v]"),"ejecutar snippet (con templates)"],
+    [C.gray("nw snip export/import"),"exportar/importar snippets (JSON)"],
     [C.yellow("nw task"),             "listar tareas"],
     [C.yellow("nw task add <texto>"),"añadir tarea"],
     [C.yellow("nw task done <n>"),   "completar tarea N"],
@@ -295,7 +296,28 @@ async function cmdSnip(args, write, sendToShell) {
     write(nl + C.green(`✓ Snippet '${args[1]}' eliminado`) + nl + nl);
     return;
   }
-  write(nl + C.dim("  Uso: nw snip [ls|add <id> <cmd>|run <id>|del <id>]") + nl + nl);
+  if (sub === "export") {
+    const data = JSON.stringify(snippets, null, 2);
+    try { await navigator.clipboard.writeText(data); } catch {}
+    write(nl + C.green(`✓ ${Object.keys(snippets).length} snippets exportados al portapapeles (JSON)`) + nl + nl);
+    return;
+  }
+  if (sub === "import") {
+    try {
+      const text = await navigator.clipboard.readText();
+      const imported = JSON.parse(text);
+      const count = Object.keys(imported).length;
+      Object.assign(snippets, imported);
+      localStorage.setItem("nw-snippets", JSON.stringify(snippets));
+      write(nl + C.green(`✓ ${count} snippets importados desde portapapeles`) + nl + nl);
+    } catch {
+      write(nl + C.red("  ✗ Error al importar. Copia JSON válido al portapapeles primero.") + nl + nl);
+    }
+    return;
+  }
+  write(nl + C.dim("  Uso: nw snip [ls|add|run|edit|del|export|import]") + nl);
+  write(C.dim("  Templates: usa {{var}} en el comando, --var=value al ejecutar") + nl);
+  write(C.dim("  Builtins: {{date}}, {{time}}, {{user}}, {{ts}}") + nl + nl);
 }
 
 // ── nw deploy ─────────────────────────────────────────────────────────────────
@@ -883,15 +905,19 @@ export async function handleNwCommand(input, write, sendToShell, context = {}) {
   const rustResult = await tryRustBackend(trimmed);
   if (rustResult?.handled) {
     write(rustResult.output);
+    recordCommand(trimmed, rustResult.output);
     return { handled: true };
   }
 
-  // Fall back to JS commands
+  // Fall back to JS commands — capture output for recording
+  let captured = "";
+  const wrappedWrite = (t) => { captured += t; write(t); };
   const parts   = trimmed.split(/\s+/);
   const sub     = parts[1]?.toLowerCase();
   const args    = parts.slice(2);
   const handler = NW_COMMANDS[sub] || NW_COMMANDS["help"];
-  try { await handler(sub ? args : [], write, sendToShell, context); }
+  try { await handler(sub ? args : [], wrappedWrite, sendToShell, context); }
   catch (e) { write(`\r\n${C.red(`✗ Error: ${e.message}`)}\r\n`); }
+  recordCommand(trimmed, captured);
   return { handled: true };
 }

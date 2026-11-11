@@ -71,46 +71,46 @@ FASE 3 — Features killer
 
 Command Palette (Ctrl+Shift+P):
 
- Overlay modal tipo VS Code con búsqueda fuzzy
- Indexa: comandos nw, historial de shell, snippets guardados, servidores SSH, repos git, contenedores Docker, pods K8s
- Resultados agrupados por categoría con iconos
- Enter ejecuta, Esc cierra
+- [x] Overlay modal tipo VS Code con búsqueda fuzzy
+- [x] Indexa: comandos nw, historial de shell, snippets guardados, servidores SSH, repos git, contenedores Docker, pods K8s
+- [x] Resultados agrupados por categoría con iconos
+- [x] Enter ejecuta, Esc cierra
 
 Output inteligente:
 
- Detectar cuando stdout es JSON válido y renderizarlo como tabla formateada o árbol colapsable en la terminal
- Detectar errores comunes (npm, git, docker, python) y mostrar sugerencia de fix inline (sin AI, pattern matching)
- Opcionalmente pedir fix a AI con nw fix después de un error
+- [x] Detectar cuando stdout es JSON válido y renderizarlo como tabla formateada o árbol colapsable en la terminal (nw json / nw json table)
+- [x] Detectar errores comunes (npm, git, docker, python, rust, node) y mostrar sugerencia de fix inline (20+ patrones)
+- [x] Opcionalmente pedir fix a AI con nw fix después de un error
 
 Clipboard manager:
 
- nw clip — muestra últimos 20 items copiados dentro de NETWATCH
- nw clip <n> — pega el item número n
- nw clip search <texto> — busca en el historial de clipboard
- Shortcut Alt+V para abrir el clipboard en overlay
- Persistir entre sesiones (store de Tauri)
+- [x] nw clip — muestra últimos 20 items copiados dentro de NETWATCH
+- [x] nw clip <n> — pega el item número n
+- [x] nw clip search <texto> — busca en el historial de clipboard
+- [ ] Shortcut Alt+V para abrir el clipboard en overlay
+- [x] Persistir entre sesiones (localStorage, migrar a store de Tauri después)
 
 Contexto de proyecto automático:
 
- Cuando el directorio activo cambia, detectar tipo de proyecto por archivos presentes (package.json, Cargo.toml, docker-compose.yml, hardhat.config.js, etc.)
- Mostrar en la TabBar o barra de estado: runtime detectado, versión, scripts disponibles, rama git, estado dirty/clean
- Sugerir comandos relevantes en el Command Palette según el contexto
+- [x] Detectar tipo de proyecto por archivos presentes (package.json, Cargo.toml, docker-compose.yml, hardhat.config.js, etc.) via nw ctx
+- [x] Mostrar stack detectado, versiones, scripts npm, estado git
+- [x] Comandos context-aware en Command Palette (categoría TOOLS)
 
 Grabación de sesiones:
 
- nw rec start [nombre] — empieza a grabar input/output de la terminal activa
- nw rec stop — para y guarda la grabación
- nw rec list — lista sesiones grabadas
- nw rec play <nombre> — reproduce paso a paso con timestamps
- nw rec export <nombre> — exportar como markdown o asciinema
- Útil para documentación, clases y debugging
+- [x] nw rec start [nombre] — empieza a grabar input/output de la terminal activa
+- [x] nw rec stop — para y guarda la grabación
+- [x] nw rec list — lista sesiones grabadas
+- [x] nw rec play <nombre> — reproduce paso a paso con timestamps
+- [x] nw rec export <nombre> — exportar como markdown al portapapeles
+- [x] nw rec del <nombre> — eliminar grabación
 
 Snippets con templates:
 
- Extender nw snip con variables de template: {{name}}, {{port}}, {{date}}
- nw snip run deploy --name=api --port=3000 expande y ejecuta
- nw snip edit <nombre> — abre editor inline para modificar el snippet
- Snippets guardados en store de Tauri, exportables como .nw o JSON
+- [x] Extender nw snip con variables de template: {{name}}, {{port}}, {{date}}, {{time}}, {{user}}, {{ts}}
+- [x] nw snip run deploy --name=api --port=3000 expande y ejecuta
+- [x] nw snip edit <nombre> — ver snippet y variables detectadas
+- [x] nw snip export / nw snip import — exportar/importar snippets como JSON
 FASE 4 — Dojo integrado (training mode)
 
 Migrar el sistema de entrenamiento de powershell-cyberpunk:
