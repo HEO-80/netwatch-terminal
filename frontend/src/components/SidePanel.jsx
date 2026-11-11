@@ -143,7 +143,7 @@ function useUptime() {
 }
 
 // ── Main SidePanel ────────────────────────────────────────────────────────────
-function SidePanel({ open }) {
+function SidePanel({ open, focused, onFocus, onOverlay }) {
   const [crypto,  setCrypto]  = useState(null);
   const [docker,  setDocker]  = useState(null);
   const [mev,     setMev]     = useState([]);
@@ -212,8 +212,8 @@ function SidePanel({ open }) {
       onMouseLeave={() => setHovered(false)}
       style={{
       boxShadow:  hovered ? "0 0 12px rgba(0,240,255,0.3)" : "none",
-      width:      open ? "220px" : "0px",
-      minWidth:   open ? "220px" : "0px",
+      width:      open ? (focused ? "350px" : "220px") : "0px",
+      minWidth:   open ? (focused ? "350px" : "220px") : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderLeft: open ? "1px solid var(--nw-accent)" : "none",
@@ -230,9 +230,9 @@ function SidePanel({ open }) {
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             marginBottom: "4px",
-          }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: C, letterSpacing: "0.1em" }}>
-              ◈ NETWATCH
+          }} onDoubleClick={onOverlay}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: C, letterSpacing: "0.1em", cursor: "pointer" }} onClick={onFocus}>
+              ◈ NETWATCH {focused ? "⊟" : ""}
             </span>
             <button
               onClick={refresh}

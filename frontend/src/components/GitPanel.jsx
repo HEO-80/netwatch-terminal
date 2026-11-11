@@ -180,13 +180,14 @@ function GitButton({ label, color, onClick, disabled }) {
   );
 }
 
-function GitPanel({ open }) {
+function GitPanel({ open, focused, onFocus, onOverlay }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpd, setLastUpd] = useState(null);
   const [actionMsg, setActionMsg] = useState("");
   const [commitMode, setCommitMode] = useState(false);
   const [commitMsg, setCommitMsg]   = useState("");
+  const [hovered, setHovered] = useState(false);
   const commitRef = useRef(null);
   const timerRef = useRef(null);
 
@@ -241,24 +242,28 @@ function GitPanel({ open }) {
   const isClean  = data && data.files.length === 0;
 
   return (
-    <div style={{
-      width:      open ? "220px" : "0px",
-      minWidth:   open ? "220px" : "0px",
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      width:      open ? (focused ? "350px" : "220px") : "0px",
+      minWidth:   open ? (focused ? "350px" : "220px") : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderLeft: open ? "1px solid #D9027D" : "none",
       flexShrink: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
       flexDirection: "column",
+      boxShadow: hovered && open ? "0 0 12px rgba(217, 2, 125, 0.3)" : "none",
     }}>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
-          <div style={{ padding: "12px 14px 0 14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+          <div style={{ padding: "12px 14px 0 14px" }} onDoubleClick={onOverlay}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: M, letterSpacing: "0.1em" }}>
-                ◈ GIT
+                ◈ GIT {focused ? "⊟" : ""}
               </span>
               <button
                 onClick={refresh}

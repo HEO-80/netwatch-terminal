@@ -122,6 +122,8 @@ export default function App() {
   const [systemUser,   setSystemUser]   = useState("Usuario");
   const [panelOrder,   setPanelOrder]   = useState(loadPanelOrder);
   const [paletteOpen,  setPaletteOpen]  = useState(false);
+  const [focusPanel,   setFocusPanel]   = useState(null);
+  const [panelOverlay, setPanelOverlay] = useState(null);
   const { theme, accent, corner, cycle: cycleTheme } = useTheme();
 
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
@@ -181,10 +183,14 @@ export default function App() {
         e.preventDefault();
         setPaletteOpen(o => !o);
       }
+      if (e.key === "Escape") {
+        if (panelOverlay) { setPanelOverlay(null); return; }
+        if (focusPanel) { setFocusPanel(null); return; }
+      }
     };
     window.addEventListener("keydown", paletteHandler);
     return () => window.removeEventListener("keydown", paletteHandler);
-  }, [booting]);
+  }, [booting, panelOverlay, focusPanel]);
 
   useEffect(() => {
     if (booting) return;
@@ -269,7 +275,9 @@ export default function App() {
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "row" }}>
 
         {/* Panel INFRA izquierda — altura completa */}
-        <InfraPanel open={infraOpen} />
+        <div style={panelOverlay === "infra" ? { position: "relative", zIndex: 60 } : undefined}>
+          <InfraPanel open={infraOpen} focused={focusPanel === "infra" || panelOverlay === "infra"} onFocus={() => setFocusPanel(f => f === "infra" ? null : "infra")} onOverlay={() => setPanelOverlay(p => p === "infra" ? null : "infra")} />
+        </div>
 
         {/* Zona central — AI arriba + contenido */}
         <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -303,12 +311,23 @@ export default function App() {
         </div>
 
         {/* Panel derecho — intercambiable con Alt+P */}
-        <SidePanel open={rightPanel === "crypto"} />
-        <TasksPanel open={rightPanel === "tasks"} />
-        <GitPanel open={rightPanel === "git"} />
-        <NotesPanel open={rightPanel === "notes"} />
-        <LogsPanel open={rightPanel === "logs"} />
-        <SettingsPanel open={rightPanel === "settings"} />
+        {[
+          { key: "crypto", Comp: SidePanel },
+          { key: "tasks", Comp: TasksPanel },
+          { key: "git", Comp: GitPanel },
+          { key: "notes", Comp: NotesPanel },
+          { key: "logs", Comp: LogsPanel },
+          { key: "settings", Comp: SettingsPanel },
+        ].map(({ key, Comp }) => (
+          <div key={key} style={panelOverlay === key ? { position: "relative", zIndex: 60 } : undefined}>
+            <Comp
+              open={rightPanel === key}
+              focused={focusPanel === key || panelOverlay === key}
+              onFocus={() => setFocusPanel(f => f === key ? null : key)}
+              onOverlay={() => setPanelOverlay(p => p === key ? null : key)}
+            />
+          </div>
+        ))}
 
       </div>
       </Suspense>
@@ -350,17 +369,27 @@ export default function App() {
       <Suspense fallback={null}>
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onExecute={executePaletteCmd} />
       </Suspense>
+
+      {/* Panel Overlay backdrop */}
+      {panelOverlay && (
+        <div onClick={() => setPanelOverlay(null)} style={{
+          position: "absolute", inset: 0, zIndex: 50,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(2px)",
+          pointerEvents: "auto",
+        }}/>
+      )}
     </div>
   );
 }
 
 const RIGHT_PANEL_META = {
-  crypto:   { label: "CRYPTO",   color: "var(--nw-accent)" },
-  tasks:    { label: "TASKS",    color: "#FCEE0A" },
-  git:      { label: "GIT",      color: "#D9027D" },
-  notes:    { label: "NOTES",    color: "#39FF14" },
-  logs:     { label: "LOGS",     color: "#ff5555" },
-  settings: { label: "SETTINGS", color: "#D9027D" },
+  crypto:   { label: "CRYPTO",   color: "var(--nw-accent)", tip: "Precios BTC/ETH, Gas, MEV Bots" },
+  tasks:    { label: "TASKS",    color: "#FCEE0A",          tip: "Tareas: pendiente, en curso, hecho" },
+  git:      { label: "GIT",      color: "#D9027D",          tip: "Repo actual, cambios, diff inline" },
+  notes:    { label: "NOTES",    color: "#39FF14",          tip: "Notas rápidas, pin, export" },
+  logs:     { label: "LOGS",     color: "#ff5555",          tip: "Logs del sistema, filtros, tail" },
+  settings: { label: "SETTINGS", color: "#D9027D",          tip: "API keys, config, tema" },
 };
 
 function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel }) {
@@ -375,7 +404,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
     <div style={{ display: "flex", alignItems: "stretch", background: "#000", borderTop: `1px solid ${accent}`, flexShrink: 0, height: "28px", fontFamily: "var(--font-mono)" }}>
 
       {/* INFRA toggle izquierda */}
-      <button onClick={onToggleInfra} title="Alt+I"
+      <button onClick={onToggleInfra} title="INFRA — SSH, puertos, K8s, Terraform, GitHub · Alt+I"
         style={{ background: infraOpen ? "#D9027D" : "transparent", border: "none", borderRight: "1px solid #333", color: infraOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "0 10px", cursor: "pointer", flexShrink: 0 }}
         onMouseOver={e => { if (!infraOpen) e.target.style.color = "#D9027D"; }}
         onMouseOut={e => { if (!infraOpen) e.target.style.color = "#888"; }}
@@ -428,14 +457,14 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
       <div style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0 6px", flexShrink: 0 }}>
 
         {/* AI toggle */}
-        <button onClick={onToggleAi} title="Alt+A — Panel AI"
+        <button onClick={onToggleAi} title="AI — Chat con Ollama/Gemini/Claude · Alt+A"
           style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
           onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
           onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
         >◈ AI</button>
 
         {/* METRICS toggle */}
-        <button onClick={onToggleMetrics} title="Alt+M — Panel Metrics"
+        <button onClick={onToggleMetrics} title="METRICS — CPU, RAM, Disco en tiempo real · Alt+M"
           style={{ background: metricsOpen ? "#39FF14" : "transparent", border: `1px solid ${metricsOpen ? "#39FF14" : "#333"}`, color: metricsOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
           onMouseOver={e => { if (!metricsOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
           onMouseOut={e => { if (!metricsOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
@@ -457,7 +486,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
               onDrop={e => { e.preventDefault(); if (dragPanel.current !== null && dragPanel.current !== i) onReorderPanels(dragPanel.current, i); dragPanel.current = null; setPanelDropTarget(null); }}
               onDragEnd={() => { dragPanel.current = null; setPanelDropTarget(null); }}
               onClick={() => onTogglePanel(p)}
-              title={`${meta.label} — arrastra para reordenar`}
+              title={`${meta.label} — ${meta.tip}`}
               style={{
                 background: isActive ? meta.color : "transparent",
                 border: `1px solid ${isActive ? meta.color : isDragOver ? accent : "#333"}`,

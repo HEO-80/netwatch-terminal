@@ -147,11 +147,12 @@ function DropZone({ columnId, color, isOver, onDrop, children }) {
   );
 }
 
-function TasksPanel({ open }) {
+function TasksPanel({ open, focused, onFocus, onOverlay }) {
   const [tasks, setTasks] = useState(() => loadTasks());
   const [input, setInput] = useState("");
   const [draggingId, setDraggingId] = useState(null);
   const [overColumn, setOverColumn] = useState(null);
+  const [hovered, setHovered] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => { saveTasks(tasks); }, [tasks]);
@@ -200,24 +201,28 @@ function TasksPanel({ open }) {
   const byStatus = (status) => tasks.filter(t => t.status === status);
 
   return (
-    <div style={{
-      width:      open ? "220px" : "0px",
-      minWidth:   open ? "220px" : "0px",
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      width:      open ? (focused ? "350px" : "220px") : "0px",
+      minWidth:   open ? (focused ? "350px" : "220px") : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderLeft: open ? "1px solid #FCEE0A" : "none",
       flexShrink: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
       flexDirection: "column",
+      boxShadow: hovered && open ? "0 0 12px rgba(252, 238, 10, 0.3)" : "none",
     }}>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
-          <div style={{ padding: "12px 14px 0 14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+          <div style={{ padding: "12px 14px 0 14px" }} onDoubleClick={onOverlay}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: Y, letterSpacing: "0.1em" }}>
-                ◈ TASKS
+                ◈ TASKS {focused ? "⊟" : ""}
               </span>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>
                 {tasks.length}

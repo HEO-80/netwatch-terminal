@@ -247,7 +247,7 @@ function timeAgo(date) {
 }
 
 // ── Main InfraPanel ───────────────────────────────────────────────────────────
-function InfraPanel({ open }) {
+function InfraPanel({ open, focused, onFocus, onOverlay }) {
   const [k8s,     setK8s]     = useState(null);
   const [tf,      setTf]      = useState(null);
   const [ssh,     setSsh]     = useState([]);
@@ -307,8 +307,8 @@ function InfraPanel({ open }) {
       onMouseLeave={() => setHovered(false)}
       style={{
       boxShadow:  hovered && open ? "0 0 12px rgba(217,2,125,0.3)" : "none",
-      width:      open ? "220px" : "0px",
-      minWidth:   open ? "220px" : "0px",
+      width:      open ? (focused ? "350px" : "220px") : "0px",
+      minWidth:   open ? (focused ? "350px" : "220px") : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderRight: open ? "1px solid var(--nw-accent)" : "none",
@@ -322,9 +322,9 @@ function InfraPanel({ open }) {
         <div style={{ padding: "12px 14px", overflowY: "auto", flex: 1 }}>
 
           {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: M, letterSpacing: "0.1em" }}>
-              ◈ INFRA
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }} onDoubleClick={onOverlay}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: M, letterSpacing: "0.1em", cursor: "pointer" }} onClick={onFocus}>
+              ◈ INFRA {focused ? "⊟" : ""}
             </span>
             <button
               onClick={refresh}

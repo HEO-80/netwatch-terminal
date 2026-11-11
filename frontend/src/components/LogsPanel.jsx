@@ -85,7 +85,7 @@ function parseEventLines(raw) {
   });
 }
 
-function LogsPanel({ open }) {
+function LogsPanel({ open, focused, onFocus, onOverlay }) {
   const [entries, setEntries] = useState([]);
   const [filter, setFilter] = useState({ error: true, warn: true, info: true, debug: false });
   const [search, setSearch] = useState("");
@@ -94,6 +94,7 @@ function LogsPanel({ open }) {
   const [loading, setLoading] = useState(false);
   const [paused, setPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [hovered, setHovered] = useState(false);
   const listRef = useRef(null);
   const timerRef = useRef(null);
 
@@ -158,24 +159,28 @@ function LogsPanel({ open }) {
   entries.forEach(e => counts[e.severity]++);
 
   return (
-    <div style={{
-      width:      open ? "260px" : "0px",
-      minWidth:   open ? "260px" : "0px",
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      width:      open ? (focused ? "400px" : "260px") : "0px",
+      minWidth:   open ? (focused ? "400px" : "260px") : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderLeft: open ? `1px solid ${R}` : "none",
       flexShrink: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
       flexDirection: "column",
+      boxShadow: hovered && open ? "0 0 12px rgba(255, 85, 85, 0.3)" : "none",
     }}>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
-          <div style={{ padding: "12px 10px 0 10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+          <div style={{ padding: "12px 10px 0 10px" }} onDoubleClick={onOverlay}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", cursor: "pointer" }} onClick={onFocus}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: R, letterSpacing: "0.1em" }}>
-                ◈ LOGS
+                ◈ LOGS {focused ? "⊟" : ""}
               </span>
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <span

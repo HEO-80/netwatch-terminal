@@ -20,12 +20,13 @@ function mask(val) {
   return val.slice(0, 4) + "•".repeat(Math.min(val.length - 8, 20)) + val.slice(-4);
 }
 
-function SettingsPanel({ open }) {
+function SettingsPanel({ open, focused, onFocus, onOverlay }) {
   const [values, setValues]     = useState({});
   const [editing, setEditing]   = useState(null);
   const [editVal, setEditVal]   = useState("");
   const [saving, setSaving]     = useState(false);
   const [secure, setSecure]     = useState(false);
+  const [hovered, setHovered]   = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -81,20 +82,25 @@ function SettingsPanel({ open }) {
   if (!open) return null;
 
   return (
-    <div style={{
-      width: 310, minWidth: 310, maxWidth: 310,
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      width: focused ? 420 : 310, minWidth: focused ? 420 : 310, maxWidth: focused ? 420 : 310,
       background: BG, borderLeft: "1px solid #D9027D",
       display: "flex", flexDirection: "column",
       fontFamily: "var(--font-mono)", overflow: "hidden",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
+      boxShadow: hovered ? "0 0 12px rgba(217, 2, 125, 0.3)" : "none",
     }}>
       {/* Header */}
       <div style={{
         padding: "8px 12px", background: "#0a0900",
         borderBottom: "1px solid #1a1a00",
         display: "flex", alignItems: "center", gap: "8px",
-      }}>
-        <span style={{ fontSize: "10px", color: Y, letterSpacing: "0.1em" }}>
-          ◈ SETTINGS
+      }} onDoubleClick={onOverlay}>
+        <span style={{ fontSize: "10px", color: Y, letterSpacing: "0.1em", cursor: "pointer" }} onClick={onFocus}>
+          ◈ SETTINGS {focused ? "⊟" : ""}
         </span>
         <div style={{ flex: 1 }} />
         <span style={{

@@ -71,9 +71,10 @@ function NoteItem({ note, onDelete, onPin }) {
   );
 }
 
-function NotesPanel({ open }) {
+function NotesPanel({ open, focused, onFocus, onOverlay }) {
   const [notes, setNotes] = useState(() => loadNotes());
   const [input, setInput] = useState("");
+  const [hovered, setHovered] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => { saveNotes(notes); }, [notes]);
@@ -109,24 +110,28 @@ function NotesPanel({ open }) {
   const sorted   = [...pinned, ...unpinned];
 
   return (
-    <div style={{
-      width:      open ? "220px" : "0px",
-      minWidth:   open ? "220px" : "0px",
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+      width:      open ? (focused ? "350px" : "220px") : "0px",
+      minWidth:   open ? (focused ? "350px" : "220px") : "0px",
       overflow:   "hidden",
       background: "#020200",
       borderLeft: open ? "1px solid #39FF14" : "none",
       flexShrink: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
+      transition: "width 0.2s ease, min-width 0.2s ease, box-shadow 0.2s ease",
       display:    "flex",
       flexDirection: "column",
+      boxShadow: hovered && open ? "0 0 12px rgba(57, 255, 20, 0.3)" : "none",
     }}>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
-          <div style={{ padding: "12px 14px 0 14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+          <div style={{ padding: "12px 14px 0 14px" }} onDoubleClick={onOverlay}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", cursor: "pointer" }} onClick={onFocus}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: G, letterSpacing: "0.1em" }}>
-                ◈ NOTES
+                ◈ NOTES {focused ? "⊟" : ""}
               </span>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>
                 {notes.length}
