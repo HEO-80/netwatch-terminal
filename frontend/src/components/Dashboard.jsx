@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback, memo } from "react";
+import DashOverlay, { loadQLConfig, DEFAULT_QL } from "./DashboardOverlays";
 
 const invoke = async (cmd, args) => {
   try {
@@ -114,9 +115,20 @@ function QLBtn({ icon, label, rgb, onClick }) {
 }
 
 // ── SSH Server Row ───────────────────────────────────────────────────────────
-function SSHRow({ name, color, status }) {
+function SSHRow({ name, color, status, onClick }) {
+  const [hov, setHov] = useState(false);
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 4px", borderLeft: `2px solid ${color}` }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "2px 4px", borderLeft: `2px solid ${color}`,
+        cursor: "pointer", transition: "background 0.15s",
+        background: hov ? "rgba(5,217,232,0.04)" : "transparent",
+      }}
+    >
       <span style={{ fontSize: 11, color: AC }}>{name}</span>
       <span style={{ fontSize: 9, color, fontWeight: 700 }}>{status}</span>
     </div>
@@ -135,10 +147,20 @@ function ActivityRow({ cmd, time, onRerun }) {
 }
 
 // ── Process Row ──────────────────────────────────────────────────────────────
-function ProcRow({ name, pct }) {
+function ProcRow({ name, pct, onClick }) {
   const c = pct > 10 ? R : pct > 4 ? Y : G;
+  const [hov, setHov] = useState(false);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 4px" }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: 6, padding: "2px 4px",
+        cursor: "pointer", transition: "background 0.15s",
+        background: hov ? "rgba(5,217,232,0.04)" : "transparent",
+      }}
+    >
       <span style={{ fontSize: 11, color: AC, flex: 1 }}>{name}</span>
       <div style={{ width: 40, height: 4, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
         <div style={{ height: "100%", background: c, width: `${Math.min(pct * 5, 100)}%` }} />
@@ -170,9 +192,21 @@ function StatusCard({ title, color, children, onClick }) {
 }
 
 // ── Metric Big Card ──────────────────────────────────────────────────────────
-function MetricCard({ label, value, color, children }) {
+function MetricCard({ label, value, color, children, onClick }) {
+  const [hov, setHov] = useState(false);
   return (
-    <div style={{ ...CELL, padding: "10px", textAlign: "center" }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        ...CELL, padding: "10px", textAlign: "center",
+        cursor: onClick ? "pointer" : "default",
+        transition: "border-color 0.2s, box-shadow 0.2s",
+        borderColor: hov && onClick ? `${color}55` : "rgba(5,217,232,0.15)",
+        boxShadow: hov && onClick ? `0 0 12px ${color}22` : "none",
+      }}
+    >
       <div style={{ fontSize: 8, color: DIM, letterSpacing: "1px", marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 32, color, fontFamily: ORBI, fontWeight: 700, textShadow: `0 0 8px ${color}44` }}>
         {value}
@@ -186,6 +220,21 @@ function MetricCard({ label, value, color, children }) {
 // MAIN DASHBOARD COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 function Dashboard({ onLaunchTerminal }) {
+  // ── Overlay state ──
+  const [overlay, setOverlay] = useState(null); // { type, data }
+  const openOverlay = (type, data = {}) => setOverlay({ type, data });
+  const closeOverlay = () => setOverlay(null);
+  const [qlButtons, setQlButtons] = useState(() => loadQLConfig() || DEFAULT_QL);
+  const handleOverlayAction = (action) => {
+    if (action?.type === "shell" && action.cmd) {
+      window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: action.cmd }));
+      closeOverlay();
+    }
+    if (action?.type === "ql-update" && action.items) {
+      setQlButtons(action.items);
+    }
+  };
+
   // ── Metrics state (replicated from useMetrics pattern) ──
   const [metrics, setMetrics] = useState({
     cpu: 0, cpuH: [], ram: 0, ramH: [], ramUsed: 0, ramTotal: 31.17,
@@ -417,7 +466,7 @@ function Dashboard({ onLaunchTerminal }) {
             <span style={{ color: DIM, fontSize: 7 }}>LIVE ●</span>
           </div>
           {/* CPU */}
-          <div>
+          <div onClick={() => openOverlay("cpu", { cpu: metrics.cpu, cpuH: metrics.cpuH })} style={{ cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 1 }}>
               <span style={{ fontSize: 13, color: DIM }}>CPU</span>
               <span style={{ fontSize: 9, color: cc, fontFamily: ORBI, marginLeft: "auto" }}>{metrics.cpu.toFixed(1)}%</span>
@@ -426,7 +475,7 @@ function Dashboard({ onLaunchTerminal }) {
             <Sparkline data={metrics.cpuH} color={cc} width={55} height={12} />
           </div>
           {/* RAM */}
-          <div>
+          <div onClick={() => openOverlay("ram", { ram: metrics.ram, ramH: metrics.ramH, ramUsed: metrics.ramUsed, ramTotal: metrics.ramTotal })} style={{ cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 1 }}>
               <span style={{ fontSize: 13, color: DIM }}>RAM</span>
               <span style={{ fontSize: 9, color: rc, fontFamily: ORBI, marginLeft: "auto" }}>{metrics.ram.toFixed(1)}%</span>
@@ -438,7 +487,7 @@ function Dashboard({ onLaunchTerminal }) {
           {metrics.disks.slice(0, 2).map(d => {
             const dkc = pctColor(d.pct);
             return (
-              <div key={d.name}>
+              <div key={d.name} onClick={() => openOverlay("disk", { disks: metrics.disks })} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 1 }}>
                   <span style={{ fontSize: 13, color: DIM }}>DSK {d.name}</span>
                   <span style={{ fontSize: 9, color: dkc, fontFamily: ORBI, marginLeft: "auto" }}>{d.pct}%</span>
@@ -448,7 +497,7 @@ function Dashboard({ onLaunchTerminal }) {
             );
           })}
           {/* Net */}
-          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 0", borderTop: "1px solid rgba(5,217,232,0.06)", fontSize: 8 }}>
+          <div onClick={() => openOverlay("net", { netRx: metrics.netRx, netTx: metrics.netTx })} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 0", borderTop: "1px solid rgba(5,217,232,0.06)", fontSize: 8, cursor: "pointer" }}>
             <span style={{ color: DIM }}>NET</span>
             <span style={{ color: G }}>↓{metrics.netRx}</span>
             <span style={{ color: Y }}>↑{metrics.netTx}</span>
@@ -479,27 +528,21 @@ function Dashboard({ onLaunchTerminal }) {
 
         {/* ══ QUICK LAUNCH ══ */}
         <div style={{ ...CELL, padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontSize: 8, color: Y, letterSpacing: "2px", fontFamily: ORBI, paddingBottom: 2, borderBottom: `1px solid ${Y}18` }}>QUICK LAUNCH</div>
+          <div style={{ fontSize: 8, color: Y, letterSpacing: "2px", fontFamily: ORBI, paddingBottom: 2, borderBottom: `1px solid ${Y}18`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>QUICK LAUNCH</span>
+            <span onClick={() => openOverlay("quicklaunch-config")} style={{ color: DIM, cursor: "pointer", fontSize: 9 }} title="Configurar">⚙</span>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3, flex: 1 }}>
-            <QLBtn icon="⌨" label="PowerShell" rgb="252,238,10" onClick={() => launch("powershell")} />
-            <QLBtn icon="🐧" label="WSL" rgb="40,200,64" onClick={() => launch("wsl")} />
-            <QLBtn icon=">_" label="CMD" rgb="5,217,232" onClick={() => launch("cmd")} />
-            <QLBtn icon="</>" label="VS Code" rgb="5,217,232" onClick={() => launch("vscode")} />
-            <QLBtn icon="📓" label="Obsidian" rgb="5,217,232" onClick={() => launch("obsidian")} />
-            <QLBtn icon="📋" label="Notion" rgb="5,217,232" onClick={() => launch("notion")} />
-            <QLBtn icon="✉" label="Gmail" rgb="5,217,232" onClick={() => launch("gmail")} />
-            <QLBtn icon="📁" label="Abrir Proj" rgb="252,238,10" onClick={() => launch("proj")} />
-            <QLBtn icon="✦" label="AI Chat" rgb="255,42,109" onClick={() => launch("ai")} />
-            <QLBtn icon="🥋" label="Dojo" rgb="5,217,232" onClick={() => launch("dojo")} />
-            <QLBtn icon="📒" label="Notebook" rgb="5,217,232" onClick={() => launch("notebook")} />
-            <QLBtn icon="⚙" label="Settings" rgb="5,217,232" onClick={() => launch("settings")} />
+            {qlButtons.map(btn => (
+              <QLBtn key={btn.id} icon={btn.icon} label={btn.label} rgb={btn.rgb} onClick={() => launch(btn.action)} />
+            ))}
           </div>
         </div>
 
         {/* ══ STATUS BAND ══ */}
         <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr", gap: 4 }}>
           {/* GIT */}
-          <StatusCard title="GIT" color={Y}>
+          <StatusCard title="GIT" color={Y} onClick={() => openOverlay("git", git)}>
             <div style={{ fontSize: 14, color: Y, fontWeight: 700 }}>
               {(git?.branch || "main").toUpperCase()} {git?.changes > 0 && <span style={{ color: R }}>({git.changes})</span>}
             </div>
@@ -508,7 +551,7 @@ function Dashboard({ onLaunchTerminal }) {
           </StatusCard>
 
           {/* PORTS */}
-          <StatusCard title="PORTS" color={G}>
+          <StatusCard title="PORTS" color={G} onClick={() => openOverlay("ports", { ports: portsData })}>
             <div style={{ fontSize: 14, color: G, fontWeight: 700 }}>{portsData.length} activos</div>
             {portsData.slice(0, 3).map(p => (
               <div key={p.port} style={{ fontSize: 13, color: `${G}59`, marginTop: 1 }}>
@@ -519,7 +562,7 @@ function Dashboard({ onLaunchTerminal }) {
           </StatusCard>
 
           {/* DOCKER */}
-          <StatusCard title="DOCKER" color={G}>
+          <StatusCard title="DOCKER" color={G} onClick={() => openOverlay("docker", docker)}>
             <div style={{ fontSize: 14, color: G, fontWeight: 700 }}>
               {dockerCount > 0 ? `● ${dockerCount} running` : "○ parado"}
             </div>
@@ -532,14 +575,14 @@ function Dashboard({ onLaunchTerminal }) {
           </StatusCard>
 
           {/* AI */}
-          <StatusCard title="AI" color={AC}>
+          <StatusCard title="AI" color={AC} onClick={() => openOverlay("ai", { provider: "Claude 3.5", model: "Sonnet" })}>
             <div style={{ fontSize: 14, color: AC, fontWeight: 700 }}>Claude 3.5</div>
             <div style={{ fontSize: 13, color: DIM, marginTop: 1 }}>Provider: Anthropic</div>
             <div style={{ fontSize: 13, color: DIM }}>Status: <span style={{ color: G }}>activo</span></div>
           </StatusCard>
 
           {/* UPTIME */}
-          <StatusCard title="UPTIME" color={AC}>
+          <StatusCard title="UPTIME" color={AC} onClick={() => openOverlay("uptime", { uptimeSec, boot: uptime?.boot })}>
             <div style={{ fontSize: 14, color: AC, fontWeight: 700, fontFamily: ORBI }}>{formatUptime(uptimeSec)}</div>
             <div style={{ fontSize: 13, color: "rgba(5,217,232,0.25)", marginTop: 1 }}>Sesión: {formatUptime(uptimeSec)}</div>
             <div style={{ fontSize: 13, color: "rgba(5,217,232,0.25)" }}>Boot: {uptime?.boot || "??:??:??"}</div>
@@ -551,7 +594,7 @@ function Dashboard({ onLaunchTerminal }) {
           {/* SSH Servers */}
           <div style={{ ...CELL, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
             <SectionHeader color={R} label="SSH SERVERS" />
-            {SSH_SERVERS.map(s => <SSHRow key={s.name} {...s} />)}
+            {SSH_SERVERS.map(s => <SSHRow key={s.name} {...s} onClick={() => openOverlay("ssh", s)} />)}
           </div>
 
           {/* Actividad Reciente */}
@@ -565,19 +608,19 @@ function Dashboard({ onLaunchTerminal }) {
           {/* Top Procesos */}
           <div style={{ ...CELL, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
             <SectionHeader color={AC} label="TOP PROCESOS" />
-            {procs.map((p, i) => <ProcRow key={i} name={p.name} pct={p.cpu} />)}
+            {procs.map((p, i) => <ProcRow key={i} name={p.name} pct={p.cpu} onClick={() => openOverlay("process", p)} />)}
           </div>
         </div>
 
         {/* ══ METRICS ROW ══ */}
         <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-          <MetricCard label="CPU" value={`${metrics.cpu.toFixed(1)}%`} color={cc}>
+          <MetricCard label="CPU" value={`${metrics.cpu.toFixed(1)}%`} color={cc} onClick={() => openOverlay("cpu", { cpu: metrics.cpu, cpuH: metrics.cpuH })}>
             <MiniBar data={metrics.cpuH} color={cc} />
           </MetricCard>
-          <MetricCard label="RAM" value={`${metrics.ram.toFixed(1)}%`} color={rc}>
+          <MetricCard label="RAM" value={`${metrics.ram.toFixed(1)}%`} color={rc} onClick={() => openOverlay("ram", { ram: metrics.ram, ramH: metrics.ramH, ramUsed: metrics.ramUsed, ramTotal: metrics.ramTotal })}>
             <MiniBar data={metrics.ramH} color={rc} />
           </MetricCard>
-          <MetricCard label="DISK" value={`${mainDiskPct}%`} color={dc}>
+          <MetricCard label="DISK" value={`${mainDiskPct}%`} color={dc} onClick={() => openOverlay("disk", { disks: metrics.disks })}>
             <div style={{ display: "flex", gap: 1, justifyContent: "center" }}>
               {metrics.disks.map(d => {
                 const dkc = pctColor(d.pct);
@@ -589,7 +632,7 @@ function Dashboard({ onLaunchTerminal }) {
               </>}
             </div>
           </MetricCard>
-          <MetricCard label="NETWORK" value="" color={G}>
+          <MetricCard label="NETWORK" value="" color={G} onClick={() => openOverlay("net", { netRx: metrics.netRx, netTx: metrics.netTx })}>
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: -8 }}>
               <span style={{ fontSize: 26, color: G, fontFamily: ORBI, fontWeight: 700 }}>↓{metrics.netRx}</span>
               <span style={{ fontSize: 26, color: Y, fontFamily: ORBI, fontWeight: 700 }}>↑{metrics.netTx}</span>
@@ -600,6 +643,16 @@ function Dashboard({ onLaunchTerminal }) {
 
       {/* ── CSS Keyframes (injected once) ── */}
       <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
+
+      {/* ── Overlay ── */}
+      {overlay && (
+        <DashOverlay
+          type={overlay.type}
+          data={overlay.data}
+          onClose={closeOverlay}
+          onAction={handleOverlayAction}
+        />
+      )}
     </div>
   );
 }
