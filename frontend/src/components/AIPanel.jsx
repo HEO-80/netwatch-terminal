@@ -6,13 +6,15 @@ const Y   = "#FCEE0A";
 const G   = "#39FF14";
 const C   = "var(--nw-accent)";
 const M   = "#D9027D";
+const R   = "#ff2a6d";
 const DIM = "#546E7A";
 const BG  = "#080700";
 const BG2 = "#0b0a00";
+const MONO = "var(--font-mono)";
 
 // ── Historial persistente ─────────────────────────────────────────────────────
 const HISTORY_KEY = "nw-ai-history";
-const MAX_HISTORY = 50; // máximo mensajes guardados
+const MAX_HISTORY = 50;
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
@@ -25,7 +27,7 @@ function saveHistory(messages) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(toSave));
 }
 
-// ── Estimación de tokens (aprox: 1 token ≈ 4 chars) ──────────────────────────
+// ── Estimación de tokens ─────────────────────────────────────────────────────
 function estimateTokens(text) {
   return Math.ceil((text || "").length / 4);
 }
@@ -50,6 +52,14 @@ const QUICK_COMMANDS = [
     hint: "Comandos y flujos de Git",
     system: "Eres un experto en Git. Responde con el comando exacto primero, luego explica brevemente. Sin preámbulos.",
     placeholder: "/git [describe tu situación de git]",
+  },
+  {
+    prefix: "/fix",
+    label: "/fix",
+    color: R,
+    hint: "Analizar último error",
+    system: "Eres un debugger experto. Analiza el error y da la solución exacta. Muestra el comando o código para arreglarlo. Sin preámbulos.",
+    placeholder: "/fix [pega el error o deja vacío para usar el último]",
   },
   {
     prefix: "/solidity",
@@ -91,7 +101,6 @@ const PROVIDERS = {
         return { available: true, models: models.length ? models : ["llama3.2"] };
       } catch { return { available: false, models: [] }; }
     },
-    // Warm-up: carga el modelo en VRAM sin generar output visible
     warmup: async (model) => {
       try {
         await fetch("http://localhost:11434/api/generate", {
@@ -192,6 +201,26 @@ const PROVIDERS = {
   },
 };
 
+// ── Code block parsing ───────────────────────────────────────────────────────
+function parseContentBlocks(text) {
+  if (!text) return [{ type: "text", content: text || "" }];
+  const blocks = [];
+  const regex = /```(\w*)\n?([\s\S]*?)```/g;
+  let last = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) {
+      blocks.push({ type: "text", content: text.slice(last, match.index) });
+    }
+    blocks.push({ type: "code", lang: match[1] || "", content: match[2].trimEnd() });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    blocks.push({ type: "text", content: text.slice(last) });
+  }
+  return blocks.length ? blocks : [{ type: "text", content: text }];
+}
+
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 function ProviderBadge({ provider, active, available, warming, onClick }) {
   const color = available ? provider.color : DIM;
@@ -203,7 +232,7 @@ function ProviderBadge({ provider, active, available, warming, onClick }) {
         background: active ? color : "transparent",
         border: `1px solid ${active ? color : "#1a1a00"}`,
         color: active ? BG : color,
-        fontFamily: "var(--font-mono)", fontSize: "9px",
+        fontFamily: MONO, fontSize: "9px",
         padding: "2px 8px", cursor: "pointer",
         letterSpacing: "0.06em", opacity: available ? 1 : 0.6,
         transition: "all 0.15s", display: "flex", alignItems: "center", gap: "4px",
@@ -220,10 +249,49 @@ function ProviderBadge({ provider, active, available, warming, onClick }) {
   );
 }
 
+function CodeBlock({ content, lang }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const execute = () => {
+    const cmd = content.trim().split("\n")[0].replace(/^\$\s*/, "").replace(/^>\s*/, "");
+    window.dispatchEvent(new CustomEvent("nw-palette-execute", { detail: cmd }));
+  };
+  const isExecutable = /^[$>]?\s*(git |npm |nw |docker |cargo |cd |ls |dir |mkdir |rm |cat |pwsh|powershell)/im.test(content);
+
+  return (
+    <div style={{ background: "#0d0d0d", border: "1px solid #1a2a1a", margin: "4px 0", overflow: "hidden" }}>
+      {lang && (
+        <div style={{ padding: "2px 8px", background: "#111", fontSize: 8, color: DIM, fontFamily: MONO, borderBottom: "1px solid #1a1a1a" }}>
+          {lang}
+        </div>
+      )}
+      <pre style={{
+        padding: "6px 8px", margin: 0, fontFamily: MONO, fontSize: 11,
+        color: G, lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-all",
+        overflowX: "auto",
+      }}>{content}</pre>
+      <div style={{ display: "flex", gap: 6, padding: "3px 8px", borderTop: "1px solid #1a1a1a", background: "#0a0a0a" }}>
+        <span onClick={copy} style={{ fontSize: 8, color: copied ? G : DIM, cursor: "pointer", fontFamily: MONO }}>
+          {copied ? "✓ Copiado" : "📋 Copiar"}
+        </span>
+        {isExecutable && (
+          <span onClick={execute} style={{ fontSize: 8, color: Y, cursor: "pointer", fontFamily: MONO }}>
+            ▸ Ejecutar
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({ msg }) {
   const isUser = msg.role === "user";
   const cmd = isUser ? getActiveCommand(msg.content) : null;
-  const accentCmd = cmd ? cmd.color : (isUser ? Y : "#2a4a2a");
+  const [hov, setHov] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const copied = copiedId === msg.id;
 
@@ -233,6 +301,8 @@ function MessageBubble({ msg }) {
     setCopiedId(msg.id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  const blocks = !isUser && !msg.streaming ? parseContentBlocks(msg.content) : null;
 
   return (
     <div style={{
@@ -246,54 +316,88 @@ function MessageBubble({ msg }) {
         border: `1px solid ${isUser ? Y : "#1a3a1a"}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: "8px", color: isUser ? BG : G,
-        flexShrink: 0, fontFamily: "var(--font-mono)",
+        flexShrink: 0, fontFamily: MONO,
       }}>
         {isUser ? ">" : "AI"}
       </div>
 
       {/* Contenido */}
-      <div style={{ flex: 1, maxWidth: "87%" }}>
+      <div
+        style={{ flex: 1, maxWidth: "87%" }}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+      >
         {/* Badge de comando si aplica */}
         {cmd && (
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "4px",
             background: "#0f0f00", border: `1px solid ${cmd.color}22`,
             padding: "1px 6px", marginBottom: "3px",
-            fontFamily: "var(--font-mono)", fontSize: "8px", color: cmd.color,
+            fontFamily: MONO, fontSize: "8px", color: cmd.color,
           }}>
             {cmd.label} — {cmd.hint}
           </div>
         )}
-        <div onClick={copyMsg} title="Click para copiar" style={{
-          position: "relative", cursor: "pointer",
+
+        {/* Message body */}
+        <div style={{
+          position: "relative",
           background: isUser ? "#0f0e00" : "#090d09",
           border: `1px solid ${isUser ? "#2a2700" : "#0d1f0d"}`,
           borderLeft: `2px solid ${copied ? G : (isUser ? "#2a2700" : "#0d1f0d")}`,
           transition: "border-color 0.3s",
           padding: "8px 10px",
-          fontFamily: "var(--font-mono)", fontSize: "12px",
+          fontFamily: MONO, fontSize: "12px",
           color: isUser ? Y : "#E8E8E8",
           lineHeight: "1.65", whiteSpace: "pre-wrap", wordBreak: "break-word",
         }}>
-          {msg.content}
-          {msg.streaming && (
-            <span style={{
-              display: "inline-block", width: 7, height: 12,
-              background: G, marginLeft: 3, verticalAlign: "middle",
-              animation: "blink 1s step-end infinite",
-            }} />
+          {/* Render with code blocks for assistant, plain for user/streaming */}
+          {blocks ? (
+            blocks.map((b, i) =>
+              b.type === "code"
+                ? <CodeBlock key={i} content={b.content} lang={b.lang} />
+                : <span key={i}>{b.content}</span>
+            )
+          ) : (
+            <>
+              {msg.content}
+              {msg.streaming && (
+                <span style={{
+                  display: "inline-block", width: 7, height: 12,
+                  background: G, marginLeft: 3, verticalAlign: "middle",
+                  animation: "blink 1s step-end infinite",
+                }} />
+              )}
+            </>
           )}
-          <span style={{
-            position: "absolute", top: 3, right: 6,
-            fontFamily: "var(--font-mono)", fontSize: "9px", color: G,
-            opacity: copied ? 1 : 0, transition: "opacity 0.6s ease",
-            pointerEvents: "none",
-          }}>📋 Copiado</span>
+
+          {/* Copy button on hover (assistant only) */}
+          {!isUser && hov && !msg.streaming && (
+            <span
+              onClick={e => { e.stopPropagation(); copyMsg(); }}
+              style={{
+                position: "absolute", top: 4, right: 6,
+                fontFamily: MONO, fontSize: "9px", color: copied ? G : DIM,
+                cursor: "pointer", transition: "color 0.2s",
+              }}
+            >{copied ? "✓ Copiado" : "📋"}</span>
+          )}
+
+          {/* User copy feedback */}
+          {isUser && (
+            <span onClick={e => { e.stopPropagation(); copyMsg(); }} style={{
+              position: "absolute", top: 3, right: 6,
+              fontFamily: MONO, fontSize: "9px", color: G,
+              opacity: copied ? 1 : 0, transition: "opacity 0.6s ease",
+              cursor: "pointer",
+            }}>📋 Copiado</span>
+          )}
         </div>
+
         {/* Timestamp + tokens */}
         {msg.ts && !msg.streaming && (
           <div style={{
-            fontFamily: "var(--font-mono)", fontSize: "8px", color: "#2a3a2a",
+            fontFamily: MONO, fontSize: "8px", color: "#2a3a2a",
             marginTop: "2px", textAlign: isUser ? "right" : "left",
             paddingLeft: isUser ? 0 : "2px", paddingRight: isUser ? "2px" : 0,
           }}>
@@ -323,7 +427,7 @@ function QuickCommandBar({ onSelect, activeCmd }) {
               background: isActive ? cmd.color + "22" : "transparent",
               border: `1px solid ${isActive ? cmd.color : "#1a1a00"}`,
               color: isActive ? cmd.color : DIM,
-              fontFamily: "var(--font-mono)", fontSize: "9px",
+              fontFamily: MONO, fontSize: "9px",
               padding: "1px 7px", cursor: "pointer",
               transition: "all 0.12s", letterSpacing: "0.05em",
             }}
@@ -335,14 +439,14 @@ function QuickCommandBar({ onSelect, activeCmd }) {
         );
       })}
       <div style={{ flex: 1 }} />
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: "#1a2a1a", alignSelf: "center" }}>
-        comandos rápidos — prefijos con system prompt especializado
+      <span style={{ fontFamily: MONO, fontSize: "8px", color: "#1a2a1a", alignSelf: "center" }}>
+        prefijos con system prompt especializado
       </span>
     </div>
   );
 }
 
-const CFG_BTN = { background: "transparent", border: "1px solid #333", fontFamily: "var(--font-mono)", fontSize: "8px", padding: "2px 8px", cursor: "pointer" };
+const CFG_BTN = { background: "transparent", border: "1px solid #333", fontFamily: MONO, fontSize: "8px", padding: "2px 8px", cursor: "pointer" };
 
 function ProviderConfig({ provider, onSaved }) {
   const [value, setValue]   = useState("");
@@ -363,7 +467,7 @@ function ProviderConfig({ provider, onSaved }) {
     onSaved?.();
   };
 
-  const txt = { fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM };
+  const txt = { fontFamily: MONO, fontSize: "9px", color: DIM };
   return (
     <div style={{
       background: "#111", borderLeft: `2px solid ${provider.color}`, padding: "6px 10px",
@@ -385,7 +489,7 @@ function ProviderConfig({ provider, onSaved }) {
             onKeyDown={e => { if (e.key === "Enter") save(); }}
             style={{
               flex: 1, maxWidth: 280, background: "#0a0a0a", border: "1px solid #333", outline: "none",
-              color: "#E8E8E8", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "2px 6px",
+              color: "#E8E8E8", fontFamily: MONO, fontSize: "9px", padding: "2px 6px",
             }}
           />
           <button style={{ ...CFG_BTN, color: provider.color }} onClick={save}>Guardar</button>
@@ -405,15 +509,17 @@ function AIPanel({ open, height = 340 }) {
   const [input,       setInput]       = useState("");
   const [streaming,   setStreaming]   = useState(false);
   const [checking,    setChecking]    = useState(true);
-  const [warming,     setWarming]     = useState(false); // warmup en curso
+  const [warming,     setWarming]     = useState(false);
   const [hovered,     setHovered]     = useState(false);
-  const [expanded,    setExpanded]    = useState(null); // id del provider expandido
+  const [expanded,    setExpanded]    = useState(null);
   const [collapsed,   setCollapsed]   = useState(false);
+  const [flashBorder, setFlashBorder] = useState(false);
+  const [termContext,  setTermContext] = useState({ cwd: "", project: "", lastCmds: [], lastError: null });
 
   const inputRef  = useRef(null);
   const bottomRef = useRef(null);
   const abortRef  = useRef(null);
-  const warmupRef = useRef(false); // evita doble warmup
+  const warmupRef = useRef(false);
 
   const activeProvider = PROVIDERS[activeId];
   const provStatus     = providers[activeId];
@@ -423,6 +529,32 @@ function AIPanel({ open, height = 340 }) {
   const totalToks      = totalTokens(messages);
   const noProvider     = !checking && !isAvailable;
   const effectiveHeight = noProvider && collapsed ? 28 : height;
+
+  // ── Terminal context listener ──
+  useEffect(() => {
+    const handler = (e) => setTermContext(prev => ({ ...prev, ...e.detail }));
+    window.addEventListener("nw-ai-context", handler);
+    return () => window.removeEventListener("nw-ai-context", handler);
+  }, []);
+
+  // ── Expose AI status globally ──
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("nw-ai-status", {
+      detail: { available: !!isAvailable, streaming, provider: activeProvider?.name, model: activeModel }
+    }));
+  }, [isAvailable, streaming, activeProvider, activeModel]);
+
+  // ── Listen for external "nw ai" asks ──
+  const sendMessageRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => {
+      if (!isAvailable || !e.detail?.question) return;
+      setInput(e.detail.question);
+      setTimeout(() => sendMessageRef.current?.(), 80);
+    };
+    window.addEventListener("nw-ai-ask", handler);
+    return () => window.removeEventListener("nw-ai-ask", handler);
+  }, [isAvailable]);
 
   // Al cambiar la disponibilidad, resetear el estado colapsado
   useEffect(() => {
@@ -471,7 +603,7 @@ function AIPanel({ open, height = 340 }) {
     if (open) setTimeout(() => inputRef.current?.focus(), 80);
   }, [open]);
 
-  // Persistir historial cuando cambian los mensajes
+  // Persistir historial
   useEffect(() => {
     if (messages.length > 0) saveHistory(messages);
   }, [messages]);
@@ -490,30 +622,41 @@ function AIPanel({ open, height = 340 }) {
     setActiveModel(status.models[0] || PROVIDERS[id].defaultModel);
   }, [providers]);
 
+  // ── Build context system message ──
+  const buildContextPrefix = useCallback(() => {
+    const ctx = termContext;
+    if (!ctx.cwd && !ctx.project && ctx.lastCmds.length === 0 && !ctx.lastError) return "";
+    const parts = [];
+    if (ctx.cwd) parts.push(`Dir: ${ctx.cwd}`);
+    if (ctx.project) parts.push(`Proyecto: ${ctx.project}`);
+    if (ctx.lastCmds.length > 0) parts.push(`Últimos comandos: ${ctx.lastCmds.slice(-5).join(", ")}`);
+    parts.push(ctx.lastError ? `Último error: ${ctx.lastError}` : "Sin errores");
+    return `[Contexto] ${parts.join(" | ")}`;
+  }, [termContext]);
+
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming || !isAvailable) return;
 
-    // Extraer system prompt del comando rápido si aplica
     const cmd = getActiveCommand(text);
     const systemOverride = cmd?.system || null;
-    const cleanText = cmd ? text : text; // el texto incluye el prefijo, lo mandamos tal cual
 
     const now = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
-    const userMsg = { role: "user", content: cleanText, id: Date.now(), ts: now };
+    const userMsg = { role: "user", content: text, id: Date.now(), ts: now };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setStreaming(true);
 
-    // Construir historia con system override si hay comando
     const history = [...messages, userMsg].map(m => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Si hay comando, añadimos system como primer mensaje tipo user (compatible con Ollama)
-    const finalHistory = systemOverride
-      ? [{ role: "system", content: systemOverride }, ...history]
+    // Prepend terminal context + system override
+    const ctxMsg = buildContextPrefix();
+    const systemParts = [systemOverride, ctxMsg].filter(Boolean).join("\n\n");
+    const finalHistory = systemParts
+      ? [{ role: "system", content: systemParts }, ...history]
       : history;
 
     const assistantId = Date.now() + 1;
@@ -537,6 +680,10 @@ function AIPanel({ open, height = 340 }) {
       setMessages(prev => prev.map(m =>
         m.id === assistantId ? { ...m, streaming: false, ts: endTs } : m
       ));
+
+      // Flash border on completion
+      setFlashBorder(true);
+      setTimeout(() => setFlashBorder(false), 300);
     } catch (e) {
       if (e.name !== "AbortError") {
         const endTs = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
@@ -548,7 +695,10 @@ function AIPanel({ open, height = 340 }) {
       }
     }
     setStreaming(false);
-  }, [input, streaming, messages, activeId, activeModel, activeProvider, isAvailable]);
+  }, [input, streaming, messages, activeId, activeModel, activeProvider, isAvailable, buildContextPrefix]);
+
+  // Keep sendMessageRef in sync
+  sendMessageRef.current = sendMessage;
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
@@ -573,6 +723,13 @@ function AIPanel({ open, height = 340 }) {
     inputRef.current?.focus();
   }, []);
 
+  const analyzeError = useCallback(() => {
+    if (!termContext.lastError) return;
+    const errorSnippet = termContext.lastError.substring(0, 200);
+    setInput(`/fix ${errorSnippet}`);
+    setTimeout(() => sendMessageRef.current?.(), 80);
+  }, [termContext.lastError]);
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -582,10 +739,10 @@ function AIPanel({ open, height = 340 }) {
       minHeight:     open ? `${effectiveHeight}px` : "0px",
       overflow:      "hidden",
       background:    BG2,
-      borderBottom:  open ? "1px solid var(--nw-accent)" : "none",
+      borderBottom:  open ? `1px solid ${flashBorder ? G : "var(--nw-accent)"}` : "none",
       flexShrink:    0,
-      boxShadow:     hovered ? "0 0 12px rgba(57,255,20,0.25)" : "none",
-      transition:    "height 0.2s ease, min-height 0.2s ease, box-shadow 0.2s ease",
+      boxShadow:     flashBorder ? `0 0 15px rgba(57,255,20,0.4)` : (hovered ? "0 0 12px rgba(57,255,20,0.25)" : "none"),
+      transition:    "height 0.2s ease, min-height 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease",
       display:       "flex",
       flexDirection: "column",
     }}>
@@ -593,7 +750,7 @@ function AIPanel({ open, height = 340 }) {
         <div onClick={() => setCollapsed(false)} style={{
           height: "28px", display: "flex", alignItems: "center", gap: "8px",
           padding: "0 12px", cursor: "pointer", flexShrink: 0,
-          fontFamily: "var(--font-mono)", fontSize: "10px",
+          fontFamily: MONO, fontSize: "10px",
         }}>
           <span style={{ color: DIM }}>◈ AI · sin provider</span>
           <span style={{ color: DIM }}>— click para configurar</span>
@@ -614,7 +771,7 @@ function AIPanel({ open, height = 340 }) {
             padding: "5px 12px", background: "#080900",
             borderBottom: "1px solid #0f0f00", flexShrink: 0, userSelect: "none",
           }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: accentColor, letterSpacing: "0.1em", flexShrink: 0 }}>
+            <span style={{ fontFamily: MONO, fontSize: "10px", color: accentColor, letterSpacing: "0.1em", flexShrink: 0 }}>
               ◈ AI
             </span>
 
@@ -638,7 +795,7 @@ function AIPanel({ open, height = 340 }) {
                 onChange={e => setActiveModel(e.target.value)}
                 style={{
                   background: "#0d0c00", border: "1px solid #2a2700",
-                  color: Y, fontFamily: "var(--font-mono)", fontSize: "9px",
+                  color: Y, fontFamily: MONO, fontSize: "9px",
                   padding: "1px 6px", cursor: "pointer", outline: "none",
                 }}
               >
@@ -652,24 +809,24 @@ function AIPanel({ open, height = 340 }) {
 
             {/* Token counter */}
             {messages.length > 0 && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", color: "#2a4a2a" }}>
+              <span style={{ fontFamily: MONO, fontSize: "8px", color: "#2a4a2a" }}>
                 ~{totalToks.toLocaleString()}t · {messages.length} msgs
               </span>
             )}
 
-            {/* Estado */}
+            {/* Estado con local/cloud suffix */}
             {checking ? (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>detectando...</span>
+              <span style={{ fontFamily: MONO, fontSize: "9px", color: DIM }}>detectando...</span>
             ) : warming ? (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: G, animation: "blink 1s step-end infinite" }}>
+              <span style={{ fontFamily: MONO, fontSize: "9px", color: G, animation: "blink 1s step-end infinite" }}>
                 ◌ cargando modelo...
               </span>
             ) : isAvailable ? (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: G }}>
-                ● {activeProvider.name} · {activeModel}
+              <span style={{ fontFamily: MONO, fontSize: "9px", color: G }}>
+                ● {activeProvider.name} · {activeModel} · {activeProvider.local ? "local" : "cloud"}
               </span>
             ) : (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: DIM }}>
+              <span style={{ fontFamily: MONO, fontSize: "9px", color: DIM }}>
                 sin provider activo
               </span>
             )}
@@ -679,7 +836,7 @@ function AIPanel({ open, height = 340 }) {
               onClick={clearChat}
               style={{
                 background: "transparent", border: "1px solid #1a1a00",
-                color: DIM, fontFamily: "var(--font-mono)", fontSize: "9px",
+                color: DIM, fontFamily: MONO, fontSize: "9px",
                 padding: "1px 7px", cursor: "pointer", flexShrink: 0,
               }}
               onMouseOver={e => { e.currentTarget.style.borderColor = M; e.currentTarget.style.color = M; }}
@@ -700,17 +857,22 @@ function AIPanel({ open, height = 340 }) {
           {/* ── Mensajes ── */}
           <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column" }}>
             {(messages.length === 0 || !isAvailable) && !checking && (
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: DIM, lineHeight: "1.9" }}>
+              <div style={{ fontFamily: MONO, fontSize: "11px", color: DIM, lineHeight: "1.9" }}>
                 {isAvailable ? (
                   <>
                     <div style={{ color: accentColor, marginBottom: "6px" }}>
-                      ● {activeProvider.name} {warming ? "— cargando en VRAM..." : "listo"} · {activeModel}
+                      ● {activeProvider.name} {warming ? "— cargando en VRAM..." : "listo"} · {activeModel} · {activeProvider.local ? "local" : "cloud"}
                     </div>
+                    {termContext.cwd && (
+                      <div style={{ color: "#1a3a3a", fontSize: "9px", marginBottom: "6px" }}>
+                        📂 {termContext.cwd} {termContext.project && `· ${termContext.project}`}
+                      </div>
+                    )}
                     <div style={{ color: "#2a4a2a", marginBottom: "4px" }}>Sugerencias rápidas:</div>
                     {[
                       { text: "/code explícame este error: [pega el error]", color: G },
                       { text: "/git cómo revierto el último commit sin perder cambios", color: M },
-                      { text: "/solidity revisa esta función para reentrancy", color: C },
+                      { text: "/fix [pega un error para diagnóstico]", color: R },
                       { text: "/explain qué es un MEV flashloan attack", color: Y },
                     ].map((s, i) => (
                       <div
@@ -751,6 +913,26 @@ function AIPanel({ open, height = 340 }) {
             <div ref={bottomRef} />
           </div>
 
+          {/* ── Error analysis banner ── */}
+          {termContext.lastError && !streaming && isAvailable && (
+            <div
+              onClick={analyzeError}
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "4px 10px",
+                background: "#1a0000", borderTop: `1px solid ${R}33`, cursor: "pointer",
+                flexShrink: 0, transition: "background 0.15s",
+              }}
+              onMouseOver={e => e.currentTarget.style.background = "#2a0000"}
+              onMouseOut={e => e.currentTarget.style.background = "#1a0000"}
+            >
+              <span style={{ fontSize: 9, color: R, fontFamily: MONO, fontWeight: 700 }}>⚠</span>
+              <span style={{ fontSize: 9, color: R, fontFamily: MONO }}>Error detectado — Click para analizar</span>
+              <span style={{ fontSize: 8, color: "#ff2a6d66", fontFamily: MONO, marginLeft: "auto", maxWidth: 200, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                {termContext.lastError.substring(0, 80)}
+              </span>
+            </div>
+          )}
+
           {/* ── Input ── */}
           <div style={{
             display: "flex", alignItems: "center", gap: "8px",
@@ -758,7 +940,7 @@ function AIPanel({ open, height = 340 }) {
             borderTop: `1px solid ${activeCmd ? activeCmd.color + "33" : "#0f0f00"}`,
             flexShrink: 0, transition: "border-color 0.15s",
           }}>
-            <span style={{ color: activeCmd ? activeCmd.color : accentColor, fontSize: "11px", fontFamily: "var(--font-mono)", flexShrink: 0 }}>
+            <span style={{ color: activeCmd ? activeCmd.color : accentColor, fontSize: "11px", fontFamily: MONO, flexShrink: 0 }}>
               {activeCmd ? activeCmd.prefix.slice(1, 2).toUpperCase() + "›" : "❯"}
             </span>
             <input
@@ -777,7 +959,7 @@ function AIPanel({ open, height = 340 }) {
               style={{
                 flex: 1, background: "transparent", border: "none", outline: "none",
                 color: isAvailable ? "#E8E8E8" : DIM,
-                fontFamily: "var(--font-mono)", fontSize: "12px",
+                fontFamily: MONO, fontSize: "12px",
                 caretColor: activeCmd ? activeCmd.color : accentColor,
               }}
             />
@@ -786,7 +968,7 @@ function AIPanel({ open, height = 340 }) {
                 onClick={stopStreaming}
                 style={{
                   background: "transparent", border: `1px solid ${M}`, color: M,
-                  fontFamily: "var(--font-mono)", fontSize: "9px",
+                  fontFamily: MONO, fontSize: "9px",
                   padding: "2px 8px", cursor: "pointer", flexShrink: 0,
                 }}
               >◼ stop</button>
@@ -798,7 +980,7 @@ function AIPanel({ open, height = 340 }) {
                   background: isAvailable && input.trim() && !warming ? (activeCmd ? activeCmd.color : accentColor) : "transparent",
                   border: `1px solid ${isAvailable && input.trim() && !warming ? (activeCmd ? activeCmd.color : accentColor) : "#1a1a00"}`,
                   color: isAvailable && input.trim() && !warming ? BG : DIM,
-                  fontFamily: "var(--font-mono)", fontSize: "9px",
+                  fontFamily: MONO, fontSize: "9px",
                   padding: "2px 10px", cursor: isAvailable && input.trim() && !warming ? "pointer" : "default",
                   transition: "all 0.15s", flexShrink: 0,
                 }}
@@ -809,13 +991,13 @@ function AIPanel({ open, height = 340 }) {
           {/* ── Hints ── */}
           <div style={{
             padding: "2px 12px", background: "#080700",
-            fontFamily: "var(--font-mono)", fontSize: "9px",
+            fontFamily: MONO, fontSize: "9px",
             color: "#1a2a1a", display: "flex", gap: "12px", userSelect: "none", flexShrink: 0,
           }}>
             <span><span style={{ color: Y }}>Enter</span> enviar</span>
             <span><span style={{ color: DIM }}>Shift+Enter</span> nueva línea</span>
             <span><span style={{ color: M }}>Esc</span> detener</span>
-            <span><span style={{ color: G }}>/code /git /sol /explain</span> modos</span>
+            <span><span style={{ color: G }}>/code /git /fix /sol /explain</span> modos</span>
             <div style={{ flex: 1 }} />
             <span style={{ color: "#1a1a00" }}>Alt+A cerrar</span>
           </div>

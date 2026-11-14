@@ -383,38 +383,62 @@ async function cmdDeploy(args, write, sendToShell) {
 
 // ── nw ai ─────────────────────────────────────────────────────────────────────
 async function cmdAi(args, write) {
-  const question = args.join(" ");
-  if (!question) {
-    write(nl + C.dim("  Uso: nw ai <pregunta>") + nl + nl);
+  if (!args.length) {
+    window.dispatchEvent(new CustomEvent("nw-ai-toggle"));
+    write(nl + C.dim("  Abriendo panel AI...") + nl + nl);
     return;
   }
-  write(nl + C.yellow("◈ NETWATCH AI") + nl + SEP + nl + nl);
-  write(`  ${C.dim("Pregunta:")} ${C.white(question)}` + nl + nl);
-  write(C.yellow("  Pensando") + C.dim("...") + nl + nl);
 
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: `Eres el asistente de NETWATCH Terminal. Usuario: HEO-80, Full Stack Dev y DeFi researcher.
-Responde conciso y directo. Máximo 15 líneas. Sin markdown, texto plano.`,
-        messages: [{ role: "user", content: question }],
-      }),
-    });
-    const data = await response.json();
-    const text = data?.content?.[0]?.text || "Sin respuesta";
-    text.split("\n").forEach(line => {
-      if (!line.trim()) { write(nl); return; }
-      if (line.match(/^[\s]{2,}/) || line.match(/^[$>]/)) write(C.green("  " + line.trim()) + nl);
-      else write(C.white("  " + line) + nl);
-    });
-  } catch (e) {
-    write(C.red(`  Error: ${e.message}`) + nl);
+  if (args[0] === "--provider" && args[1]) {
+    window.dispatchEvent(new CustomEvent("nw-ai-provider", { detail: args[1] }));
+    write(nl + C.green(`  ✓ Provider cambiado a: ${args[1]}`) + nl + nl);
+    return;
   }
-  write(nl);
+
+  if (args[0] === "--model" && args[1]) {
+    window.dispatchEvent(new CustomEvent("nw-ai-model", { detail: args[1] }));
+    write(nl + C.green(`  ✓ Modelo cambiado a: ${args[1]}`) + nl + nl);
+    return;
+  }
+
+  const question = args.join(" ");
+  write(nl + C.green("  ┃") + C.dim(" NETWATCH AI") + nl);
+  write(C.green("  ┃") + ` ${C.white(question)}` + nl);
+  write(C.green("  ┃") + nl);
+
+  const response = await new Promise((resolve) => {
+    let full = "";
+    let done = false;
+    const onChunk = (e) => {
+      if (e.detail.done) {
+        done = true;
+        window.removeEventListener("nw-ai-response", onChunk);
+        resolve(full);
+        return;
+      }
+      full = e.detail.text || full;
+    };
+    window.addEventListener("nw-ai-response", onChunk);
+    window.dispatchEvent(new CustomEvent("nw-ai-ask", { detail: { question, inline: true } }));
+
+    setTimeout(() => {
+      if (!done) {
+        window.removeEventListener("nw-ai-response", onChunk);
+        resolve(full || "[Timeout — sin respuesta del provider AI]");
+      }
+    }, 30000);
+  });
+
+  response.split("\n").forEach(line => {
+    if (!line.trim()) { write(C.green("  ┃") + nl); return; }
+    if (line.match(/^\s*([$>]|\w+:\/\/|```|npm |git |nw |docker |cargo )/)) {
+      write(C.green("  ┃") + `  ${C.yellow(line.trim())}` + nl);
+    } else {
+      write(C.green("  ┃") + `  ${C.white(line)}` + nl);
+    }
+  });
+  write(C.green("  ┃") + nl);
+  write(C.green("  ┗") + C.dim("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━") + nl + nl);
 }
 
 // ── nw task ──────────────────────────────────────────────────────────────────

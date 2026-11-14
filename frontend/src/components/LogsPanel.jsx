@@ -52,7 +52,7 @@ function LogLine({ entry }) {
       }}>{sev.label}</span>
       <span style={{
         color: entry.severity === "error" ? R : entry.severity === "warn" ? "#cca" : "#888",
-        whiteSpace: "pre-wrap", wordBreak: "break-all", flex: 1,
+        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0,
       }}>{entry.text}</span>
     </div>
   );
@@ -83,7 +83,8 @@ function parseEventLines(raw) {
     if (levelRaw.includes("error") || levelRaw.includes("critical")) severity = "error";
     else if (levelRaw.includes("warn")) severity = "warn";
     else if (levelRaw.includes("verbose") || levelRaw.includes("debug")) severity = "debug";
-    return { id: Date.now() + Math.random(), time, severity, text: text || line };
+    const key = `${time}|${severity}|${text || line}`;
+    return { id: key, time, severity, text: text || line };
   });
 }
 
@@ -107,8 +108,10 @@ function LogsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
     const res = await invoke("run_powershell", { command: src.command });
     const lines = parseEventLines(res?.stdout);
     setEntries(prev => {
-      const combined = [...prev, ...lines];
-      return combined.slice(-MAX_LINES);
+      const seen = new Set(prev.map(e => e.id));
+      const fresh = lines.filter(l => !seen.has(l.id));
+      if (fresh.length === 0) return prev;
+      return [...prev, ...fresh].slice(-MAX_LINES);
     });
     setLoading(false);
   }, [source]);
@@ -299,11 +302,14 @@ function LogsPanel({ open, focused, onFocus, onOverlay, minimized, onMinimize })
               </div>
             ) : (
               <div style={{ height: filtered.length * ROW_H, position: "relative" }}>
-                {filtered.slice(visibleRange.start, visibleRange.end).map((entry, i) => (
-                  <div key={visibleRange.start + i} style={{ position: "absolute", top: (visibleRange.start + i) * ROW_H, left: 0, right: 0, height: ROW_H, ...(focused && visibleRange.start + i === kbIdx ? KB_HIGHLIGHT : {}) }}>
+                {filtered.slice(visibleRange.start, visibleRange.end).map((entry, i) => {
+                  const idx = visibleRange.start + i;
+                  return (
+                  <div key={entry.id} style={{ position: "absolute", top: idx * ROW_H, left: 0, right: 0, height: ROW_H, overflow: "hidden", ...(focused && idx === kbIdx ? KB_HIGHLIGHT : {}) }}>
                     <LogLine entry={entry} />
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

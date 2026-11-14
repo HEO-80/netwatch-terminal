@@ -1,10 +1,17 @@
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 const G = "#39FF14";
 const C = "var(--nw-accent)";
 
 function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", activeTabLabel, onOpenHelp, onOpenSettings }) {
+
+  const [aiStatus, setAiStatus] = useState({ available: false, streaming: false });
+  useEffect(() => {
+    const handler = (e) => setAiStatus(e.detail || {});
+    window.addEventListener("nw-ai-status", handler);
+    return () => window.removeEventListener("nw-ai-status", handler);
+  }, []);
 
   const handleClose    = (e) => { e.stopPropagation(); invoke("close_window").catch(() => {}); };
   const handleMinimize = (e) => { e.stopPropagation(); invoke("minimize_window").catch(() => {}); };
@@ -54,6 +61,16 @@ function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", activeTab
 
       {/* Icono */}
       <span style={{ color: "var(--nw-accent)", fontSize: "11px", opacity: 0.6 }}>▣</span>
+
+      {/* AI indicator */}
+      {aiStatus.available && (
+        <span style={{
+          color: aiStatus.streaming ? "#FCEE0A" : "#39FF14",
+          fontSize: "10px",
+          animation: aiStatus.streaming ? "blink 0.8s step-end infinite" : "none",
+          WebkitAppRegion: "no-drag",
+        }}>◆</span>
+      )}
 
       {/* Título — zona drag */}
       <span
@@ -133,6 +150,7 @@ function TitleBar({ title = "NETWATCH OS V2.077", subtitle = "HEO-80", activeTab
           }}
         >SETTINGS</button>
       </div>
+      <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
     </div>
   );
 }

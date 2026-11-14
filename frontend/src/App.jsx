@@ -157,6 +157,12 @@ function AppInner() {
     return () => window.removeEventListener("nw-config-changed", onChanged);
   }, []);
 
+  useEffect(() => {
+    const handler = () => { if (!isEnabled("panels.ai")) setModule("panels.ai", true); setAiOpen(o => !o); };
+    window.addEventListener("nw-ai-toggle", handler);
+    return () => window.removeEventListener("nw-ai-toggle", handler);
+  }, [isEnabled, setModule]);
+
   useEffect(() => { try { localStorage.setItem("nw-panel-order", JSON.stringify(panelOrder)); } catch {} }, [panelOrder]);
 
   const activePanelOrder = panelOrder.filter(p => isEnabled(`panels.${p}`));
@@ -553,6 +559,12 @@ const RIGHT_PANEL_META = {
 function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOpen, aiOpen, metricsOpen, onCycleRight, onToggleInfra, onToggleAi, onToggleMetrics, accent, theme, onCycleTheme, onReorderTabs, panelOrder, onReorderPanels, onTogglePanel, focusPanel, isEnabled }) {
   const [time, setTime] = useState(getTime());
   useEffect(() => { const t = setInterval(() => setTime(getTime()), 1000); return () => clearInterval(t); }, []);
+  const [aiStatus, setAiStatus] = useState({ available: false, streaming: false });
+  useEffect(() => {
+    const handler = (e) => setAiStatus(e.detail || {});
+    window.addEventListener("nw-ai-status", handler);
+    return () => window.removeEventListener("nw-ai-status", handler);
+  }, []);
   const dragTab = useRef(null);
   const dragPanel = useRef(null);
   const [dropTarget, setDropTarget] = useState(null);
@@ -619,7 +631,7 @@ function TabBar({ tabs, activeTab, onSelect, onClose, onAdd, rightPanel, infraOp
           style={{ background: aiOpen ? "#39FF14" : "transparent", border: `1px solid ${aiOpen ? "#39FF14" : "#333"}`, color: aiOpen ? "#000" : "#888", fontFamily: "var(--font-mono)", fontSize: "9px", padding: "1px 7px", cursor: "pointer" }}
           onMouseOver={e => { if (!aiOpen) { e.target.style.borderColor = "#39FF14"; e.target.style.color = "#39FF14"; } }}
           onMouseOut={e => { if (!aiOpen) { e.target.style.borderColor = "#333"; e.target.style.color = "#888"; } }}
-        >◈ AI</button>
+        >◈ AI {aiStatus.streaming ? <span style={{ animation: "blink 0.8s step-end infinite", color: aiOpen ? "#000" : "#FCEE0A" }}>◌</span> : aiStatus.available ? <span style={{ color: aiOpen ? "#000" : "#39FF14" }}>●</span> : <span style={{ color: "#555" }}>○</span>}</button>
 
         {/* METRICS toggle */}
         <button onClick={onToggleMetrics} title="METRICS — CPU, RAM, Disco en tiempo real · Alt+M"
